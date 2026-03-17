@@ -49,14 +49,10 @@ class TranscriptionManager @Inject constructor(
             return Result.failure(error)
         }
 
-        Log.d(TAG, "Raw transcription: '$rawText'")
         if (rawText.isBlank()) return Result.success("")
 
-        // LLM post-processing
         val processedText = textProcessor.process(rawText, dictionaryWords)
         val wordCount = processedText.split("\\s+".toRegex()).filter { it.isNotBlank() }.size
-
-        Log.d(TAG, "Processed text: '$processedText' ($wordCount words)")
 
         if (prefs.historyEnabled) {
             dictationDao.insert(

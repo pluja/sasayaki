@@ -13,12 +13,6 @@ interface DictationDao {
     @Query("SELECT * FROM dictations ORDER BY timestamp DESC")
     fun getAll(): Flow<List<com.sasayaki.data.db.entity.Dictation>>
 
-    @Query("SELECT * FROM dictations WHERE timestamp BETWEEN :startTime AND :endTime ORDER BY timestamp DESC")
-    fun getByDateRange(startTime: Long, endTime: Long): Flow<List<com.sasayaki.data.db.entity.Dictation>>
-
-    @Query("SELECT date(timestamp / 1000, 'unixepoch', 'localtime') as day, SUM(wordCount) as totalWords FROM dictations GROUP BY day ORDER BY day DESC")
-    fun getDailyWordCounts(): Flow<List<DailyWordCount>>
-
     @Query("DELETE FROM dictations WHERE id = :id")
     suspend fun delete(id: Long)
 
@@ -28,8 +22,3 @@ interface DictationDao {
     @Query("SELECT COALESCE(SUM(wordCount), 0) FROM dictations WHERE timestamp >= :startOfDay")
     fun getTodayWordCount(startOfDay: Long): Flow<Int>
 }
-
-data class DailyWordCount(
-    val day: String,
-    val totalWords: Int
-)

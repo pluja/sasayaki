@@ -1,5 +1,6 @@
 package com.sasayaki.di
 
+import com.sasayaki.BuildConfig
 import com.sasayaki.data.api.ApiClientFactory
 import dagger.Module
 import dagger.Provides
@@ -20,11 +21,15 @@ object NetworkModule {
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
-            .addInterceptor(
-                HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.BASIC
+            .apply {
+                if (BuildConfig.DEBUG) {
+                    addInterceptor(
+                        HttpLoggingInterceptor().apply {
+                            level = HttpLoggingInterceptor.Level.BASIC
+                        }
+                    )
                 }
-            )
+            }
             .build()
     }
 

@@ -1,9 +1,10 @@
 package com.sasayaki.data.db.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "dictations")
+@Entity(tableName = "dictations", indices = [Index("timestamp")])
 data class Dictation(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val text: String,

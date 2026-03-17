@@ -321,27 +321,23 @@ class BubbleService : Service() {
         updateState(ServiceState.Transcribing)
 
         scope.launch {
+            var currentPcmFile: File? = null
+            var wavFile: File? = null
             try {
-                // Wait for the recording coroutine to fully finish writing the file
                 recordingJob?.join()
 
-                val currentPcmFile = pcmFile
+                currentPcmFile = pcmFile
                 if (currentPcmFile == null || !currentPcmFile.exists() || currentPcmFile.length() == 0L) {
-                    Log.w(TAG, "PCM file empty or missing (size=${currentPcmFile?.length()})")
+                    Log.w(TAG, "PCM file empty or missing")
                     updateState(ServiceState.Idle)
                     return@launch
                 }
 
-                Log.d(TAG, "PCM file size: ${currentPcmFile.length()} bytes, duration: ${durationMs}ms")
-
-                val wavFile = File(cacheDir, "recording_${System.currentTimeMillis()}.wav")
+                wavFile = File(cacheDir, "recording_${System.currentTimeMillis()}.wav")
                 withContext(Dispatchers.IO) {
                     AudioConverter.pcmToWav(currentPcmFile, wavFile)
                 }
 
-                Log.d(TAG, "WAV file size: ${wavFile.length()} bytes")
-
-                // Capture the source app name before transcription
                 val sourceApp = textInjectionBridge.focusedAppName
 
                 val result = withContext(Dispatchers.IO) {
@@ -349,27 +345,22 @@ class BubbleService : Service() {
                 }
 
                 result.onSuccess { text ->
-                    Log.d(TAG, "Transcription result: '$text'")
                     if (text.isNotBlank()) {
                         updateState(ServiceState.Injecting)
-                        // inject() may show Toast, must be on Main
                         textInjectionBridge.inject(text)
                         hapticFeedback?.complete()
-                    } else {
-                        Log.w(TAG, "Transcription returned empty text")
                     }
                     updateState(ServiceState.Idle)
                 }.onFailure { error ->
                     Log.e(TAG, "Transcription failed", error)
                     showError("Transcription failed: ${error.message}")
                 }
-
-                // Cleanup
-                currentPcmFile.delete()
-                wavFile.delete()
             } catch (e: Exception) {
                 Log.e(TAG, "Processing failed", e)
                 showError(e.message ?: "Unknown error")
+            } finally {
+                currentPcmFile?.delete()
+                wavFile?.delete()
             }
         }
     }
