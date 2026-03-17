@@ -67,6 +67,7 @@ fun SettingsScreen(
     var autoClipboard by remember(prefs.autoClipboard) { mutableStateOf(prefs.autoClipboard) }
     var vibrateOnRecord by remember(prefs.vibrateOnRecord) { mutableStateOf(prefs.vibrateOnRecord) }
     var silenceThreshold by remember(prefs.silenceThresholdMs) { mutableFloatStateOf(prefs.silenceThresholdMs.toFloat()) }
+    var historyEnabled by remember(prefs.historyEnabled) { mutableStateOf(prefs.historyEnabled) }
 
     Scaffold(
         topBar = {
@@ -244,7 +245,7 @@ fun SettingsScreen(
                         checked = autoClipboard,
                         onCheckedChange = {
                             autoClipboard = it
-                            viewModel.saveGeneralSettings(it, vibrateOnRecord, silenceThreshold.toLong())
+                            viewModel.saveGeneralSettings(it, vibrateOnRecord, silenceThreshold.toLong(), historyEnabled)
                         }
                     )
                 }
@@ -260,7 +261,7 @@ fun SettingsScreen(
                         checked = vibrateOnRecord,
                         onCheckedChange = {
                             vibrateOnRecord = it
-                            viewModel.saveGeneralSettings(autoClipboard, it, silenceThreshold.toLong())
+                            viewModel.saveGeneralSettings(autoClipboard, it, silenceThreshold.toLong(), historyEnabled)
                         }
                     )
                 }
@@ -272,10 +273,26 @@ fun SettingsScreen(
                         value = silenceThreshold,
                         onValueChange = { silenceThreshold = it },
                         onValueChangeFinished = {
-                            viewModel.saveGeneralSettings(autoClipboard, vibrateOnRecord, silenceThreshold.toLong())
+                            viewModel.saveGeneralSettings(autoClipboard, vibrateOnRecord, silenceThreshold.toLong(), historyEnabled)
                         },
                         valueRange = 500f..5000f,
                         steps = 8
+                    )
+                }
+            }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Save dictation history")
+                    Switch(
+                        checked = historyEnabled,
+                        onCheckedChange = {
+                            historyEnabled = it
+                            viewModel.saveGeneralSettings(autoClipboard, vibrateOnRecord, silenceThreshold.toLong(), it)
+                        }
                     )
                 }
             }

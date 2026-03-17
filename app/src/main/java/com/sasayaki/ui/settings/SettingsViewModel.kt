@@ -70,9 +70,14 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun saveGeneralSettings(autoClipboard: Boolean, vibrateOnRecord: Boolean, silenceThresholdMs: Long) {
+    fun saveGeneralSettings(
+        autoClipboard: Boolean,
+        vibrateOnRecord: Boolean,
+        silenceThresholdMs: Long,
+        historyEnabled: Boolean
+    ) {
         viewModelScope.launch {
-            preferencesDataStore.updateGeneralSettings(autoClipboard, vibrateOnRecord, silenceThresholdMs)
+            preferencesDataStore.updateGeneralSettings(autoClipboard, vibrateOnRecord, silenceThresholdMs, historyEnabled)
         }
     }
 

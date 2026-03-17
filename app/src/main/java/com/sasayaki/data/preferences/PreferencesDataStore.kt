@@ -32,6 +32,7 @@ class PreferencesDataStore @Inject constructor(
         val VIBRATE_ON_RECORD = booleanPreferencesKey("vibrate_on_record")
         val SILENCE_THRESHOLD_MS = longPreferencesKey("silence_threshold_ms")
         val LANGUAGE = stringPreferencesKey("language")
+        val HISTORY_ENABLED = booleanPreferencesKey("history_enabled")
     }
 
     val preferences: Flow<UserPreferences> = context.dataStore.data.map { prefs ->
@@ -46,7 +47,8 @@ class PreferencesDataStore @Inject constructor(
             autoClipboard = prefs[Keys.AUTO_CLIPBOARD] ?: true,
             vibrateOnRecord = prefs[Keys.VIBRATE_ON_RECORD] ?: true,
             silenceThresholdMs = prefs[Keys.SILENCE_THRESHOLD_MS] ?: 2000L,
-            language = prefs[Keys.LANGUAGE] ?: ""
+            language = prefs[Keys.LANGUAGE] ?: "",
+            historyEnabled = prefs[Keys.HISTORY_ENABLED] ?: true
         )
     }
 
@@ -67,11 +69,17 @@ class PreferencesDataStore @Inject constructor(
         }
     }
 
-    suspend fun updateGeneralSettings(autoClipboard: Boolean, vibrateOnRecord: Boolean, silenceThresholdMs: Long) {
+    suspend fun updateGeneralSettings(
+        autoClipboard: Boolean,
+        vibrateOnRecord: Boolean,
+        silenceThresholdMs: Long,
+        historyEnabled: Boolean
+    ) {
         context.dataStore.edit { prefs ->
             prefs[Keys.AUTO_CLIPBOARD] = autoClipboard
             prefs[Keys.VIBRATE_ON_RECORD] = vibrateOnRecord
             prefs[Keys.SILENCE_THRESHOLD_MS] = silenceThresholdMs
+            prefs[Keys.HISTORY_ENABLED] = historyEnabled
         }
     }
 

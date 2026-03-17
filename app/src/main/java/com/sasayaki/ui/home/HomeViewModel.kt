@@ -2,7 +2,6 @@ package com.sasayaki.ui.home
 
 import androidx.lifecycle.ViewModel
 import com.sasayaki.data.db.dao.DictationDao
-import com.sasayaki.data.db.entity.Dictation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import java.util.Calendar
@@ -25,5 +24,4 @@ class HomeViewModel @Inject constructor(
 
     val todayCount: Flow<Int> = dictationDao.getTodayCount(startOfToday)
     val todayWordCount: Flow<Int> = dictationDao.getTodayWordCount(startOfToday)
-    val recentDictations: Flow<List<Dictation>> = dictationDao.getAll()
 }

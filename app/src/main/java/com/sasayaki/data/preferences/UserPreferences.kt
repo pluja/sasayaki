@@ -11,5 +11,6 @@ data class UserPreferences(
     val autoClipboard: Boolean = true,
     val vibrateOnRecord: Boolean = true,
     val silenceThresholdMs: Long = 2000,
-    val language: String = ""
+    val language: String = "",
+    val historyEnabled: Boolean = true
 )

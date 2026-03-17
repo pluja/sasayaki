@@ -1,8 +1,8 @@
 package com.sasayaki.ui.home
 
+import android.os.Build
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -47,9 +46,6 @@ import com.sasayaki.ui.common.rememberMicrophonePermissionState
 import com.sasayaki.ui.common.rememberNotificationPermissionState
 import com.sasayaki.ui.common.requestAccessibilityPermission
 import com.sasayaki.ui.common.requestOverlayPermission
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun HomeScreen(
@@ -61,9 +57,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val todayCount by viewModel.todayCount.collectAsState(initial = 0)
     val todayWordCount by viewModel.todayWordCount.collectAsState(initial = 0)
-    val recentDictations by viewModel.recentDictations.collectAsState(initial = emptyList())
 
-    // Re-check permissions every time the activity resumes (user comes back from settings)
     var refreshTick by remember { mutableIntStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
@@ -76,13 +70,14 @@ fun HomeScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // These recompute when refreshTick changes
     val overlayGranted = remember(refreshTick) { checkOverlayPermission(context) }
     val accessibilityGranted = remember(refreshTick) { checkAccessibilityPermission(context) }
     val serviceRunning = remember(refreshTick) { BubbleService.isRunning }
 
     val micPermission = rememberMicrophonePermissionState()
     val notifPermission = rememberNotificationPermissionState()
+
+    val allPermissionsGranted = overlayGranted && accessibilityGranted && micPermission.granted && notifPermission.granted
 
     Scaffold { padding ->
         LazyColumn(
@@ -92,7 +87,7 @@ fun HomeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
+            item(key = "title") {
                 Text(
                     text = "Sasayaki",
                     style = MaterialTheme.typography.headlineLarge
@@ -100,8 +95,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Service toggle with color coding
-            item {
+            item(key = "service_toggle") {
                 var running by remember(serviceRunning) { mutableStateOf(serviceRunning) }
                 Button(
                     onClick = {
@@ -119,10 +113,7 @@ fun HomeScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (running)
-                            Color(0xFF4CAF50) // green
-                        else
-                            MaterialTheme.colorScheme.error // red
+                        containerColor = if (running) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
                     )
                 ) {
                     Text(
@@ -134,7 +125,7 @@ fun HomeScreen(
 
             // Restricted settings hint for sideloaded apps (Android 13+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && (!overlayGranted || !accessibilityGranted)) {
-                item {
+                item(key = "sideload_hint") {
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.tertiaryContainer
@@ -172,7 +163,7 @@ fun HomeScreen(
             }
 
             // Stats
-            item {
+            item(key = "stats") {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -202,21 +193,31 @@ fun HomeScreen(
                 }
             }
 
-            // Permissions
-            item {
-                Text("Permissions", style = MaterialTheme.typography.titleLarge)
+            // Permissions - only show if any are missing
+            if (!allPermissionsGranted) {
+                item(key = "perm_header") {
+                    Text("Permissions", style = MaterialTheme.typography.titleLarge)
+                }
+                if (!overlayGranted) {
+                    item(key = "perm_overlay") {
+                        PermissionCard(PermissionStatus("Overlay", false) { requestOverlayPermission(context) })
+                    }
+                }
+                if (!accessibilityGranted) {
+                    item(key = "perm_accessibility") {
+                        PermissionCard(PermissionStatus("Accessibility", false) { requestAccessibilityPermission(context) })
+                    }
+                }
+                if (!micPermission.granted) {
+                    item(key = "perm_mic") { PermissionCard(micPermission) }
+                }
+                if (!notifPermission.granted) {
+                    item(key = "perm_notif") { PermissionCard(notifPermission) }
+                }
             }
-            item {
-                PermissionCard(PermissionStatus("Overlay", overlayGranted) { requestOverlayPermission(context) })
-            }
-            item {
-                PermissionCard(PermissionStatus("Accessibility", accessibilityGranted) { requestAccessibilityPermission(context) })
-            }
-            item { PermissionCard(micPermission) }
-            item { PermissionCard(notifPermission) }
 
             // Navigation
-            item {
+            item(key = "nav") {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -229,47 +230,6 @@ fun HomeScreen(
                     }
                     OutlinedButton(onClick = onNavigateToHistory, modifier = Modifier.weight(1f)) {
                         Text("History")
-                    }
-                }
-            }
-
-            // Recent dictations
-            item {
-                Text("Recent Dictations", style = MaterialTheme.typography.titleLarge)
-            }
-            val recent = recentDictations.take(5)
-            if (recent.isEmpty()) {
-                item {
-                    Text(
-                        "No dictations yet. Start the service and tap the bubble to dictate!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            items(recent) { dictation ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(
-                            text = dictation.text.take(100) + if (dictation.text.length > 100) "..." else "",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "${dictation.wordCount} words",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(dictation.timestamp)),
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                 }
             }

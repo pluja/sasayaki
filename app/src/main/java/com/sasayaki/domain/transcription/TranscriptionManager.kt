@@ -58,16 +58,17 @@ class TranscriptionManager @Inject constructor(
 
         Log.d(TAG, "Processed text: '$processedText' ($wordCount words)")
 
-        // Save to history
-        dictationDao.insert(
-            Dictation(
-                text = processedText,
-                rawText = rawText,
-                wordCount = wordCount,
-                sourceApp = sourceApp,
-                durationMs = durationMs
+        if (prefs.historyEnabled) {
+            dictationDao.insert(
+                Dictation(
+                    text = processedText,
+                    rawText = rawText,
+                    wordCount = wordCount,
+                    sourceApp = sourceApp,
+                    durationMs = durationMs
+                )
             )
-        )
+        }
 
         return Result.success(processedText)
     }
