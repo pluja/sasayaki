@@ -14,7 +14,11 @@ class TextProcessor @Inject constructor(
     private val apiClientFactory: ApiClientFactory,
     private val preferencesDataStore: PreferencesDataStore
 ) {
-    suspend fun process(rawText: String, dictionaryWords: List<String>): String {
+    suspend fun process(
+        rawText: String,
+        dictionaryWords: List<String>,
+        sourceApp: String? = null
+    ): String {
         return try {
             val prefs = preferencesDataStore.preferences.first()
             if (!prefs.llmEnabled || prefs.llmBaseUrl.isBlank() || prefs.llmApiKey.isBlank()) {
@@ -27,15 +31,7 @@ class TextProcessor @Inject constructor(
                 prefs.llmApiKey
             )
 
-            val dictTerms = if (dictionaryWords.isNotEmpty()) {
-                "\n- Use these known terms correctly: ${dictionaryWords.joinToString(", ")}"
-            } else ""
-
-            val systemPrompt = """You are a dictation post-processor. Clean up the following transcribed speech:
-- Remove filler words (um, uh, like, you know)
-- Apply self-corrections ("seven, no sorry, five" → "five")
-- Fix grammar and punctuation$dictTerms
-Return ONLY the cleaned text, nothing else."""
+            val systemPrompt = buildSystemPrompt(dictionaryWords, sourceApp)
 
             val request = ChatCompletionRequest(
                 model = prefs.llmModel,
@@ -50,5 +46,50 @@ Return ONLY the cleaned text, nothing else."""
         } catch (e: Exception) {
             rawText
         }
+    }
+
+    private fun buildSystemPrompt(dictionaryWords: List<String>, sourceApp: String?): String {
+        val parts = mutableListOf<String>()
+
+        parts += """You are a dictation post-processor. The input is raw speech-to-text output. Transform it into clean written text:
+- Remove filler words and verbal tics (um, uh, like, you know, so, basically, I mean)
+- Apply self-corrections: when the speaker restates something, keep only the final version ("five no wait seven" becomes "seven")
+- Remove false starts and repeated words ("I I think" becomes "I think")
+- Fix punctuation, capitalization, and sentence boundaries
+- Convert spoken forms to written forms ("dot com" to ".com", "at sign" to "@", "slash" to "/")
+- Do not add, infer, or rephrase content beyond what was spoken"""
+
+        if (dictionaryWords.isNotEmpty()) {
+            parts += "- Use these known terms with their exact spelling: ${dictionaryWords.joinToString(", ")}"
+        }
+
+        if (!sourceApp.isNullOrBlank()) {
+            val style = inferStyleForApp(sourceApp)
+            if (style != null) {
+                parts += "- The user is dictating into $sourceApp. $style"
+            }
+        }
+
+        parts += "Return ONLY the cleaned text, nothing else."
+        return parts.joinToString("\n")
+    }
+
+    private fun inferStyleForApp(sourceApp: String): String? {
+        val appLower = sourceApp.lowercase()
+        return when {
+            appLower.containsAny("mail", "outlook", "gmail", "proton") ->
+                "Use a professional written tone with proper greetings and sign-offs if present."
+            appLower.containsAny("slack", "discord", "telegram", "whatsapp", "messenger", "signal", "messages") ->
+                "Use a casual conversational tone. Keep it concise and natural for chat."
+            appLower.containsAny("docs", "notion", "notes", "obsidian", "keep", "evernote", "writer") ->
+                "Use a clear, structured writing style suitable for documents and notes."
+            appLower.containsAny("twitter", "x", "mastodon", "threads", "bluesky") ->
+                "Keep it very concise and punchy, suitable for social media posts."
+            else -> null
+        }
+    }
+
+    private fun String.containsAny(vararg terms: String): Boolean {
+        return terms.any { this.contains(it) }
     }
 }

@@ -51,7 +51,7 @@ class TranscriptionManager @Inject constructor(
 
         if (rawText.isBlank()) return Result.success("")
 
-        val processedText = textProcessor.process(rawText, dictionaryWords)
+        val processedText = textProcessor.process(rawText, dictionaryWords, sourceApp)
         val wordCount = processedText.split("\\s+".toRegex()).filter { it.isNotBlank() }.size
 
         if (prefs.historyEnabled) {
