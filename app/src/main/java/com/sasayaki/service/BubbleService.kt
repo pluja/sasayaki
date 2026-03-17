@@ -25,6 +25,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -39,7 +42,13 @@ class BubbleService : Service() {
 
         @Volatile
         var isRunning: Boolean = false
-            private set
+            private set(value) {
+                field = value
+                _runningState.value = value
+            }
+
+        private val _runningState = MutableStateFlow(false)
+        val runningState: StateFlow<Boolean> = _runningState.asStateFlow()
 
         fun start(context: Context) {
             context.startForegroundService(Intent(context, BubbleService::class.java).apply {

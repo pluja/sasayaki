@@ -14,3 +14,11 @@ local.properties
 *.hprof
 debug.keystore
 sasayaki-debug.apk
+.gradle-local
+.gradle-local-project
+.gradle-cache
+.android-cache
+.kotlin
+.claude
+output/
+.*-cache

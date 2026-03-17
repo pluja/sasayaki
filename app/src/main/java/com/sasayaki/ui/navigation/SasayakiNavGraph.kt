@@ -4,9 +4,9 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.tween
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -22,10 +22,10 @@ object Routes {
     const val HISTORY = "history"
 }
 
-private val enterTransition: EnterTransition = slideInHorizontally(initialOffsetX = { it / 4 }) + fadeIn()
-private val exitTransition: ExitTransition = slideOutHorizontally(targetOffsetX = { -it / 4 }) + fadeOut()
-private val popEnterTransition: EnterTransition = slideInHorizontally(initialOffsetX = { -it / 4 }) + fadeIn()
-private val popExitTransition: ExitTransition = slideOutHorizontally(targetOffsetX = { it / 4 }) + fadeOut()
+private val enterTransition: EnterTransition = fadeIn(animationSpec = tween(durationMillis = 180))
+private val exitTransition: ExitTransition = fadeOut(animationSpec = tween(durationMillis = 120))
+private val popEnterTransition: EnterTransition = fadeIn(animationSpec = tween(durationMillis = 180))
+private val popExitTransition: ExitTransition = fadeOut(animationSpec = tween(durationMillis = 120))
 
 @Composable
 fun SasayakiNavGraph() {
@@ -41,9 +41,9 @@ fun SasayakiNavGraph() {
     ) {
         composable(Routes.HOME) {
             HomeScreen(
-                onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
-                onNavigateToDictionary = { navController.navigate(Routes.DICTIONARY) },
-                onNavigateToHistory = { navController.navigate(Routes.HISTORY) }
+                onNavigateToSettings = { navController.navigateSingleTop(Routes.SETTINGS) },
+                onNavigateToDictionary = { navController.navigateSingleTop(Routes.DICTIONARY) },
+                onNavigateToHistory = { navController.navigateSingleTop(Routes.HISTORY) }
             )
         }
         composable(Routes.SETTINGS) {
@@ -55,5 +55,12 @@ fun SasayakiNavGraph() {
         composable(Routes.HISTORY) {
             HistoryScreen(onBack = { navController.popBackStack() })
         }
+    }
+}
+
+private fun NavHostController.navigateSingleTop(route: String) {
+    navigate(route) {
+        launchSingleTop = true
+        restoreState = true
     }
 }

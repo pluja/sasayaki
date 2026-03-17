@@ -11,7 +11,6 @@ import com.sasayaki.R
 import com.sasayaki.data.preferences.PreferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,7 +25,7 @@ class TextInjectionBridge @Inject constructor(
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    fun inject(text: String): Boolean {
+    suspend fun inject(text: String): Boolean {
         val injector = TextInjectorService.instance
         if (injector != null) {
             val injectionResult = injector.injectText(text)
@@ -41,7 +40,7 @@ class TextInjectionBridge @Inject constructor(
             }
         }
 
-        val autoClipboard = runBlocking { preferencesDataStore.preferences.first().autoClipboard }
+        val autoClipboard = preferencesDataStore.preferences.first().autoClipboard
         if (autoClipboard) {
             copyToClipboard(text)
         } else {

@@ -10,6 +10,7 @@ import com.sasayaki.data.api.model.ChatMessage
 import com.sasayaki.data.preferences.PreferencesDataStore
 import com.sasayaki.data.preferences.UserPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,6 +36,13 @@ class SettingsViewModel @Inject constructor(
     private val preferencesDataStore: PreferencesDataStore,
     private val apiClientFactory: ApiClientFactory
 ) : ViewModel() {
+    private var asrSavedResetJob: Job? = null
+    private var llmSavedResetJob: Job? = null
+    private var asrTestJob: Job? = null
+    private var llmTestJob: Job? = null
+    private var asrTestResetJob: Job? = null
+    private var llmTestResetJob: Job? = null
+
     val preferences: StateFlow<UserPreferences> = preferencesDataStore.preferences
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserPreferences())
 
@@ -55,8 +63,11 @@ class SettingsViewModel @Inject constructor(
             preferencesDataStore.updateAsrConfig(baseUrl, apiKey, model)
             apiClientFactory.invalidate()
             _asrSaved.value = true
-            delay(2000)
-            _asrSaved.value = false
+            asrSavedResetJob?.cancel()
+            asrSavedResetJob = viewModelScope.launch {
+                delay(2000)
+                _asrSaved.value = false
+            }
         }
     }
 
@@ -65,8 +76,11 @@ class SettingsViewModel @Inject constructor(
             preferencesDataStore.updateLlmConfig(baseUrl, apiKey, model, enabled)
             apiClientFactory.invalidate()
             _llmSaved.value = true
-            delay(2000)
-            _llmSaved.value = false
+            llmSavedResetJob?.cancel()
+            llmSavedResetJob = viewModelScope.launch {
+                delay(2000)
+                _llmSaved.value = false
+            }
         }
     }
 
@@ -82,7 +96,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun testAsrConnection(baseUrl: String, apiKey: String, model: String) {
-        viewModelScope.launch {
+        asrTestJob?.cancel()
+        asrTestJob = viewModelScope.launch {
+            asrTestResetJob?.cancel()
             _asrTestState.value = TestState.Testing
             try {
                 val service = apiClientFactory.create(AsrApiService::class.java, baseUrl, apiKey)
@@ -103,13 +119,17 @@ class SettingsViewModel @Inject constructor(
             } catch (e: Exception) {
                 _asrTestState.value = TestState.Error(e.message ?: "Unknown error")
             }
-            delay(5000)
-            _asrTestState.value = TestState.Idle
+            asrTestResetJob = viewModelScope.launch {
+                delay(5000)
+                _asrTestState.value = TestState.Idle
+            }
         }
     }
 
     fun testLlmConnection(baseUrl: String, apiKey: String, model: String) {
-        viewModelScope.launch {
+        llmTestJob?.cancel()
+        llmTestJob = viewModelScope.launch {
+            llmTestResetJob?.cancel()
             _llmTestState.value = TestState.Testing
             try {
                 val service = apiClientFactory.create(LlmApiService::class.java, baseUrl, apiKey)
@@ -128,8 +148,10 @@ class SettingsViewModel @Inject constructor(
             } catch (e: Exception) {
                 _llmTestState.value = TestState.Error(e.message ?: "Unknown error")
             }
-            delay(5000)
-            _llmTestState.value = TestState.Idle
+            llmTestResetJob = viewModelScope.launch {
+                delay(5000)
+                _llmTestState.value = TestState.Idle
+            }
         }
     }
 

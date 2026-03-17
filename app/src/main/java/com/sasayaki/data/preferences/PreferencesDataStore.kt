@@ -22,7 +22,8 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 @Singleton
 class PreferencesDataStore @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val securePreferencesStore: SecurePreferencesStore
 ) {
     private object Keys {
         val ASR_BASE_URL = stringPreferencesKey("asr_base_url")
@@ -49,12 +50,14 @@ class PreferencesDataStore @Inject constructor(
             }
         }
         .map { prefs ->
+        migrateLegacySecretsIfNeeded(prefs)
+
         UserPreferences(
             asrBaseUrl = prefs[Keys.ASR_BASE_URL] ?: "",
-            asrApiKey = prefs[Keys.ASR_API_KEY] ?: "",
+            asrApiKey = securePreferencesStore.getAsrApiKey(),
             asrModel = prefs[Keys.ASR_MODEL] ?: "whisper-1",
             llmBaseUrl = prefs[Keys.LLM_BASE_URL] ?: "",
-            llmApiKey = prefs[Keys.LLM_API_KEY] ?: "",
+            llmApiKey = securePreferencesStore.getLlmApiKey(),
             llmModel = prefs[Keys.LLM_MODEL] ?: "gpt-4o-mini",
             llmEnabled = prefs[Keys.LLM_ENABLED] ?: false,
             autoClipboard = prefs[Keys.AUTO_CLIPBOARD] ?: true,
@@ -66,18 +69,20 @@ class PreferencesDataStore @Inject constructor(
     }
 
     suspend fun updateAsrConfig(baseUrl: String, apiKey: String, model: String) {
+        securePreferencesStore.updateAsrApiKey(apiKey.trim())
         context.dataStore.edit { prefs ->
-            prefs[Keys.ASR_BASE_URL] = baseUrl
-            prefs[Keys.ASR_API_KEY] = apiKey
-            prefs[Keys.ASR_MODEL] = model
+            prefs[Keys.ASR_BASE_URL] = baseUrl.trim()
+            prefs.remove(Keys.ASR_API_KEY)
+            prefs[Keys.ASR_MODEL] = model.trim()
         }
     }
 
     suspend fun updateLlmConfig(baseUrl: String, apiKey: String, model: String, enabled: Boolean) {
+        securePreferencesStore.updateLlmApiKey(apiKey.trim())
         context.dataStore.edit { prefs ->
-            prefs[Keys.LLM_BASE_URL] = baseUrl
-            prefs[Keys.LLM_API_KEY] = apiKey
-            prefs[Keys.LLM_MODEL] = model
+            prefs[Keys.LLM_BASE_URL] = baseUrl.trim()
+            prefs.remove(Keys.LLM_API_KEY)
+            prefs[Keys.LLM_MODEL] = model.trim()
             prefs[Keys.LLM_ENABLED] = enabled
         }
     }
@@ -93,6 +98,26 @@ class PreferencesDataStore @Inject constructor(
             prefs[Keys.VIBRATE_ON_RECORD] = vibrateOnRecord
             prefs[Keys.SILENCE_THRESHOLD_MS] = silenceThresholdMs
             prefs[Keys.HISTORY_ENABLED] = historyEnabled
+        }
+    }
+
+    private suspend fun migrateLegacySecretsIfNeeded(prefs: Preferences) {
+        val legacyAsrApiKey = prefs[Keys.ASR_API_KEY].orEmpty()
+        val legacyLlmApiKey = prefs[Keys.LLM_API_KEY].orEmpty()
+
+        if (legacyAsrApiKey.isBlank() && legacyLlmApiKey.isBlank()) return
+
+        if (legacyAsrApiKey.isNotBlank() && securePreferencesStore.getAsrApiKey().isBlank()) {
+            securePreferencesStore.updateAsrApiKey(legacyAsrApiKey)
+        }
+
+        if (legacyLlmApiKey.isNotBlank() && securePreferencesStore.getLlmApiKey().isBlank()) {
+            securePreferencesStore.updateLlmApiKey(legacyLlmApiKey)
+        }
+
+        context.dataStore.edit { mutablePrefs ->
+            mutablePrefs.remove(Keys.ASR_API_KEY)
+            mutablePrefs.remove(Keys.LLM_API_KEY)
         }
     }
 

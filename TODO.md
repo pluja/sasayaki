@@ -1,0 +1,3 @@
+- More stats; show global stats, and day stats.
+- Pass the app name to the LLM so it can adjust style to the app; for example, in a mail app, the style is more formal, in a IM app, the style may be more informal/friendly.
+- Tell the llm to cleanup the user input, since it's from ASR, it should clean all the speaking quirks and put it in a written-like format.

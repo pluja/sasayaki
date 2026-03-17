@@ -1,361 +1,357 @@
 package com.sasayaki.ui.settings
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.data.preferences.UserPreferences
+import com.sasayaki.ui.common.SasayakiScaffold
+import com.sasayaki.ui.common.SasayakiTopBar
+import com.sasayaki.ui.common.SectionCard
+import com.sasayaki.ui.common.StatusPill
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val prefs by viewModel.preferences.collectAsState()
-    val asrTestState by viewModel.asrTestState.collectAsState()
-    val llmTestState by viewModel.llmTestState.collectAsState()
-    val asrSaved by viewModel.asrSaved.collectAsState()
-    val llmSaved by viewModel.llmSaved.collectAsState()
+    val preferences by viewModel.preferences.collectAsStateWithLifecycle()
+    val asrTestState by viewModel.asrTestState.collectAsStateWithLifecycle()
+    val llmTestState by viewModel.llmTestState.collectAsStateWithLifecycle()
+    val asrSaved by viewModel.asrSaved.collectAsStateWithLifecycle()
+    val llmSaved by viewModel.llmSaved.collectAsStateWithLifecycle()
 
-    var asrUrl by remember(prefs.asrBaseUrl) { mutableStateOf(prefs.asrBaseUrl) }
-    var asrKey by remember(prefs.asrApiKey) { mutableStateOf(prefs.asrApiKey) }
-    var asrModel by remember(prefs.asrModel) { mutableStateOf(prefs.asrModel) }
+    var asrUrl by rememberSaveable(preferences.asrBaseUrl) { mutableStateOf(preferences.asrBaseUrl) }
+    var asrKey by rememberSaveable(preferences.asrApiKey) { mutableStateOf(preferences.asrApiKey) }
+    var asrModel by rememberSaveable(preferences.asrModel) { mutableStateOf(preferences.asrModel) }
 
-    var llmUrl by remember(prefs.llmBaseUrl) { mutableStateOf(prefs.llmBaseUrl) }
-    var llmKey by remember(prefs.llmApiKey) { mutableStateOf(prefs.llmApiKey) }
-    var llmModel by remember(prefs.llmModel) { mutableStateOf(prefs.llmModel) }
-    var llmEnabled by remember(prefs.llmEnabled) { mutableStateOf(prefs.llmEnabled) }
+    var llmUrl by rememberSaveable(preferences.llmBaseUrl) { mutableStateOf(preferences.llmBaseUrl) }
+    var llmKey by rememberSaveable(preferences.llmApiKey) { mutableStateOf(preferences.llmApiKey) }
+    var llmModel by rememberSaveable(preferences.llmModel) { mutableStateOf(preferences.llmModel) }
+    var llmEnabled by rememberSaveable(preferences.llmEnabled) { mutableStateOf(preferences.llmEnabled) }
 
-    var autoClipboard by remember(prefs.autoClipboard) { mutableStateOf(prefs.autoClipboard) }
-    var vibrateOnRecord by remember(prefs.vibrateOnRecord) { mutableStateOf(prefs.vibrateOnRecord) }
-    var silenceThreshold by remember(prefs.silenceThresholdMs) { mutableFloatStateOf(prefs.silenceThresholdMs.toFloat()) }
-    var historyEnabled by remember(prefs.historyEnabled) { mutableStateOf(prefs.historyEnabled) }
+    var silenceThreshold by rememberSaveable(preferences.silenceThresholdMs) {
+        mutableStateOf(preferences.silenceThresholdMs.toFloat())
+    }
 
-    Scaffold(
+    val asrDirty = asrUrl != preferences.asrBaseUrl ||
+        asrKey != preferences.asrApiKey ||
+        asrModel != preferences.asrModel
+    val llmDirty = llmUrl != preferences.llmBaseUrl ||
+        llmKey != preferences.llmApiKey ||
+        llmModel != preferences.llmModel ||
+        llmEnabled != preferences.llmEnabled
+
+    val asrUrlValid = isSecureUrl(asrUrl)
+    val llmUrlValid = isSecureUrl(llmUrl)
+    val canSaveAsr = asrDirty && asrUrlValid && asrModel.isNotBlank()
+    val canTestAsr = asrUrl.isNotBlank() && asrKey.isNotBlank() && asrModel.isNotBlank() && asrUrlValid
+    val canSaveLlm = llmDirty && (!llmEnabled || (llmUrlValid && llmModel.isNotBlank()))
+    val canTestLlm = llmEnabled && llmUrl.isNotBlank() && llmKey.isNotBlank() && llmModel.isNotBlank() && llmUrlValid
+
+    SasayakiScaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Settings") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                }
+            SasayakiTopBar(
+                title = "Settings",
+                subtitle = "Tune transcription quality, post-processing, and dictation behavior.",
+                onBack = onBack
             )
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = settingsContentPadding(padding),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // ASR Section
             item {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text("Speech Recognition (ASR)", style = MaterialTheme.typography.titleLarge)
-            }
-            item {
-                OutlinedTextField(
-                    value = asrUrl, onValueChange = { asrUrl = it },
-                    label = { Text("Base URL") },
-                    placeholder = { Text("https://api.openai.com") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                AsrSettingsSection(
+                    url = asrUrl,
+                    apiKey = asrKey,
+                    model = asrModel,
+                    saved = asrSaved,
+                    state = asrTestState,
+                    urlValid = asrUrlValid,
+                    canSave = canSaveAsr,
+                    canTest = canTestAsr,
+                    onUrlChange = { asrUrl = it },
+                    onApiKeyChange = { asrKey = it },
+                    onModelChange = { asrModel = it },
+                    onSave = { viewModel.saveAsrConfig(asrUrl, asrKey, asrModel) },
+                    onTest = { viewModel.testAsrConnection(asrUrl, asrKey, asrModel) }
                 )
-            }
-            item {
-                OutlinedTextField(
-                    value = asrKey, onValueChange = { asrKey = it },
-                    label = { Text("API Key") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation()
-                )
-            }
-            item {
-                OutlinedTextField(
-                    value = asrModel, onValueChange = { asrModel = it },
-                    label = { Text("Model") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            }
-            item {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val saveColor by animateColorAsState(
-                        if (asrSaved) MaterialTheme.colorScheme.tertiary
-                        else MaterialTheme.colorScheme.primary,
-                        label = "asrSaveColor"
-                    )
-                    Button(
-                        onClick = { viewModel.saveAsrConfig(asrUrl, asrKey, asrModel) },
-                        colors = ButtonDefaults.buttonColors(containerColor = saveColor)
-                    ) {
-                        if (asrSaved) {
-                            Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
-                            Text(" Saved")
-                        } else {
-                            Text("Save")
-                        }
-                    }
-                    TestButton(
-                        state = asrTestState,
-                        onClick = { viewModel.testAsrConnection(asrUrl, asrKey, asrModel) },
-                        enabled = asrUrl.isNotBlank() && asrKey.isNotBlank()
-                    )
-                }
-            }
-            // ASR test error detail
-            item {
-                TestResultDetail(asrTestState)
             }
 
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
-
-            // LLM Section
             item {
-                Text("LLM Post-Processing", style = MaterialTheme.typography.titleLarge)
-            }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Enable LLM")
-                    Switch(checked = llmEnabled, onCheckedChange = { llmEnabled = it })
-                }
-            }
-            item {
-                OutlinedTextField(
-                    value = llmUrl, onValueChange = { llmUrl = it },
-                    label = { Text("Base URL") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    enabled = llmEnabled
+                LlmSettingsSection(
+                    url = llmUrl,
+                    apiKey = llmKey,
+                    model = llmModel,
+                    enabled = llmEnabled,
+                    saved = llmSaved,
+                    state = llmTestState,
+                    urlValid = llmUrlValid,
+                    canSave = canSaveLlm,
+                    canTest = canTestLlm,
+                    onEnabledChange = { llmEnabled = it },
+                    onUrlChange = { llmUrl = it },
+                    onApiKeyChange = { llmKey = it },
+                    onModelChange = { llmModel = it },
+                    onSave = { viewModel.saveLlmConfig(llmUrl, llmKey, llmModel, llmEnabled) },
+                    onTest = { viewModel.testLlmConnection(llmUrl, llmKey, llmModel) }
                 )
             }
-            item {
-                OutlinedTextField(
-                    value = llmKey, onValueChange = { llmKey = it },
-                    label = { Text("API Key") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    enabled = llmEnabled
-                )
-            }
-            item {
-                OutlinedTextField(
-                    value = llmModel, onValueChange = { llmModel = it },
-                    label = { Text("Model") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    enabled = llmEnabled
-                )
-            }
-            item {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val saveColor by animateColorAsState(
-                        if (llmSaved) MaterialTheme.colorScheme.tertiary
-                        else MaterialTheme.colorScheme.primary,
-                        label = "llmSaveColor"
-                    )
-                    Button(
-                        onClick = { viewModel.saveLlmConfig(llmUrl, llmKey, llmModel, llmEnabled) },
-                        colors = ButtonDefaults.buttonColors(containerColor = saveColor)
-                    ) {
-                        if (llmSaved) {
-                            Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
-                            Text(" Saved")
-                        } else {
-                            Text("Save")
-                        }
-                    }
-                    TestButton(
-                        state = llmTestState,
-                        onClick = { viewModel.testLlmConnection(llmUrl, llmKey, llmModel) },
-                        enabled = llmEnabled && llmUrl.isNotBlank() && llmKey.isNotBlank()
-                    )
-                }
-            }
-            item {
-                TestResultDetail(llmTestState)
-            }
 
-            item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
-
-            // General Section
             item {
-                Text("General", style = MaterialTheme.typography.titleLarge)
-            }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Auto-clipboard fallback")
-                    Switch(
-                        checked = autoClipboard,
-                        onCheckedChange = {
-                            autoClipboard = it
-                            viewModel.saveGeneralSettings(it, vibrateOnRecord, silenceThreshold.toLong(), historyEnabled)
-                        }
-                    )
-                }
-            }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Vibrate on record")
-                    Switch(
-                        checked = vibrateOnRecord,
-                        onCheckedChange = {
-                            vibrateOnRecord = it
-                            viewModel.saveGeneralSettings(autoClipboard, it, silenceThreshold.toLong(), historyEnabled)
-                        }
-                    )
-                }
-            }
-            item {
-                Column {
-                    Text("Silence detection: ${"%.1f".format(silenceThreshold / 1000)}s")
-                    Slider(
-                        value = silenceThreshold,
-                        onValueChange = { silenceThreshold = it },
-                        onValueChangeFinished = {
-                            viewModel.saveGeneralSettings(autoClipboard, vibrateOnRecord, silenceThreshold.toLong(), historyEnabled)
-                        },
-                        valueRange = 500f..5000f,
-                        steps = 8
-                    )
-                }
-            }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Save dictation history")
-                    Switch(
-                        checked = historyEnabled,
-                        onCheckedChange = {
+                GeneralSettingsSection(
+                    preferences = preferences,
+                    silenceThreshold = silenceThreshold,
+                    onAutoClipboardChange = {
+                        viewModel.saveGeneralSettings(
+                            autoClipboard = it,
+                            vibrateOnRecord = preferences.vibrateOnRecord,
+                            silenceThresholdMs = silenceThreshold.toLong(),
+                            historyEnabled = preferences.historyEnabled
+                        )
+                    },
+                    onVibrateOnRecordChange = {
+                        viewModel.saveGeneralSettings(
+                            autoClipboard = preferences.autoClipboard,
+                            vibrateOnRecord = it,
+                            silenceThresholdMs = silenceThreshold.toLong(),
+                            historyEnabled = preferences.historyEnabled
+                        )
+                    },
+                    onSilenceThresholdChange = { silenceThreshold = it },
+                    onSilenceThresholdSave = {
+                        viewModel.saveGeneralSettings(
+                            autoClipboard = preferences.autoClipboard,
+                            vibrateOnRecord = preferences.vibrateOnRecord,
+                            silenceThresholdMs = silenceThreshold.toLong(),
+                            historyEnabled = preferences.historyEnabled
+                        )
+                    },
+                    onHistoryEnabledChange = {
+                        viewModel.saveGeneralSettings(
+                            autoClipboard = preferences.autoClipboard,
+                            vibrateOnRecord = preferences.vibrateOnRecord,
+                            silenceThresholdMs = silenceThreshold.toLong(),
                             historyEnabled = it
-                            viewModel.saveGeneralSettings(autoClipboard, vibrateOnRecord, silenceThreshold.toLong(), it)
-                        }
+                        )
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AsrSettingsSection(
+    url: String,
+    apiKey: String,
+    model: String,
+    saved: Boolean,
+    state: TestState,
+    urlValid: Boolean,
+    canSave: Boolean,
+    canTest: Boolean,
+    onUrlChange: (String) -> Unit,
+    onApiKeyChange: (String) -> Unit,
+    onModelChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onTest: () -> Unit
+) {
+    SectionCard(
+        title = "Speech recognition",
+        subtitle = "Point Sasayaki at the transcription endpoint that should receive your audio."
+    ) {
+        StatusPill(
+            label = "ASR",
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+
+        SettingTextField(
+            value = url,
+            onValueChange = onUrlChange,
+            label = "Base URL",
+            placeholder = "https://api.openai.com/",
+            supportingText = if (urlValid) null else "Use an HTTPS endpoint."
+        )
+
+        SettingTextField(
+            value = apiKey,
+            onValueChange = onApiKeyChange,
+            label = "API key",
+            isSecret = true
+        )
+
+        SettingTextField(
+            value = model,
+            onValueChange = onModelChange,
+            label = "Model",
+            supportingText = "Example: whisper-1"
+        )
+
+        SaveAndTestRow(
+            saved = saved,
+            state = state,
+            canSave = canSave,
+            canTest = canTest,
+            onSave = onSave,
+            onTest = onTest
+        )
+
+        TestResultBanner(state = state)
+    }
+}
+
+@Composable
+private fun LlmSettingsSection(
+    url: String,
+    apiKey: String,
+    model: String,
+    enabled: Boolean,
+    saved: Boolean,
+    state: TestState,
+    urlValid: Boolean,
+    canSave: Boolean,
+    canTest: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    onUrlChange: (String) -> Unit,
+    onApiKeyChange: (String) -> Unit,
+    onModelChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onTest: () -> Unit
+) {
+    SectionCard(
+        title = "Post-processing",
+        subtitle = "Optionally polish transcripts with an LLM before they are inserted."
+    ) {
+        SettingSwitchRow(
+            title = "Enable LLM cleanup",
+            description = "Use a second model to tidy punctuation, spelling, and casing before insertion.",
+            checked = enabled,
+            onCheckedChange = onEnabledChange
+        )
+
+        SettingTextField(
+            value = url,
+            onValueChange = onUrlChange,
+            label = "Base URL",
+            supportingText = when {
+                !enabled -> "Disabled until LLM cleanup is enabled."
+                urlValid -> null
+                else -> "Use an HTTPS endpoint."
+            },
+            enabled = enabled
+        )
+
+        SettingTextField(
+            value = apiKey,
+            onValueChange = onApiKeyChange,
+            label = "API key",
+            enabled = enabled,
+            isSecret = true
+        )
+
+        SettingTextField(
+            value = model,
+            onValueChange = onModelChange,
+            label = "Model",
+            supportingText = if (enabled) "Example: gpt-4o-mini" else null,
+            enabled = enabled
+        )
+
+        SaveAndTestRow(
+            saved = saved,
+            state = state,
+            canSave = canSave,
+            canTest = canTest,
+            onSave = onSave,
+            onTest = onTest
+        )
+
+        TestResultBanner(state = state)
+    }
+}
+
+@Composable
+private fun GeneralSettingsSection(
+    preferences: UserPreferences,
+    silenceThreshold: Float,
+    onAutoClipboardChange: (Boolean) -> Unit,
+    onVibrateOnRecordChange: (Boolean) -> Unit,
+    onSilenceThresholdChange: (Float) -> Unit,
+    onSilenceThresholdSave: () -> Unit,
+    onHistoryEnabledChange: (Boolean) -> Unit
+) {
+    SectionCard(
+        title = "Behavior",
+        subtitle = "Decide how Sasayaki behaves when insertion fails, when recording starts, and how much history stays on the device."
+    ) {
+        SettingSwitchRow(
+            title = "Clipboard fallback",
+            description = "When direct insertion is unavailable, copy the dictated text so you can paste it manually.",
+            checked = preferences.autoClipboard,
+            onCheckedChange = onAutoClipboardChange
+        )
+
+        SettingSwitchRow(
+            title = "Haptic feedback",
+            description = "Give a short vibration when recording starts and stops.",
+            checked = preferences.vibrateOnRecord,
+            onCheckedChange = onVibrateOnRecordChange
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Silence detection",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "Stop recording after ${"%.1f".format(silenceThreshold / 1000f)} seconds of silence.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                StatusPill(label = "${"%.1f".format(silenceThreshold / 1000f)}s")
             }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-        }
-    }
-}
 
-@Composable
-private fun TestButton(
-    state: TestState,
-    onClick: () -> Unit,
-    enabled: Boolean
-) {
-    OutlinedButton(
-        onClick = onClick,
-        enabled = enabled && state !is TestState.Testing
-    ) {
-        when (state) {
-            is TestState.Idle -> Text("Test")
-            is TestState.Testing -> {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp
-                )
-            }
-            is TestState.Success -> {
-                Icon(
-                    Icons.Default.Check, null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Text(" OK", color = MaterialTheme.colorScheme.primary)
-            }
-            is TestState.Error -> {
-                Icon(
-                    Icons.Default.Close, null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.error
-                )
-                Text(" Fail", color = MaterialTheme.colorScheme.error)
-            }
-        }
-    }
-}
-
-@Composable
-private fun TestResultDetail(state: TestState) {
-    when (state) {
-        is TestState.Error -> {
-            Text(
-                text = state.message,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
+            Slider(
+                value = silenceThreshold,
+                onValueChange = onSilenceThresholdChange,
+                onValueChangeFinished = onSilenceThresholdSave,
+                valueRange = 500f..5000f,
+                steps = 8
             )
         }
-        is TestState.Success -> {
-            Text(
-                text = state.message,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-        else -> {}
+
+        SettingSwitchRow(
+            title = "Save dictation history",
+            description = "Keep recent dictations on the device so you can review and copy them later.",
+            checked = preferences.historyEnabled,
+            onCheckedChange = onHistoryEnabledChange
+        )
     }
 }

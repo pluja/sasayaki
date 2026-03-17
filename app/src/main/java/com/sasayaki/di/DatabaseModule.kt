@@ -1,7 +1,9 @@
 package com.sasayaki.di
 
 import android.content.Context
+import androidx.room.migration.Migration
 import androidx.room.Room
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sasayaki.data.db.SasayakiDatabase
 import com.sasayaki.data.db.dao.DictationDao
 import com.sasayaki.data.db.dao.DictionaryDao
@@ -15,6 +17,14 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
+    private val migration1To2 = object : Migration(1, 2) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_dictations_timestamp` ON `dictations` (`timestamp`)"
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): SasayakiDatabase {
@@ -22,7 +32,7 @@ object DatabaseModule {
             context,
             SasayakiDatabase::class.java,
             "sasayaki.db"
-        ).fallbackToDestructiveMigration(dropAllTables = true).build()
+        ).addMigrations(migration1To2).build()
     }
 
     @Provides

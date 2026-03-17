@@ -56,6 +56,10 @@ android {
         buildConfig = true
     }
 
+    composeCompiler {
+        stabilityConfigurationFile = project.layout.projectDirectory.file("compose-stability.conf")
+    }
+
     room {
         schemaDirectory("$projectDir/schemas")
     }
@@ -97,6 +101,7 @@ dependencies {
 
     // DataStore
     implementation(libs.datastore.preferences)
+    implementation(libs.androidx.security.crypto)
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)

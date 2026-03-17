@@ -4,66 +4,63 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.data.db.entity.Dictation
+import com.sasayaki.ui.common.EmptyStateCard
+import com.sasayaki.ui.common.SasayakiScaffold
+import com.sasayaki.ui.common.SasayakiTopBar
+import com.sasayaki.ui.common.StatusPill
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryScreen(
     onBack: () -> Unit,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
-    val dayGroups by viewModel.dayGroups.collectAsState()
+    val dayGroups by viewModel.dayGroups.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    var expandedIds by rememberSaveable { mutableStateOf(emptySet<Long>()) }
 
-    Scaffold(
+    SasayakiScaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("History") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                }
+            SasayakiTopBar(
+                title = "History",
+                subtitle = "Review, copy, or clear previous dictations stored on this device.",
+                onBack = onBack
             )
         }
     ) { padding ->
@@ -71,138 +68,150 @@ fun HistoryScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(historyContentPadding(padding)),
+                verticalArrangement = Arrangement.Center
             ) {
-                Text(
-                    "No dictation history yet.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                EmptyStateCard(
+                    icon = Icons.Default.History,
+                    title = "No dictations yet",
+                    description = "When history is enabled, your recent transcripts will appear here for quick reuse."
                 )
             }
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                contentPadding = historyContentPadding(padding),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 dayGroups.forEach { group ->
-                    item(key = "header_${group.date}") {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = group.date,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "${group.totalWords} words",
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                    item(key = "header_${group.key}") {
+                        DayHeader(group = group)
                     }
 
                     items(group.dictations, key = { it.id }) { dictation ->
-                        var expanded by remember { mutableStateOf(false) }
-
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .clickable { expanded = !expanded }
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = dictation.text.take(80) + if (dictation.text.length > 80) "..." else "",
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                            Text(
-                                                text = timeFormat.format(Date(dictation.timestamp)),
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Text(
-                                                text = "${dictation.wordCount} words",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            dictation.sourceApp?.let { app ->
-                                                Text(
-                                                    text = app,
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    color = MaterialTheme.colorScheme.tertiary
-                                                )
-                                            }
-                                        }
-                                    }
-                                    IconButton(
-                                        onClick = { copyToClipboard(context, dictation.text) },
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.ContentCopy, "Copy",
-                                            modifier = Modifier.size(18.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    IconButton(
-                                        onClick = { viewModel.delete(dictation.id) },
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Delete, "Delete",
-                                            modifier = Modifier.size(18.dp),
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                    }
+                        HistoryCard(
+                            dictation = dictation,
+                            expanded = dictation.id in expandedIds,
+                            onToggle = {
+                                expandedIds = if (dictation.id in expandedIds) {
+                                    expandedIds - dictation.id
+                                } else {
+                                    expandedIds + dictation.id
                                 }
+                            },
+                            onCopy = { copyToClipboard(context, dictation.text) },
+                            onDelete = { viewModel.delete(dictation.id) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
-                                AnimatedVisibility(visible = expanded) {
-                                    Column(modifier = Modifier.padding(top = 8.dp)) {
-                                        if (dictation.rawText != dictation.text) {
-                                            Text(
-                                                "Raw:",
-                                                style = MaterialTheme.typography.labelLarge,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Text(
-                                                text = dictation.rawText,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Text(
-                                                "Processed:",
-                                                style = MaterialTheme.typography.labelLarge,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                        Text(
-                                            text = dictation.text,
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                    }
-                                }
-                            }
+@Composable
+private fun DayHeader(group: DayGroup) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = group.date,
+            style = MaterialTheme.typography.titleLarge
+        )
+        StatusPill(
+            label = "${group.totalWords} words",
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+    }
+}
+
+@Composable
+private fun HistoryCard(
+    dictation: Dictation,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onCopy: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        onClick = onToggle,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .animateContentSize(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = dictation.text,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = if (expanded) Int.MAX_VALUE else 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        StatusPill(label = formatTime(dictation.timestamp))
+                        StatusPill(label = "${dictation.wordCount} words")
+                        dictation.sourceApp?.takeIf(String::isNotBlank)?.let { sourceApp ->
+                            StatusPill(
+                                label = displaySourceApp(sourceApp),
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
                         }
                     }
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    IconButton(onClick = onCopy) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = "Copy dictation"
+                        )
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete dictation",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+
+            if (expanded && dictation.rawText != dictation.text) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Raw transcript",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = dictation.rawText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -213,4 +222,25 @@ private fun copyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText("dictation", text))
     Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+}
+
+private val timeFormat = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+private val defaultZoneId = ZoneId.systemDefault()
+
+private fun formatTime(timestamp: Long): String {
+    return timeFormat.format(Instant.ofEpochMilli(timestamp).atZone(defaultZoneId))
+}
+
+private fun displaySourceApp(sourceApp: String): String {
+    val compactName = sourceApp.substringAfterLast('.')
+    return compactName.take(20)
+}
+
+private fun historyContentPadding(padding: PaddingValues): PaddingValues {
+    return PaddingValues(
+        start = 20.dp,
+        end = 20.dp,
+        top = padding.calculateTopPadding() + 12.dp,
+        bottom = padding.calculateBottomPadding() + 24.dp
+    )
 }
