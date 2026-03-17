@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,8 +25,8 @@ import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -59,8 +58,12 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val todayCount by viewModel.todayCount.collectAsStateWithLifecycle(initialValue = 0)
-    val todayWordCount by viewModel.todayWordCount.collectAsStateWithLifecycle(initialValue = 0)
+    val todayCount by viewModel.todayCount.collectAsStateWithLifecycle()
+    val todayWordCount by viewModel.todayWordCount.collectAsStateWithLifecycle()
+    val todayDurationMs by viewModel.todayDurationMs.collectAsStateWithLifecycle()
+    val totalCount by viewModel.totalCount.collectAsStateWithLifecycle()
+    val totalWordCount by viewModel.totalWordCount.collectAsStateWithLifecycle()
+    val totalDurationMs by viewModel.totalDurationMs.collectAsStateWithLifecycle()
     val serviceRunning by BubbleService.runningState.collectAsStateWithLifecycle()
 
     val overlayPermission = rememberOverlayPermissionState()
@@ -99,9 +102,13 @@ fun HomeScreen(
             }
 
             item {
-                StatsRow(
+                StatsSection(
                     todayCount = todayCount,
-                    todayWordCount = todayWordCount
+                    todayWordCount = todayWordCount,
+                    todayDurationMs = todayDurationMs,
+                    totalCount = totalCount,
+                    totalWordCount = totalWordCount,
+                    totalDurationMs = totalDurationMs
                 )
             }
 
@@ -253,26 +260,67 @@ private fun HomeHeroCard(
 }
 
 @Composable
-private fun StatsRow(
+private fun StatsSection(
     todayCount: Int,
-    todayWordCount: Int
+    todayWordCount: Int,
+    todayDurationMs: Long,
+    totalCount: Int,
+    totalWordCount: Int,
+    totalDurationMs: Long
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        StatCard(
-            title = "Today",
-            value = todayCount.toString(),
-            description = if (todayCount == 1) "dictation captured" else "dictations captured",
-            modifier = Modifier.weight(1f)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = "Today",
+            style = MaterialTheme.typography.titleLarge
         )
-        StatCard(
-            title = "Words",
-            value = todayWordCount.toString(),
-            description = "spoken so far",
-            modifier = Modifier.weight(1f)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            StatCard(
+                title = "Dictations",
+                value = todayCount.toString(),
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                title = "Words",
+                value = todayWordCount.toString(),
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                title = "Time",
+                value = formatDuration(todayDurationMs),
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        if (totalCount > 0) {
+            Text(
+                text = "All time",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                StatCard(
+                    title = "Dictations",
+                    value = totalCount.toString(),
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    title = "Words",
+                    value = formatCompactNumber(totalWordCount),
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    title = "Time",
+                    value = formatDuration(totalDurationMs),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
     }
 }
 
@@ -280,33 +328,26 @@ private fun StatsRow(
 private fun StatCard(
     title: String,
     value: String,
-    description: String,
     modifier: Modifier = Modifier
 ) {
-    ElevatedCard(
+    Card(
         modifier = modifier,
-        colors = CardDefaults.elevatedCardColors(
+        colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        )
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.headlineMedium
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -334,6 +375,26 @@ private fun RestrictedSettingsCard(onOpenAppInfo: () -> Unit) {
                 Text("Open App Info")
             }
         }
+    }
+}
+
+private fun formatDuration(millis: Long): String {
+    val totalSeconds = millis / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return when {
+        hours > 0 -> "${hours}h ${minutes}m"
+        minutes > 0 -> "${minutes}m ${seconds}s"
+        else -> "${seconds}s"
+    }
+}
+
+private fun formatCompactNumber(number: Int): String {
+    return when {
+        number >= 1_000_000 -> "${"%.1f".format(number / 1_000_000.0)}M"
+        number >= 10_000 -> "${"%.1f".format(number / 1_000.0)}K"
+        else -> number.toString()
     }
 }
 

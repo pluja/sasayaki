@@ -31,6 +31,19 @@ class HomeViewModel @Inject constructor(
         .flatMapLatest(dictationDao::getTodayWordCount)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
+    val todayDurationMs: StateFlow<Long> = startOfToday
+        .flatMapLatest(dictationDao::getTodayDurationMs)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
+    val totalCount: StateFlow<Int> = dictationDao.getTotalCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val totalWordCount: StateFlow<Int> = dictationDao.getTotalWordCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val totalDurationMs: StateFlow<Long> = dictationDao.getTotalDurationMs()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+
     init {
         viewModelScope.launch {
             while (isActive) {

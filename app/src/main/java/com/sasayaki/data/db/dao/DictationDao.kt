@@ -21,4 +21,16 @@ interface DictationDao {
 
     @Query("SELECT COALESCE(SUM(wordCount), 0) FROM dictations WHERE timestamp >= :startOfDay")
     fun getTodayWordCount(startOfDay: Long): Flow<Int>
+
+    @Query("SELECT COALESCE(SUM(durationMs), 0) FROM dictations WHERE timestamp >= :startOfDay")
+    fun getTodayDurationMs(startOfDay: Long): Flow<Long>
+
+    @Query("SELECT COUNT(*) FROM dictations")
+    fun getTotalCount(): Flow<Int>
+
+    @Query("SELECT COALESCE(SUM(wordCount), 0) FROM dictations")
+    fun getTotalWordCount(): Flow<Int>
+
+    @Query("SELECT COALESCE(SUM(durationMs), 0) FROM dictations")
+    fun getTotalDurationMs(): Flow<Long>
 }
