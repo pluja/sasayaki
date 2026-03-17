@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Sasayaki</string>
+    <string name="bubble_notification_channel">Dictation Service</string>
+    <string name="bubble_notification_title">Sasayaki is running</string>
+    <string name="bubble_notification_text">Tap the bubble to dictate</string>
+    <string name="action_stop">Stop</string>
+    <string name="accessibility_service_description">Sasayaki uses accessibility to insert dictated text into text fields in other apps. It only accesses the currently focused text field and does not read passwords or sensitive data.</string>
+    <string name="clipboard_fallback_toast">Text copied to clipboard</string>
+    <string name="no_accessibility_toast">Enable accessibility service for direct text insertion</string>
+</resources>
