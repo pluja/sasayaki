@@ -116,6 +116,8 @@ fun SectionCard(
     }
 }
 
+private val PillShape = RoundedCornerShape(999.dp)
+
 @Composable
 fun StatusPill(
     label: String,
@@ -127,7 +129,7 @@ fun StatusPill(
         modifier = modifier,
         color = containerColor,
         contentColor = contentColor,
-        shape = RoundedCornerShape(999.dp)
+        shape = PillShape
     ) {
         Text(
             text = label,

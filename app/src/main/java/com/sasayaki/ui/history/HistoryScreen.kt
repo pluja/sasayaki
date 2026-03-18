@@ -4,7 +4,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -88,18 +88,27 @@ fun HistoryScreen(
                     }
 
                     items(group.dictations, key = { it.id }) { dictation ->
-                        HistoryCard(
-                            dictation = dictation,
-                            expanded = dictation.id in expandedIds,
-                            onToggle = {
+                        val onToggle = remember(dictation.id) {
+                            {
                                 expandedIds = if (dictation.id in expandedIds) {
                                     expandedIds - dictation.id
                                 } else {
                                     expandedIds + dictation.id
                                 }
-                            },
-                            onCopy = { copyToClipboard(context, dictation.text) },
-                            onDelete = { viewModel.delete(dictation.id) }
+                            }
+                        }
+                        val onCopy = remember(dictation.id) {
+                            { copyToClipboard(context, dictation.text) }
+                        }
+                        val onDelete = remember(dictation.id) {
+                            { viewModel.delete(dictation.id) }
+                        }
+                        HistoryCard(
+                            dictation = dictation,
+                            expanded = dictation.id in expandedIds,
+                            onToggle = onToggle,
+                            onCopy = onCopy,
+                            onDelete = onDelete
                         )
                     }
                 }
@@ -155,9 +164,7 @@ private fun HistoryCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .animateContentSize(),
+                    modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(

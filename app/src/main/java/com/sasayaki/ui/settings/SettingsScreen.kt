@@ -9,7 +9,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
@@ -20,8 +21,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -59,20 +62,31 @@ fun SettingsScreen(
         mutableStateOf(preferences.silenceThresholdMs.toFloat())
     }
 
-    val asrDirty = asrUrl != preferences.asrBaseUrl ||
-        asrKey != preferences.asrApiKey ||
-        asrModel != preferences.asrModel
-    val llmDirty = llmUrl != preferences.llmBaseUrl ||
-        llmKey != preferences.llmApiKey ||
-        llmModel != preferences.llmModel ||
-        llmEnabled != preferences.llmEnabled
-
-    val asrUrlValid = isSecureUrl(asrUrl)
-    val llmUrlValid = isSecureUrl(llmUrl)
-    val canSaveAsr = asrDirty && asrUrlValid && asrModel.isNotBlank()
-    val canTestAsr = asrUrl.isNotBlank() && asrKey.isNotBlank() && asrModel.isNotBlank() && asrUrlValid
-    val canSaveLlm = llmDirty && (!llmEnabled || (llmUrlValid && llmModel.isNotBlank()))
-    val canTestLlm = llmEnabled && llmUrl.isNotBlank() && llmKey.isNotBlank() && llmModel.isNotBlank() && llmUrlValid
+    val asrUrlValid by remember { derivedStateOf { isSecureUrl(asrUrl) } }
+    val llmUrlValid by remember { derivedStateOf { isSecureUrl(llmUrl) } }
+    val canSaveAsr by remember {
+        derivedStateOf {
+            val dirty = asrUrl != preferences.asrBaseUrl ||
+                asrKey != preferences.asrApiKey ||
+                asrModel != preferences.asrModel
+            dirty && asrUrlValid && asrModel.isNotBlank()
+        }
+    }
+    val canTestAsr by remember {
+        derivedStateOf { asrUrl.isNotBlank() && asrKey.isNotBlank() && asrModel.isNotBlank() && asrUrlValid }
+    }
+    val canSaveLlm by remember {
+        derivedStateOf {
+            val dirty = llmUrl != preferences.llmBaseUrl ||
+                llmKey != preferences.llmApiKey ||
+                llmModel != preferences.llmModel ||
+                llmEnabled != preferences.llmEnabled
+            dirty && (!llmEnabled || (llmUrlValid && llmModel.isNotBlank()))
+        }
+    }
+    val canTestLlm by remember {
+        derivedStateOf { llmEnabled && llmUrl.isNotBlank() && llmKey.isNotBlank() && llmModel.isNotBlank() && llmUrlValid }
+    }
 
     SasayakiScaffold(
         topBar = {
@@ -83,95 +97,90 @@ fun SettingsScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
-            contentPadding = settingsContentPadding(padding),
+        val scrollPadding = settingsContentPadding(padding)
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(scrollPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
-                AsrSettingsSection(
-                    url = asrUrl,
-                    apiKey = asrKey,
-                    model = asrModel,
-                    saved = asrSaved,
-                    state = asrTestState,
-                    urlValid = asrUrlValid,
-                    canSave = canSaveAsr,
-                    canTest = canTestAsr,
-                    onUrlChange = { asrUrl = it },
-                    onApiKeyChange = { asrKey = it },
-                    onModelChange = { asrModel = it },
-                    onSave = { viewModel.saveAsrConfig(asrUrl, asrKey, asrModel) },
-                    onTest = { viewModel.testAsrConnection(asrUrl, asrKey, asrModel) }
-                )
-            }
+            AsrSettingsSection(
+                url = asrUrl,
+                apiKey = asrKey,
+                model = asrModel,
+                saved = asrSaved,
+                state = asrTestState,
+                urlValid = asrUrlValid,
+                canSave = canSaveAsr,
+                canTest = canTestAsr,
+                onUrlChange = { asrUrl = it },
+                onApiKeyChange = { asrKey = it },
+                onModelChange = { asrModel = it },
+                onSave = { viewModel.saveAsrConfig(asrUrl, asrKey, asrModel) },
+                onTest = { viewModel.testAsrConnection(asrUrl, asrKey, asrModel) }
+            )
 
-            item {
-                LlmSettingsSection(
-                    url = llmUrl,
-                    apiKey = llmKey,
-                    model = llmModel,
-                    enabled = llmEnabled,
-                    saved = llmSaved,
-                    state = llmTestState,
-                    urlValid = llmUrlValid,
-                    canSave = canSaveLlm,
-                    canTest = canTestLlm,
-                    onEnabledChange = { llmEnabled = it },
-                    onUrlChange = { llmUrl = it },
-                    onApiKeyChange = { llmKey = it },
-                    onModelChange = { llmModel = it },
-                    onSave = { viewModel.saveLlmConfig(llmUrl, llmKey, llmModel, llmEnabled) },
-                    onTest = { viewModel.testLlmConnection(llmUrl, llmKey, llmModel) }
-                )
-            }
+            LlmSettingsSection(
+                url = llmUrl,
+                apiKey = llmKey,
+                model = llmModel,
+                enabled = llmEnabled,
+                saved = llmSaved,
+                state = llmTestState,
+                urlValid = llmUrlValid,
+                canSave = canSaveLlm,
+                canTest = canTestLlm,
+                onEnabledChange = { llmEnabled = it },
+                onUrlChange = { llmUrl = it },
+                onApiKeyChange = { llmKey = it },
+                onModelChange = { llmModel = it },
+                onSave = { viewModel.saveLlmConfig(llmUrl, llmKey, llmModel, llmEnabled) },
+                onTest = { viewModel.testLlmConnection(llmUrl, llmKey, llmModel) }
+            )
 
-            item {
-                LanguageSettingsSection(
-                    languages = preferences.preferredLanguages,
-                    onAddLanguage = { viewModel.addPreferredLanguage(it) },
-                    onRemoveLanguage = { viewModel.removePreferredLanguage(it) }
-                )
-            }
+            LanguageSettingsSection(
+                languages = preferences.preferredLanguages,
+                onAddLanguage = { viewModel.addPreferredLanguage(it) },
+                onRemoveLanguage = { viewModel.removePreferredLanguage(it) }
+            )
 
-            item {
-                GeneralSettingsSection(
-                    preferences = preferences,
-                    silenceThreshold = silenceThreshold,
-                    onAutoClipboardChange = {
-                        viewModel.saveGeneralSettings(
-                            autoClipboard = it,
-                            vibrateOnRecord = preferences.vibrateOnRecord,
-                            silenceThresholdMs = silenceThreshold.toLong(),
-                            historyEnabled = preferences.historyEnabled
-                        )
-                    },
-                    onVibrateOnRecordChange = {
-                        viewModel.saveGeneralSettings(
-                            autoClipboard = preferences.autoClipboard,
-                            vibrateOnRecord = it,
-                            silenceThresholdMs = silenceThreshold.toLong(),
-                            historyEnabled = preferences.historyEnabled
-                        )
-                    },
-                    onSilenceThresholdChange = { silenceThreshold = it },
-                    onSilenceThresholdSave = {
-                        viewModel.saveGeneralSettings(
-                            autoClipboard = preferences.autoClipboard,
-                            vibrateOnRecord = preferences.vibrateOnRecord,
-                            silenceThresholdMs = silenceThreshold.toLong(),
-                            historyEnabled = preferences.historyEnabled
-                        )
-                    },
-                    onHistoryEnabledChange = {
-                        viewModel.saveGeneralSettings(
-                            autoClipboard = preferences.autoClipboard,
-                            vibrateOnRecord = preferences.vibrateOnRecord,
-                            silenceThresholdMs = silenceThreshold.toLong(),
-                            historyEnabled = it
-                        )
-                    }
-                )
-            }
+            GeneralSettingsSection(
+                preferences = preferences,
+                silenceThreshold = silenceThreshold,
+                onAutoClipboardChange = {
+                    viewModel.saveGeneralSettings(
+                        autoClipboard = it,
+                        vibrateOnRecord = preferences.vibrateOnRecord,
+                        silenceThresholdMs = silenceThreshold.toLong(),
+                        historyEnabled = preferences.historyEnabled
+                    )
+                },
+                onVibrateOnRecordChange = {
+                    viewModel.saveGeneralSettings(
+                        autoClipboard = preferences.autoClipboard,
+                        vibrateOnRecord = it,
+                        silenceThresholdMs = silenceThreshold.toLong(),
+                        historyEnabled = preferences.historyEnabled
+                    )
+                },
+                onSilenceThresholdChange = { silenceThreshold = it },
+                onSilenceThresholdSave = {
+                    viewModel.saveGeneralSettings(
+                        autoClipboard = preferences.autoClipboard,
+                        vibrateOnRecord = preferences.vibrateOnRecord,
+                        silenceThresholdMs = silenceThreshold.toLong(),
+                        historyEnabled = preferences.historyEnabled
+                    )
+                },
+                onHistoryEnabledChange = {
+                    viewModel.saveGeneralSettings(
+                        autoClipboard = preferences.autoClipboard,
+                        vibrateOnRecord = preferences.vibrateOnRecord,
+                        silenceThresholdMs = silenceThreshold.toLong(),
+                        historyEnabled = it
+                    )
+                }
+            )
         }
     }
 }
