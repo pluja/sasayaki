@@ -3,6 +3,7 @@ package com.sasayaki.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sasayaki.data.db.dao.DictationDao
+import com.sasayaki.data.db.entity.DictationStats
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -16,33 +17,21 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
 
+private val EMPTY_STATS = DictationStats(count = 0, wordCount = 0, durationMs = 0L)
+
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val dictationDao: DictationDao
+    dictationDao: DictationDao
 ) : ViewModel() {
     private val startOfToday = MutableStateFlow(currentStartOfDay())
 
-    val todayCount: StateFlow<Int> = startOfToday
-        .flatMapLatest(dictationDao::getTodayCount)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    val todayStats: StateFlow<DictationStats> = startOfToday
+        .flatMapLatest(dictationDao::getTodayStats)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EMPTY_STATS)
 
-    val todayWordCount: StateFlow<Int> = startOfToday
-        .flatMapLatest(dictationDao::getTodayWordCount)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
-    val todayDurationMs: StateFlow<Long> = startOfToday
-        .flatMapLatest(dictationDao::getTodayDurationMs)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
-
-    val totalCount: StateFlow<Int> = dictationDao.getTotalCount()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
-    val totalWordCount: StateFlow<Int> = dictationDao.getTotalWordCount()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
-
-    val totalDurationMs: StateFlow<Long> = dictationDao.getTotalDurationMs()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
+    val totalStats: StateFlow<DictationStats> = dictationDao.getTotalStats()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EMPTY_STATS)
 
     init {
         viewModelScope.launch {

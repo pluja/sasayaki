@@ -61,8 +61,7 @@ class TextInjectorService : AccessibilityService() {
                     focusedAppPackage = packageName
                 }
             }
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED,
-            AccessibilityEvent.TYPE_WINDOWS_CHANGED -> {
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
                 checkKeyboardVisibility()
             }
         }

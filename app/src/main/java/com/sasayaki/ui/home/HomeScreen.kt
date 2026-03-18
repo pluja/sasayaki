@@ -58,12 +58,8 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val todayCount by viewModel.todayCount.collectAsStateWithLifecycle()
-    val todayWordCount by viewModel.todayWordCount.collectAsStateWithLifecycle()
-    val todayDurationMs by viewModel.todayDurationMs.collectAsStateWithLifecycle()
-    val totalCount by viewModel.totalCount.collectAsStateWithLifecycle()
-    val totalWordCount by viewModel.totalWordCount.collectAsStateWithLifecycle()
-    val totalDurationMs by viewModel.totalDurationMs.collectAsStateWithLifecycle()
+    val todayStats by viewModel.todayStats.collectAsStateWithLifecycle()
+    val totalStats by viewModel.totalStats.collectAsStateWithLifecycle()
     val serviceRunning by BubbleService.runningState.collectAsStateWithLifecycle()
 
     val overlayPermission = rememberOverlayPermissionState()
@@ -103,12 +99,12 @@ fun HomeScreen(
 
             item {
                 StatsSection(
-                    todayCount = todayCount,
-                    todayWordCount = todayWordCount,
-                    todayDurationMs = todayDurationMs,
-                    totalCount = totalCount,
-                    totalWordCount = totalWordCount,
-                    totalDurationMs = totalDurationMs
+                    todayCount = todayStats.count,
+                    todayWordCount = todayStats.wordCount,
+                    todayDurationMs = todayStats.durationMs,
+                    totalCount = totalStats.count,
+                    totalWordCount = totalStats.wordCount,
+                    totalDurationMs = totalStats.durationMs
                 )
             }
 

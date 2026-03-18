@@ -3,6 +3,7 @@ package com.sasayaki.data.db.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import com.sasayaki.data.db.entity.DictationStats
 import com.sasayaki.data.db.entity.DictationSummary
 import kotlinx.coroutines.flow.Flow
 
@@ -23,21 +24,19 @@ interface DictationDao {
     @Query("DELETE FROM dictations WHERE id NOT IN (SELECT id FROM dictations ORDER BY timestamp DESC LIMIT :keep)")
     suspend fun pruneOldEntries(keep: Int)
 
-    @Query("SELECT COUNT(*) FROM dictations WHERE timestamp >= :startOfDay")
-    fun getTodayCount(startOfDay: Long): Flow<Int>
+    @Query("""
+        SELECT COUNT(*) as count,
+               COALESCE(SUM(wordCount), 0) as wordCount,
+               COALESCE(SUM(durationMs), 0) as durationMs
+        FROM dictations WHERE timestamp >= :startOfDay
+    """)
+    fun getTodayStats(startOfDay: Long): Flow<DictationStats>
 
-    @Query("SELECT COALESCE(SUM(wordCount), 0) FROM dictations WHERE timestamp >= :startOfDay")
-    fun getTodayWordCount(startOfDay: Long): Flow<Int>
-
-    @Query("SELECT COALESCE(SUM(durationMs), 0) FROM dictations WHERE timestamp >= :startOfDay")
-    fun getTodayDurationMs(startOfDay: Long): Flow<Long>
-
-    @Query("SELECT COUNT(*) FROM dictations")
-    fun getTotalCount(): Flow<Int>
-
-    @Query("SELECT COALESCE(SUM(wordCount), 0) FROM dictations")
-    fun getTotalWordCount(): Flow<Int>
-
-    @Query("SELECT COALESCE(SUM(durationMs), 0) FROM dictations")
-    fun getTotalDurationMs(): Flow<Long>
+    @Query("""
+        SELECT COUNT(*) as count,
+               COALESCE(SUM(wordCount), 0) as wordCount,
+               COALESCE(SUM(durationMs), 0) as durationMs
+        FROM dictations
+    """)
+    fun getTotalStats(): Flow<DictationStats>
 }
