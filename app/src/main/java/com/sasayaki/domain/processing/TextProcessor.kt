@@ -31,7 +31,7 @@ class TextProcessor @Inject constructor(
                 prefs.llmApiKey
             )
 
-            val systemPrompt = buildSystemPrompt(dictionaryWords, sourceApp, prefs.preferredLanguages)
+            val systemPrompt = buildSystemPrompt(dictionaryWords, sourceApp, prefs.activeLanguage, prefs.preferredLanguages)
 
             val request = ChatCompletionRequest(
                 model = prefs.llmModel,
@@ -51,6 +51,7 @@ class TextProcessor @Inject constructor(
     private fun buildSystemPrompt(
         dictionaryWords: List<String>,
         sourceApp: String?,
+        activeLanguage: String?,
         preferredLanguages: List<String>
     ): String {
         val parts = mutableListOf<String>()
@@ -68,7 +69,9 @@ class TextProcessor @Inject constructor(
 - Preserve the speaker's original wording, tone, and intent. Only fix what's needed for speech to read naturally as written text
 - Do not add, infer, or rephrase content beyond what was spoken"""
 
-        if (preferredLanguages.isNotEmpty()) {
+        if (activeLanguage != null) {
+            parts += "- The user is dictating in: $activeLanguage. Handle speech disfluencies for this language."
+        } else if (preferredLanguages.isNotEmpty()) {
             val langList = preferredLanguages.joinToString(", ")
             parts += "- The user dictates in: $langList. Handle speech disfluencies in all of these languages."
         }
