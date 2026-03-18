@@ -12,5 +12,6 @@ data class UserPreferences(
     val vibrateOnRecord: Boolean = true,
     val silenceThresholdMs: Long = 2000,
     val preferredLanguages: List<String> = emptyList(),
+    val activeLanguage: String? = null,
     val historyEnabled: Boolean = true
 )

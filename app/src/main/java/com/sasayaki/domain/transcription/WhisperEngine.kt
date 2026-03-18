@@ -37,9 +37,9 @@ class WhisperEngine @Inject constructor(
             val promptPart = if (dictionaryWords.isNotEmpty()) {
                 dictionaryWords.joinToString(", ").toRequestBody("text/plain".toMediaType())
             } else null
-            val languagePart = if (prefs.preferredLanguages.size == 1) {
-                prefs.preferredLanguages.first().toRequestBody("text/plain".toMediaType())
-            } else null
+            val languagePart = prefs.activeLanguage?.let {
+                it.toRequestBody("text/plain".toMediaType())
+            }
 
             val response = service.transcribe(filePart, modelPart, promptPart, languagePart)
             Result.success(response.text)

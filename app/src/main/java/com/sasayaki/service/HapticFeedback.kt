@@ -31,6 +31,10 @@ class HapticFeedback(context: Context) {
         vibrate(longArrayOf(0, 100, 50, 100))
     }
 
+    fun tick() {
+        vibrate(longArrayOf(0, 15))
+    }
+
     private fun vibrate(pattern: LongArray) {
         if (!vibrator.hasVibrator()) return
         vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))

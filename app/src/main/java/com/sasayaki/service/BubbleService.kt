@@ -76,6 +76,8 @@ class BubbleService : Service() {
     private var recordingJob: Job? = null
     private var silenceCheckJob: Job? = null
     private var levelJob: Job? = null
+    private var longPressJob: Job? = null
+    private var fanMenuController: FanMenuController? = null
 
     private var state: ServiceState = ServiceState.Idle
     private var recordingStartTime: Long = 0
@@ -143,6 +145,7 @@ class BubbleService : Service() {
 
     override fun onDestroy() {
         isRunning = false
+        fanMenuController?.dismiss()
         stopRecordingAndWait()
         removeBubble()
         TextInjectorService.keyboardListener = null
@@ -167,6 +170,14 @@ class BubbleService : Service() {
             x = 50
             y = 300
         }
+
+        fanMenuController = FanMenuController(
+            context = this,
+            windowManager = windowManager!!,
+            preferencesDataStore = preferencesDataStore,
+            scope = scope,
+            hapticFeedback = hapticFeedback
+        )
 
         setupTouchListener()
     }
@@ -207,7 +218,9 @@ class BubbleService : Service() {
         var initialTouchX = 0f
         var initialTouchY = 0f
         var isDragging = false
+        var longPressTriggered = false
         val tapThreshold = 10 * resources.displayMetrics.density
+        val longPressDelayMs = 400L
 
         bubbleView?.setOnTouchListener { _, event ->
             when (event.action) {
@@ -217,6 +230,18 @@ class BubbleService : Service() {
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     isDragging = false
+                    longPressTriggered = false
+                    longPressJob?.cancel()
+                    if (state is ServiceState.Idle) {
+                        longPressJob = scope.launch {
+                            delay(longPressDelayMs)
+                            if (!isDragging) {
+                                longPressTriggered = true
+                                val bubbleSizePx = bubbleView?.measuredWidth ?: 0
+                                fanMenuController?.show(params.x, params.y, bubbleSizePx)
+                            }
+                        }
+                    }
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -224,6 +249,7 @@ class BubbleService : Service() {
                     val dy = event.rawY - initialTouchY
                     if (dx * dx + dy * dy > tapThreshold * tapThreshold) {
                         isDragging = true
+                        longPressJob?.cancel()
                     }
                     if (isDragging && bubbleAdded) {
                         params.x = initialX + dx.toInt()
@@ -233,8 +259,15 @@ class BubbleService : Service() {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    if (!isDragging) {
-                        onBubbleTap()
+                    longPressJob?.cancel()
+                    if (longPressTriggered) {
+                        // Long press already handled, do nothing
+                    } else if (!isDragging) {
+                        if (fanMenuController?.isShowing == true) {
+                            fanMenuController?.dismiss()
+                        } else {
+                            onBubbleTap()
+                        }
                     } else {
                         val displayHeight = resources.displayMetrics.heightPixels
                         if (params.y > displayHeight - 200) {

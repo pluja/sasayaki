@@ -38,6 +38,7 @@ class PreferencesDataStore @Inject constructor(
         val SILENCE_THRESHOLD_MS = longPreferencesKey("silence_threshold_ms")
         val LANGUAGE = stringPreferencesKey("language")
         val PREFERRED_LANGUAGES = stringPreferencesKey("preferred_languages")
+        val ACTIVE_LANGUAGE = stringPreferencesKey("active_language")
         val HISTORY_ENABLED = booleanPreferencesKey("history_enabled")
     }
 
@@ -65,6 +66,7 @@ class PreferencesDataStore @Inject constructor(
             vibrateOnRecord = prefs[Keys.VIBRATE_ON_RECORD] ?: true,
             silenceThresholdMs = prefs[Keys.SILENCE_THRESHOLD_MS] ?: 2000L,
             preferredLanguages = parsePreferredLanguages(prefs),
+            activeLanguage = resolveActiveLanguage(prefs),
             historyEnabled = prefs[Keys.HISTORY_ENABLED] ?: true
         )
     }
@@ -102,11 +104,40 @@ class PreferencesDataStore @Inject constructor(
         }
     }
 
+    suspend fun updateActiveLanguage(language: String?) {
+        context.dataStore.edit { prefs ->
+            if (language == null) {
+                prefs.remove(Keys.ACTIVE_LANGUAGE)
+            } else {
+                prefs[Keys.ACTIVE_LANGUAGE] = language
+            }
+        }
+    }
+
+    suspend fun toggleLlmEnabled() {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.LLM_ENABLED] = !(prefs[Keys.LLM_ENABLED] ?: false)
+        }
+    }
+
+    suspend fun toggleHistoryEnabled() {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.HISTORY_ENABLED] = !(prefs[Keys.HISTORY_ENABLED] ?: true)
+        }
+    }
+
     suspend fun updatePreferredLanguages(languages: List<String>) {
         context.dataStore.edit { prefs ->
             prefs[Keys.PREFERRED_LANGUAGES] = languages.joinToString(",")
             prefs.remove(Keys.LANGUAGE)
         }
+    }
+
+    private fun resolveActiveLanguage(prefs: Preferences): String? {
+        val preferred = parsePreferredLanguages(prefs)
+        val active = prefs[Keys.ACTIVE_LANGUAGE]
+        if (active != null) return if (active in preferred) active else null
+        return if (preferred.size == 1) preferred.first() else null
     }
 
     private fun parsePreferredLanguages(prefs: Preferences): List<String> {
