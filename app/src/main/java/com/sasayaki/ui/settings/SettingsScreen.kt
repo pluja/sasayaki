@@ -2,12 +2,21 @@ package com.sasayaki.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -113,6 +122,14 @@ fun SettingsScreen(
                     onModelChange = { llmModel = it },
                     onSave = { viewModel.saveLlmConfig(llmUrl, llmKey, llmModel, llmEnabled) },
                     onTest = { viewModel.testLlmConnection(llmUrl, llmKey, llmModel) }
+                )
+            }
+
+            item {
+                LanguageSettingsSection(
+                    languages = preferences.preferredLanguages,
+                    onAddLanguage = { viewModel.addPreferredLanguage(it) },
+                    onRemoveLanguage = { viewModel.removePreferredLanguage(it) }
                 )
             }
 
@@ -287,6 +304,71 @@ private fun LlmSettingsSection(
         )
 
         TestResultBanner(state = state)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun LanguageSettingsSection(
+    languages: List<String>,
+    onAddLanguage: (String) -> Unit,
+    onRemoveLanguage: (String) -> Unit
+) {
+    var languageInput by rememberSaveable { mutableStateOf("") }
+
+    SectionCard(
+        title = "Languages",
+        subtitle = "Set preferred languages for transcription and text cleanup. With one language, it is sent to the ASR for better accuracy. With multiple, the ASR auto-detects per dictation."
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            OutlinedTextField(
+                value = languageInput,
+                onValueChange = { languageInput = it.lowercase().filter { char -> char.isLetter() }.take(3) },
+                modifier = Modifier.weight(1f),
+                label = { Text("Language code") },
+                placeholder = { Text("en, es, ja...") },
+                singleLine = true,
+                supportingText = { Text("ISO 639-1 codes") }
+            )
+            Button(
+                onClick = {
+                    val code = languageInput.trim()
+                    if (code.isNotBlank() && code !in languages) {
+                        onAddLanguage(code)
+                        languageInput = ""
+                    }
+                },
+                enabled = languageInput.trim().length in 2..3
+            ) {
+                Text("Add")
+            }
+        }
+
+        if (languages.isNotEmpty()) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                languages.forEach { code ->
+                    InputChip(
+                        selected = false,
+                        onClick = { onRemoveLanguage(code) },
+                        label = { Text(code) },
+                        trailingIcon = {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Remove $code",
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 

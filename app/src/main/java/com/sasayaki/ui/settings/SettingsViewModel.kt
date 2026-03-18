@@ -95,6 +95,23 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun addPreferredLanguage(code: String) {
+        viewModelScope.launch {
+            val current = preferences.value.preferredLanguages
+            val normalized = code.trim().lowercase()
+            if (normalized.isNotBlank() && normalized !in current) {
+                preferencesDataStore.updatePreferredLanguages(current + normalized)
+            }
+        }
+    }
+
+    fun removePreferredLanguage(code: String) {
+        viewModelScope.launch {
+            val current = preferences.value.preferredLanguages
+            preferencesDataStore.updatePreferredLanguages(current - code)
+        }
+    }
+
     fun testAsrConnection(baseUrl: String, apiKey: String, model: String) {
         asrTestJob?.cancel()
         asrTestJob = viewModelScope.launch {

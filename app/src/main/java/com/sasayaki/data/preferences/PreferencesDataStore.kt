@@ -37,6 +37,7 @@ class PreferencesDataStore @Inject constructor(
         val VIBRATE_ON_RECORD = booleanPreferencesKey("vibrate_on_record")
         val SILENCE_THRESHOLD_MS = longPreferencesKey("silence_threshold_ms")
         val LANGUAGE = stringPreferencesKey("language")
+        val PREFERRED_LANGUAGES = stringPreferencesKey("preferred_languages")
         val HISTORY_ENABLED = booleanPreferencesKey("history_enabled")
     }
 
@@ -63,7 +64,7 @@ class PreferencesDataStore @Inject constructor(
             autoClipboard = prefs[Keys.AUTO_CLIPBOARD] ?: true,
             vibrateOnRecord = prefs[Keys.VIBRATE_ON_RECORD] ?: true,
             silenceThresholdMs = prefs[Keys.SILENCE_THRESHOLD_MS] ?: 2000L,
-            language = prefs[Keys.LANGUAGE] ?: "",
+            preferredLanguages = parsePreferredLanguages(prefs),
             historyEnabled = prefs[Keys.HISTORY_ENABLED] ?: true
         )
     }
@@ -99,6 +100,23 @@ class PreferencesDataStore @Inject constructor(
             prefs[Keys.SILENCE_THRESHOLD_MS] = silenceThresholdMs
             prefs[Keys.HISTORY_ENABLED] = historyEnabled
         }
+    }
+
+    suspend fun updatePreferredLanguages(languages: List<String>) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.PREFERRED_LANGUAGES] = languages.joinToString(",")
+            prefs.remove(Keys.LANGUAGE)
+        }
+    }
+
+    private fun parsePreferredLanguages(prefs: Preferences): List<String> {
+        val stored = prefs[Keys.PREFERRED_LANGUAGES].orEmpty()
+        if (stored.isNotBlank()) {
+            return stored.split(",").map { it.trim().lowercase() }.filter { it.isNotBlank() }
+        }
+        val legacy = prefs[Keys.LANGUAGE].orEmpty().trim().lowercase()
+        if (legacy.isNotBlank()) return listOf(legacy)
+        return emptyList()
     }
 
     private suspend fun migrateLegacySecretsIfNeeded(prefs: Preferences) {
