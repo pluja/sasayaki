@@ -32,7 +32,9 @@ object DatabaseModule {
             context,
             SasayakiDatabase::class.java,
             "sasayaki.db"
-        ).addMigrations(migration1To2).build()
+        ).addMigrations(migration1To2)
+            .fallbackToDestructiveMigrationOnDowngrade()
+            .build()
     }
 
     @Provides
