@@ -9,8 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
@@ -97,14 +96,11 @@ fun SettingsScreen(
             )
         }
     ) { padding ->
-        val scrollPadding = settingsContentPadding(padding)
-        Column(
-            modifier = Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(scrollPadding),
+        LazyColumn(
+            contentPadding = settingsContentPadding(padding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            AsrSettingsSection(
+            item(key = "asr") { AsrSettingsSection(
                 url = asrUrl,
                 apiKey = asrKey,
                 model = asrModel,
@@ -118,9 +114,9 @@ fun SettingsScreen(
                 onModelChange = { asrModel = it },
                 onSave = { viewModel.saveAsrConfig(asrUrl, asrKey, asrModel) },
                 onTest = { viewModel.testAsrConnection(asrUrl, asrKey, asrModel) }
-            )
+            ) }
 
-            LlmSettingsSection(
+            item(key = "llm") { LlmSettingsSection(
                 url = llmUrl,
                 apiKey = llmKey,
                 model = llmModel,
@@ -136,15 +132,15 @@ fun SettingsScreen(
                 onModelChange = { llmModel = it },
                 onSave = { viewModel.saveLlmConfig(llmUrl, llmKey, llmModel, llmEnabled) },
                 onTest = { viewModel.testLlmConnection(llmUrl, llmKey, llmModel) }
-            )
+            ) }
 
-            LanguageSettingsSection(
+            item(key = "lang") { LanguageSettingsSection(
                 languages = preferences.preferredLanguages,
                 onAddLanguage = { viewModel.addPreferredLanguage(it) },
                 onRemoveLanguage = { viewModel.removePreferredLanguage(it) }
-            )
+            ) }
 
-            GeneralSettingsSection(
+            item(key = "general") { GeneralSettingsSection(
                 preferences = preferences,
                 silenceThreshold = silenceThreshold,
                 onAutoClipboardChange = {
@@ -180,7 +176,7 @@ fun SettingsScreen(
                         historyEnabled = it
                     )
                 }
-            )
+            ) }
         }
     }
 }

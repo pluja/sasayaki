@@ -3,7 +3,7 @@ package com.sasayaki.ui.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sasayaki.data.db.dao.DictationDao
-import com.sasayaki.data.db.entity.Dictation
+import com.sasayaki.data.db.entity.DictationSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +23,7 @@ data class DayGroup(
     val key: String,
     val date: String,
     val totalWords: Int,
-    val dictations: List<Dictation>
+    val dictations: List<DictationSummary>
 )
 
 @HiltViewModel
@@ -33,7 +33,7 @@ class HistoryViewModel @Inject constructor(
     private val zoneId: ZoneId = ZoneId.systemDefault()
     private val displayFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault())
 
-    val dayGroups: StateFlow<List<DayGroup>> = dictationDao.getAll().map { dictations ->
+    val dayGroups: StateFlow<List<DayGroup>> = dictationDao.getRecent().map { dictations ->
         dictations
             .groupBy { Instant.ofEpochMilli(it.timestamp).atZone(zoneId).toLocalDate() }
             .entries
@@ -52,6 +52,10 @@ class HistoryViewModel @Inject constructor(
         viewModelScope.launch {
             dictationDao.delete(id)
         }
+    }
+
+    suspend fun getRawText(id: Long): String? {
+        return dictationDao.getRawText(id)
     }
 
     private fun formatDate(date: LocalDate): String {

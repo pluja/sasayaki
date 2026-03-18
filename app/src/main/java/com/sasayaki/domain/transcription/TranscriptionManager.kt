@@ -22,6 +22,7 @@ class TranscriptionManager @Inject constructor(
 ) {
     companion object {
         private const val TAG = "TranscriptionManager"
+        private const val MAX_HISTORY_ENTRIES = 500
     }
 
     /**
@@ -64,6 +65,7 @@ class TranscriptionManager @Inject constructor(
                     durationMs = durationMs
                 )
             )
+            dictationDao.pruneOldEntries(MAX_HISTORY_ENTRIES)
         }
 
         return Result.success(processedText)

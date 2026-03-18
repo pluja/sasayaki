@@ -25,8 +25,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,11 +38,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sasayaki.data.db.entity.Dictation
+import com.sasayaki.data.db.entity.DictationSummary
 import com.sasayaki.ui.common.EmptyStateCard
 import com.sasayaki.ui.common.SasayakiScaffold
 import com.sasayaki.ui.common.SasayakiTopBar
 import com.sasayaki.ui.common.StatusPill
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -90,7 +93,8 @@ fun HistoryScreen(
                         HistoryCard(
                             dictation = dictation,
                             onCopy = { copyToClipboard(context, dictation.text) },
-                            onDelete = { viewModel.delete(dictation.id) }
+                            onDelete = { viewModel.delete(dictation.id) },
+                            onLoadRawText = { viewModel.getRawText(dictation.id) }
                         )
                     }
                 }
@@ -122,11 +126,14 @@ private fun DayHeader(group: DayGroup) {
 
 @Composable
 private fun HistoryCard(
-    dictation: Dictation,
+    dictation: DictationSummary,
     onCopy: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onLoadRawText: suspend () -> String?
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
+    var rawText by rememberSaveable { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     Card(
         colors = CardDefaults.cardColors(
@@ -136,7 +143,12 @@ private fun HistoryCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { expanded = !expanded }
+                .clickable {
+                    expanded = !expanded
+                    if (expanded && rawText == null) {
+                        scope.launch { rawText = onLoadRawText() }
+                    }
+                }
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -189,7 +201,7 @@ private fun HistoryCard(
                 }
             }
 
-            if (expanded && dictation.rawText != dictation.text) {
+            if (expanded && rawText != null && rawText != dictation.text) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "Raw transcript",
@@ -197,7 +209,7 @@ private fun HistoryCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = dictation.rawText,
+                        text = rawText!!,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
