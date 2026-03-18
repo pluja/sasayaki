@@ -81,6 +81,7 @@ class BubbleService : Service() {
 
     private var state: ServiceState = ServiceState.Idle
     private var recordingStartTime: Long = 0
+    private var recordingSourceApp: String? = null
     private var pcmFile: File? = null
     private var bubbleAdded = false
 
@@ -299,6 +300,7 @@ class BubbleService : Service() {
 
         updateState(ServiceState.Recording)
         recordingStartTime = System.currentTimeMillis()
+        recordingSourceApp = textInjectionBridge.focusedAppName
 
         audioRecorder = AudioRecorder()
         pcmFile = File(cacheDir, "recording_${System.currentTimeMillis()}.pcm")
@@ -380,7 +382,7 @@ class BubbleService : Service() {
                     AudioConverter.pcmToWav(currentPcmFile, wavFile)
                 }
 
-                val sourceApp = textInjectionBridge.focusedAppName
+                val sourceApp = recordingSourceApp
 
                 val result = withContext(Dispatchers.IO) {
                     transcriptionManager.transcribe(wavFile, durationMs, sourceApp)
