@@ -6,6 +6,8 @@ It works with any language. You just set your languages in `.env` and the LLM ge
 
 I personally fine-tuned Qwen3.5-2B and it works great with around 1500 examples. The whole process takes a few hours of generation time (depending on your API) and about 30 minutes of training on a consumer GPU.
 
+**You will need to spend money on a provider to generate the synthetic data and so.**
+
 ## Requirements
 
 - Python 3.13+ with [uv](https://github.com/astral-sh/uv)
@@ -27,9 +29,12 @@ Generate a small sample first to check quality:
 make sample
 ```
 
+> Try different models, so you can see which one is the best for you. For me, the best one was `mistral-large-3-675b-instruct-2512` since it is great with European languages. You can do this very cheap using the [nano-gpt.com](https://nano-gpt.com/subscription) subscription, since it includes unlimited usage of any open-weights model for just $8/month, including API usage.
+
 If the samples look good, generate the full dataset:
 
 ```bash
+# This may take a few hours if the provider is slow
 make generate
 ```
 
@@ -45,7 +50,7 @@ Train the model:
 ```bash
 make train         # local GPU
 # or
-make train-docker  # remote GPU via Docker
+make train-docker  # via Docker, don't need to install anything
 ```
 
 Evaluate:
