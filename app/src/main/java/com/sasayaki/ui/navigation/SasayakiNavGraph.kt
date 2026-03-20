@@ -1,9 +1,7 @@
 package com.sasayaki.ui.navigation
 
-import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.animation.core.tween
 import androidx.navigation.NavHostController
@@ -22,10 +20,8 @@ object Routes {
     const val HISTORY = "history"
 }
 
-private val enterTransition: EnterTransition = fadeIn(animationSpec = tween(durationMillis = 180))
-private val exitTransition: ExitTransition = fadeOut(animationSpec = tween(durationMillis = 120))
-private val popEnterTransition: EnterTransition = fadeIn(animationSpec = tween(durationMillis = 180))
-private val popExitTransition: ExitTransition = fadeOut(animationSpec = tween(durationMillis = 120))
+private val fadeIn = fadeIn(animationSpec = tween(durationMillis = 150))
+private val noExit = ExitTransition.None
 
 @Composable
 fun SasayakiNavGraph() {
@@ -34,10 +30,10 @@ fun SasayakiNavGraph() {
     NavHost(
         navController = navController,
         startDestination = Routes.HOME,
-        enterTransition = { enterTransition },
-        exitTransition = { exitTransition },
-        popEnterTransition = { popEnterTransition },
-        popExitTransition = { popExitTransition }
+        enterTransition = { fadeIn },
+        exitTransition = { noExit },
+        popEnterTransition = { fadeIn },
+        popExitTransition = { noExit }
     ) {
         composable(Routes.HOME) {
             HomeScreen(
