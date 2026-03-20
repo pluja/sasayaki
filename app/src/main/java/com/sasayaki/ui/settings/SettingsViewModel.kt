@@ -71,7 +71,6 @@ class SettingsViewModel @Inject constructor(
     fun saveAsrConfig(baseUrl: String, apiKey: String, model: String) {
         viewModelScope.launch {
             preferencesDataStore.updateAsrConfig(baseUrl, apiKey, model)
-            apiClientFactory.invalidate()
             _asrSaved.value = true
             asrSavedResetJob?.cancel()
             asrSavedResetJob = viewModelScope.launch {
@@ -84,7 +83,6 @@ class SettingsViewModel @Inject constructor(
     fun saveLlmConfig(baseUrl: String, apiKey: String, model: String, enabled: Boolean) {
         viewModelScope.launch {
             preferencesDataStore.updateLlmConfig(baseUrl, apiKey, model, enabled)
-            apiClientFactory.invalidate()
             _llmSaved.value = true
             llmSavedResetJob?.cancel()
             llmSavedResetJob = viewModelScope.launch {

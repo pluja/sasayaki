@@ -25,8 +25,6 @@ class ApiClientFactory @Inject constructor(
             .create(serviceClass)
     }
 
-    fun invalidate() = Unit
-
     private fun authInterceptor(apiKey: String) = Interceptor { chain ->
         val request = chain.request().newBuilder()
             .addHeader("Authorization", "Bearer $apiKey")

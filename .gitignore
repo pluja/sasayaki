@@ -13,7 +13,7 @@ local.properties
 *.aab
 *.hprof
 debug.keystore
-sasayaki-debug.apk
+sasayaki-*.apk
 .gradle-local
 .gradle-local-project
 .gradle-cache
