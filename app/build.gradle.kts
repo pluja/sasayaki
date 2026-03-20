@@ -16,8 +16,10 @@ android {
         applicationId = "com.sasayaki"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+
+        val tag = findProperty("versionTag")?.toString()?.removePrefix("v") ?: ""
+        versionCode = tag.toIntOrNull() ?: java.time.LocalDate.now().let { it.year * 10000 + it.monthValue * 100 + it.dayOfMonth }
+        versionName = if (tag.isNotBlank()) "v$tag" else "v$versionCode"
     }
 
     signingConfigs {

@@ -24,7 +24,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Build release APK
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease -PversionTag=${{ github.ref_name }}
 
       - name: Rename APK
         run: cp app/build/outputs/apk/release/app-release.apk sasayaki-${{ github.ref_name }}.apk
