@@ -1,3 +1,5 @@
+import java.util.Calendar
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -18,8 +20,8 @@ android {
         targetSdk = 35
 
         val tag = findProperty("versionTag")?.toString()?.removePrefix("v") ?: ""
-        val cal = java.util.Calendar.getInstance()
-        val dateCode = cal.get(java.util.Calendar.YEAR) * 10000 + (cal.get(java.util.Calendar.MONTH) + 1) * 100 + cal.get(java.util.Calendar.DAY_OF_MONTH)
+        val cal = Calendar.getInstance()
+        val dateCode = cal.get(Calendar.YEAR) * 10000 + (cal.get(Calendar.MONTH) + 1) * 100 + cal.get(Calendar.DAY_OF_MONTH)
         versionCode = tag.toIntOrNull() ?: dateCode
         versionName = if (tag.isNotBlank()) "v$tag" else "v$versionCode"
     }
