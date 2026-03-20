@@ -46,6 +46,16 @@ class SettingsViewModel @Inject constructor(
     val preferences: StateFlow<UserPreferences> = preferencesDataStore.preferences
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserPreferences())
 
+    override fun onCleared() {
+        asrTestJob?.cancel()
+        llmTestJob?.cancel()
+        asrTestResetJob?.cancel()
+        llmTestResetJob?.cancel()
+        asrSavedResetJob?.cancel()
+        llmSavedResetJob?.cancel()
+        super.onCleared()
+    }
+
     private val _asrTestState = MutableStateFlow<TestState>(TestState.Idle)
     val asrTestState: StateFlow<TestState> = _asrTestState.asStateFlow()
 

@@ -110,17 +110,23 @@ class BubbleService : Service() {
     override fun onCreate() {
         super.onCreate()
         isRunning = true
-        notificationHelper = NotificationHelper(this)
+        val helper = NotificationHelper(this)
+        notificationHelper = helper
         hapticFeedback = HapticFeedback(this)
-        notificationHelper!!.createNotificationChannel()
+        helper.createNotificationChannel()
 
         registerReceiver(stopReceiver, IntentFilter(NotificationHelper.ACTION_STOP), RECEIVER_NOT_EXPORTED)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val notification = notificationHelper?.buildForegroundNotification() ?: run {
+            Log.e(TAG, "NotificationHelper not initialized")
+            stopSelf()
+            return START_NOT_STICKY
+        }
         startForeground(
             NotificationHelper.NOTIFICATION_ID,
-            notificationHelper!!.buildForegroundNotification(),
+            notification,
             ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
         )
 
@@ -172,9 +178,10 @@ class BubbleService : Service() {
             y = 300
         }
 
+        val wm = windowManager ?: return
         fanMenuController = FanMenuController(
             context = this,
-            windowManager = windowManager!!,
+            windowManager = wm,
             preferencesDataStore = preferencesDataStore,
             scope = scope,
             hapticFeedback = hapticFeedback
@@ -305,26 +312,27 @@ class BubbleService : Service() {
         audioRecorder = AudioRecorder()
         pcmFile = File(cacheDir, "recording_${System.currentTimeMillis()}.pcm")
 
+        val recorder = audioRecorder ?: return
+        val outputFile = pcmFile ?: return
+
         recordingJob = scope.launch(Dispatchers.IO) {
             try {
-                audioRecorder?.record(pcmFile!!)
+                recorder.record(outputFile)
             } catch (e: Exception) {
                 Log.e(TAG, "Recording error", e)
             }
         }
 
-        // Audio level updates for bubble animation
         levelJob = scope.launch {
-            audioRecorder?.audioLevel?.collect { level ->
+            recorder.audioLevel.collect { level ->
                 bubbleView?.updateAudioLevel(level)
             }
         }
 
-        // Silence detection
         silenceCheckJob = scope.launch {
             val prefs = preferencesDataStore.preferences.first()
             silenceDetector = SilenceDetector(
-                audioLevel = audioRecorder!!.audioLevel,
+                audioLevel = recorder.audioLevel,
                 silenceThresholdMs = prefs.silenceThresholdMs
             )
             delay(1000) // grace period
