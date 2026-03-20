@@ -18,7 +18,9 @@ android {
         targetSdk = 35
 
         val tag = findProperty("versionTag")?.toString()?.removePrefix("v") ?: ""
-        versionCode = tag.toIntOrNull() ?: java.time.LocalDate.now().let { it.year * 10000 + it.monthValue * 100 + it.dayOfMonth }
+        val cal = java.util.Calendar.getInstance()
+        val dateCode = cal.get(java.util.Calendar.YEAR) * 10000 + (cal.get(java.util.Calendar.MONTH) + 1) * 100 + cal.get(java.util.Calendar.DAY_OF_MONTH)
+        versionCode = tag.toIntOrNull() ?: dateCode
         versionName = if (tag.isNotBlank()) "v$tag" else "v$versionCode"
     }
 
