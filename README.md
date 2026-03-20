@@ -21,7 +21,16 @@ Sasayaki is like [WisprFlow](https://wisprflow.ai) but free and can run on your 
   - "So... We can meet at 6, wait no... actually 7, at the restaurant" -> "We can meet at 7 at the restaurant."
 - And some more small features you will discover with usage.
 
-<img src="/assets/screenshot01.png" align="center" width="250">
+<table>
+  <tr>
+    <td><img src="/assets/screenshot01.png" width="250"></td>
+    <td><img src="/assets/screenshot02.png" width="250"></td>
+  </tr>
+  <tr>
+    <td align="center"><i>Main dashboard</i></td>
+    <td align="center"><i>Floating bubble recording in-chat</i></td>
+  </tr>
+</table>
 
 ## Self Hosting
 
