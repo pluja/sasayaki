@@ -1,5 +1,7 @@
 # ささやき　（sasayaki）
 
+<p align="center"><a href="https://keepandroidopen.org/"><b>ANDROID WILL BECOME A LOCKED-DOWN PLATFORM</b></a></p>
+
 A tiny dictation android app. Connect any OpenAI-Compatible backend, and type faster than you can imagine just by speaking.
 
 Sasayaki is like [WisprFlow](https://wisprflow.ai) but free and can run on your own local models.
@@ -18,6 +20,8 @@ Sasayaki is like [WisprFlow](https://wisprflow.ai) but free and can run on your 
 - LLM Post Processing; configure an LLM to take your dictation and remove speech quirks and errors:
   - "So... We can meet at 6, wait no... actually 7, at the restaurant" -> "We can meet at 7 at the restaurant."
 - And some more small features you will discover with usage.
+
+<img src="/assets/screenshot01.png" align="center" width="250">
 
 ## Self Hosting
 
