@@ -1,7 +1,7 @@
 .PHONY: build clean docker-image
 
 DOCKER_IMAGE := sasayaki-build
-APK_OUTPUT := sasayaki-debug.apk
+APK_OUTPUT := sasayaki-release.apk
 GRADLE_USER_HOME := $(CURDIR)/.gradle-cache
 ANDROID_SDK_HOME := $(CURDIR)/.android-cache
 HOST_UID := $(shell id -u)
@@ -19,8 +19,8 @@ build: docker-image
 		-v $(ANDROID_SDK_HOME):/home/gradle/.android \
 		-e GRADLE_USER_HOME=/home/gradle/.gradle \
 		-w /project $(DOCKER_IMAGE) \
-		sh -c "./gradlew assembleDebug && chown -R $(HOST_UID):$(HOST_GID) /project/app/build /project/.gradle-cache /project/.android-cache"
-	cp app/build/outputs/apk/debug/app-debug.apk $(APK_OUTPUT)
+		sh -c "./gradlew assembleRelease && chown -R $(HOST_UID):$(HOST_GID) /project/app/build /project/.gradle-cache /project/.android-cache"
+	cp app/build/outputs/apk/release/app-release.apk $(APK_OUTPUT)
 	@echo "APK built: $(APK_OUTPUT)"
 	@ls -lh $(APK_OUTPUT)
 
