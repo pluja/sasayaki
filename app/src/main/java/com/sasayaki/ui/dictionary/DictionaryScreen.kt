@@ -1,6 +1,8 @@
 package com.sasayaki.ui.dictionary
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,14 +11,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
+import com.sasayaki.ui.theme.SasayakiIcons
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -77,7 +77,7 @@ fun DictionaryScreen(
             contentPadding = dictionaryContentPadding(padding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
+            item(key = "search", contentType = "search") {
                 SectionCard(
                     title = "Custom vocabulary",
                     subtitle = if (words.isEmpty()) {
@@ -108,9 +108,9 @@ fun DictionaryScreen(
             }
 
             if (words.isEmpty()) {
-                item {
+                item(key = "empty", contentType = "empty") {
                     EmptyStateCard(
-                        icon = Icons.AutoMirrored.Filled.MenuBook,
+                        icon = SasayakiIcons.MenuBook,
                         title = if (searchQuery.isBlank()) "No custom terms yet" else "No matches found",
                         description = if (searchQuery.isBlank()) {
                             "Add words that are often mistranscribed so they stay consistent wherever you dictate."
@@ -120,7 +120,7 @@ fun DictionaryScreen(
                     )
                 }
             } else {
-                items(words, key = { it.id }) { word ->
+                items(words, key = { it.id }, contentType = { "word" }) { word ->
                     DictionaryWordCard(
                         word = word,
                         onDelete = { viewModel.deleteWord(word.id) }
@@ -183,39 +183,35 @@ private fun DictionaryWordCard(
     word: DictionaryWord,
     onDelete: () -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(text = word.word, style = MaterialTheme.typography.titleMedium)
-                if (word.category.isNotBlank()) {
-                    StatusPill(
-                        label = word.category,
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
-            }
-
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete word",
-                    tint = MaterialTheme.colorScheme.error
+            Text(text = word.word, style = MaterialTheme.typography.titleMedium)
+            if (word.category.isNotBlank()) {
+                StatusPill(
+                    label = word.category,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
+        }
+
+        IconButton(onClick = onDelete) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Delete word",
+                tint = MaterialTheme.colorScheme.error
+            )
         }
     }
 }

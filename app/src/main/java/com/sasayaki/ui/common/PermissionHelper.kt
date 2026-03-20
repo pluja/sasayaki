@@ -16,8 +16,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
+import com.sasayaki.ui.theme.SasayakiIcons
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -83,7 +83,7 @@ fun PermissionCard(status: PermissionStatus) {
                     )
                 }
                 Icon(
-                    imageVector = if (status.granted) Icons.Default.CheckCircle else Icons.Default.Warning,
+                    imageVector = if (status.granted) SasayakiIcons.CheckCircle else Icons.Default.Warning,
                     contentDescription = if (status.granted) "Granted" else "Not granted",
                     tint = if (status.granted)
                         MaterialTheme.colorScheme.primary

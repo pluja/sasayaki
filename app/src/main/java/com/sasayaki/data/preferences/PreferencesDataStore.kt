@@ -11,8 +11,11 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 import javax.inject.Inject
@@ -70,6 +73,8 @@ class PreferencesDataStore @Inject constructor(
             historyEnabled = prefs[Keys.HISTORY_ENABLED] ?: true
         )
     }
+    .distinctUntilChanged()
+    .flowOn(Dispatchers.IO)
 
     suspend fun updateAsrConfig(baseUrl: String, apiKey: String, model: String) {
         securePreferencesStore.updateAsrApiKey(apiKey.trim())

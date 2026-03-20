@@ -4,9 +4,11 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,16 +19,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.StopCircle
-import androidx.compose.material.icons.filled.Widgets
+import com.sasayaki.ui.theme.SasayakiIcons
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -81,7 +77,7 @@ fun HomeScreen(
             contentPadding = homeContentPadding(padding),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
+            item(key = "hero", contentType = "hero") {
                 HomeHeroCard(
                     serviceRunning = serviceRunning,
                     serviceReady = serviceReady,
@@ -97,7 +93,7 @@ fun HomeScreen(
                 )
             }
 
-            item {
+            item(key = "stats", contentType = "stats") {
                 StatsSection(
                     todayCount = todayStats.count,
                     todayWordCount = todayStats.wordCount,
@@ -111,7 +107,7 @@ fun HomeScreen(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 (!overlayPermission.granted || !accessibilityPermission.granted)
             ) {
-                item {
+                item(key = "restricted", contentType = "info") {
                     RestrictedSettingsCard(
                         onOpenAppInfo = {
                             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -125,7 +121,7 @@ fun HomeScreen(
             }
 
             if (missingPermissions.isNotEmpty()) {
-                item {
+                item(key = "setup_header", contentType = "header") {
                     Text(
                         text = "Finish setup",
                         style = MaterialTheme.typography.titleLarge,
@@ -133,12 +129,16 @@ fun HomeScreen(
                     )
                 }
 
-                items(missingPermissions, key = { it.name }) { status ->
+                items(
+                    missingPermissions,
+                    key = { it.name },
+                    contentType = { "permission" }
+                ) { status ->
                     PermissionCard(status = status)
                 }
             }
 
-            item {
+            item(key = "actions_header", contentType = "header") {
                 Text(
                     text = "Quick actions",
                     style = MaterialTheme.typography.titleLarge,
@@ -146,7 +146,7 @@ fun HomeScreen(
                 )
             }
 
-            item {
+            item(key = "nav_settings", contentType = "feature") {
                 FeatureCard(
                     icon = Icons.Default.Settings,
                     title = "Settings",
@@ -155,18 +155,18 @@ fun HomeScreen(
                 )
             }
 
-            item {
+            item(key = "nav_dictionary", contentType = "feature") {
                 FeatureCard(
-                    icon = Icons.AutoMirrored.Filled.MenuBook,
+                    icon = SasayakiIcons.MenuBook,
                     title = "Dictionary",
                     description = "Add names, jargon, and terms that should transcribe cleanly.",
                     onClick = onNavigateToDictionary
                 )
             }
 
-            item {
+            item(key = "nav_history", contentType = "feature") {
                 FeatureCard(
-                    icon = Icons.Default.History,
+                    icon = SasayakiIcons.History,
                     title = "History",
                     description = "Review recent dictations, copy them again, or remove them.",
                     onClick = onNavigateToHistory
@@ -223,7 +223,7 @@ private fun HomeHeroCard(
             }
         }
 
-        AnimatedContent(targetState = serviceRunning, label = "serviceCopy") { running ->
+        Crossfade(targetState = serviceRunning, label = "serviceCopy") { running ->
             Text(
                 text = if (running) {
                     "The bubble is live and ready to insert speech into the focused field."
@@ -243,12 +243,12 @@ private fun HomeHeroCard(
             colors = ButtonDefaults.buttonColors(containerColor = actionColor)
         ) {
             androidx.compose.material3.Icon(
-                imageVector = if (serviceRunning) Icons.Default.StopCircle else Icons.Default.GraphicEq,
+                imageVector = if (serviceRunning) SasayakiIcons.StopCircle else SasayakiIcons.GraphicEq,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.size(10.dp))
-            AnimatedContent(targetState = serviceRunning, label = "serviceButtonLabel") { running ->
+            Crossfade(targetState = serviceRunning, label = "serviceButtonLabel") { running ->
                 Text(if (running) "Stop dictation service" else "Start dictation service")
             }
         }
@@ -326,26 +326,22 @@ private fun StatCard(
     value: String,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+    Column(
+        modifier = modifier
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineMedium
-            )
-        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.headlineMedium
+        )
     }
 }
 
@@ -363,7 +359,7 @@ private fun RestrictedSettingsCard(onOpenAppInfo: () -> Unit) {
             )
             OutlinedButton(onClick = onOpenAppInfo, modifier = Modifier.fillMaxWidth()) {
                 androidx.compose.material3.Icon(
-                    imageVector = Icons.Default.Widgets,
+                    imageVector = SasayakiIcons.Widgets,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )

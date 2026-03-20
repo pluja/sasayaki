@@ -50,13 +50,8 @@ class TextInjectorService : AccessibilityService() {
         when (event.eventType) {
             AccessibilityEvent.TYPE_VIEW_FOCUSED,
             AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
-                val source = event.source
-                val isEditable = source?.isEditable == true
-                val packageName = (source?.packageName ?: event.packageName)?.toString()
-                if (isEditable && packageName != null) {
-                    lastFocusedPackage = packageName
-                    focusedAppPackage = packageName
-                } else if (event.eventType == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED && packageName != null) {
+                val packageName = event.packageName?.toString()
+                if (packageName != null) {
                     lastFocusedPackage = packageName
                     focusedAppPackage = packageName
                 }

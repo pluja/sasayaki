@@ -134,7 +134,7 @@ fun SettingsScreen(
                 onTest = { viewModel.testLlmConnection(llmUrl, llmKey, llmModel) }
             ) }
 
-            item(key = "lang") { LanguageSettingsSection(
+            item(key = "language") { LanguageSettingsSection(
                 languages = preferences.preferredLanguages,
                 onAddLanguage = { viewModel.addPreferredLanguage(it) },
                 onRemoveLanguage = { viewModel.removePreferredLanguage(it) }
