@@ -35,7 +35,7 @@ For privacy and data ownership reasons, I recommend you self host your own backe
 
 ### Installing
 
-Go to the [releases]() page, and get the latest APK. Install and you're good to go! You can also use Obtanium to have automated updates and so.
+Go to the [releases](https://github.com/pluja/sasayaki/releases) page, and get the latest APK. Install and you're good to go! You can also use Obtanium to have automated updates and so.
 
 ## Self Hosting your own backends
 
@@ -49,7 +49,7 @@ There are many services you can self-host; from [whisper.cpp](https://github.com
 
 ### Choosing a model
 
-The best model you can use, from my personal testing in various European languages, is [`deepdml/faster-whisper-large-v3-turbo-ct2`](), it's very fast if you have a GPU and very accurate; even when speaking fast or whispering.
+The best model you can use, from my personal testing in various European languages, is [`deepdml/faster-whisper-large-v3-turbo-ct2`](https://huggingface.co/deepdml/faster-whisper-large-v3-turbo-ct2), it's very fast if you have a GPU and very accurate; even when speaking fast or whispering.
 
 Other models you can use are:
 
@@ -62,7 +62,7 @@ Other models you can use are:
 
 This is completely optional, but I found it has very good improvement on the resulting texts (low modification rate) with minimal overhead if you run small models (2B/4B) on consumer GPUs.
 
-Personally, I have fine-tuned the 2B version of Qwen3.5 ([unsloth/Qwen3.5-2B](https://huggingface.co/unsloth/Qwen3.5-2B)) with the recipe you can find in the `fine-tuning` directory on this repo. You can generate synthetic dataset of data in your language and then perform the fine-tuning with [`unsloth`](https://unsloth.ai/), which is very fast and can be done with around 5GB of VRAM.
+Personally, I have fine-tuned the 2B version of Qwen3.5 ([unsloth/Qwen3.5-2B](https://huggingface.co/unsloth/Qwen3.5-2B)) with the recipe you can find in the [`fine-tuning`](https://github.com/pluja/sasayaki/tree/main/fine-tuning#fine-tuning) directory on this repo. You can generate synthetic dataset of data in your language and then perform the fine-tuning with [`unsloth`](https://unsloth.ai/), which is very fast and can be done with around 5GB of VRAM.
 
 For the OpenAI-compatible backend, I recommend you use [`llama-swap`](https://github.com/mostlygeek/llama-swap) with llama.cpp backend; there are other nice options such as plan [`llama.cpp`](https://github.com/ggml-org/llama.cpp) or [`koboldcpp`](https://github.com/LostRuins/koboldcpp) or even [LlamaFiles](https://github.com/mozilla-ai/llamafile). The options are endless.
 
