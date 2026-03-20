@@ -1,0 +1,10 @@
+[project]
+name = "fine-tuning"
+version = "0.1.0"
+description = "Language-agnostic fine-tuning pipeline for Sasayaki dictation post-processing"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "openai>=2.29.0",
+    "tqdm>=4.67.3",
+]
