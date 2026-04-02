@@ -113,7 +113,7 @@ class FanMenuController(
                     active = prefs.llmEnabled
                 ),
                 FanMenuItem(
-                    label = "HIST",
+                    label = "SAVE",
                     active = prefs.historyEnabled
                 )
             )

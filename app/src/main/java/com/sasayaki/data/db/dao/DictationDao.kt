@@ -19,10 +19,10 @@ interface DictationDao {
     suspend fun getRawText(id: Long): String?
 
     @Query("UPDATE dictations SET text = '', rawText = '', sourceApp = NULL, historyVisible = 0 WHERE id = :id")
-    suspend fun delete(id: Long)
+    suspend fun removeFromHistory(id: Long)
 
     @Query("UPDATE dictations SET text = '', rawText = '', sourceApp = NULL, historyVisible = 0 WHERE historyVisible = 1")
-    suspend fun clearHistory()
+    suspend fun removeAllFromHistory()
 
     @Query("DELETE FROM dictations WHERE id NOT IN (SELECT id FROM dictations ORDER BY timestamp DESC LIMIT :keep)")
     suspend fun pruneOldEntries(keep: Int)

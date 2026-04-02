@@ -48,15 +48,15 @@ class HistoryViewModel @Inject constructor(
             }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun delete(id: Long) {
+    fun removeFromHistory(id: Long) {
         viewModelScope.launch {
-            dictationDao.delete(id)
+            dictationDao.removeFromHistory(id)
         }
     }
 
-    fun clearHistory() {
+    fun removeAllFromHistory() {
         viewModelScope.launch {
-            dictationDao.clearHistory()
+            dictationDao.removeAllFromHistory()
         }
     }
 

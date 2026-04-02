@@ -1,13 +1,11 @@
 package com.sasayaki.di
 
-import com.sasayaki.BuildConfig
 import com.sasayaki.data.api.ApiClientFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
@@ -21,15 +19,7 @@ object NetworkModule {
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
-            .apply {
-                if (BuildConfig.DEBUG) {
-                    addInterceptor(
-                        HttpLoggingInterceptor().apply {
-                            level = HttpLoggingInterceptor.Level.BASIC
-                        }
-                    )
-                }
-            }
+            .applyDebugLogging()
             .build()
     }
 

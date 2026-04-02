@@ -105,7 +105,7 @@ fun HistoryScreen(
                         HistoryCard(
                             dictation = dictation,
                             onCopy = { copyToClipboard(context, dictation.text) },
-                            onDelete = { viewModel.delete(dictation.id) },
+                            onDelete = { viewModel.removeFromHistory(dictation.id) },
                             onLoadRawText = { viewModel.getRawText(dictation.id) }
                         )
                     }
@@ -122,7 +122,7 @@ fun HistoryScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.clearHistory()
+                        viewModel.removeAllFromHistory()
                         showClearHistoryDialog = false
                     }
                 ) {

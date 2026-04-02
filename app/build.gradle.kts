@@ -42,6 +42,7 @@ android {
         release {
             signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -106,8 +107,8 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp)
-    implementation(libs.okhttp.logging)
     implementation(libs.gson)
+    debugImplementation(libs.okhttp.logging)
 
     // DataStore
     implementation(libs.datastore.preferences)

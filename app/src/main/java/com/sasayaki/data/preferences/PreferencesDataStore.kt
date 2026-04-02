@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 import javax.inject.Inject
@@ -56,8 +57,6 @@ class PreferencesDataStore @Inject constructor(
             }
         }
         .map { prefs ->
-        migrateLegacySecretsIfNeeded(prefs)
-
         UserPreferences(
             asrBaseUrl = prefs[Keys.ASR_BASE_URL] ?: "",
             asrApiKey = securePreferencesStore.getAsrApiKey(),
@@ -140,6 +139,10 @@ class PreferencesDataStore @Inject constructor(
             prefs[Keys.PREFERRED_LANGUAGES] = languages.joinToString(",")
             prefs.remove(Keys.LANGUAGE)
         }
+    }
+
+    suspend fun runStartupMigrations() {
+        migrateLegacySecretsIfNeeded(context.dataStore.data.first())
     }
 
     private fun resolveActiveLanguage(prefs: Preferences): String? {
