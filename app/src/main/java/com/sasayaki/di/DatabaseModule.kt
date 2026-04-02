@@ -41,7 +41,7 @@ object DatabaseModule {
             SasayakiDatabase::class.java,
             "sasayaki.db"
         ).addMigrations(migration1To2, migration2To3)
-            .fallbackToDestructiveMigrationOnDowngrade()
+            .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
             .build()
     }
 
