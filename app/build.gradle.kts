@@ -69,7 +69,7 @@ android {
     }
 
     composeCompiler {
-        stabilityConfigurationFile = project.layout.projectDirectory.file("compose-stability.conf")
+        stabilityConfigurationFiles.add(project.layout.projectDirectory.file("compose-stability.conf"))
     }
 
     room {
