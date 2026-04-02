@@ -25,6 +25,14 @@ object DatabaseModule {
         }
     }
 
+    private val migration2To3 = object : Migration(2, 3) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                "ALTER TABLE `dictations` ADD COLUMN `historyVisible` INTEGER NOT NULL DEFAULT 1"
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): SasayakiDatabase {
@@ -32,7 +40,7 @@ object DatabaseModule {
             context,
             SasayakiDatabase::class.java,
             "sasayaki.db"
-        ).addMigrations(migration1To2)
+        ).addMigrations(migration1To2, migration2To3)
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
     }

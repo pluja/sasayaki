@@ -54,6 +54,12 @@ class HistoryViewModel @Inject constructor(
         }
     }
 
+    fun clearHistory() {
+        viewModelScope.launch {
+            dictationDao.clearHistory()
+        }
+    }
+
     suspend fun getRawText(id: Long): String? {
         return dictationDao.getRawText(id)
     }

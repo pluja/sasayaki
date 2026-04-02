@@ -96,10 +96,17 @@ class SettingsViewModel @Inject constructor(
         autoClipboard: Boolean,
         vibrateOnRecord: Boolean,
         silenceThresholdMs: Long,
-        historyEnabled: Boolean
+        historyEnabled: Boolean,
+        keepStatsWithoutHistory: Boolean
     ) {
         viewModelScope.launch {
-            preferencesDataStore.updateGeneralSettings(autoClipboard, vibrateOnRecord, silenceThresholdMs, historyEnabled)
+            preferencesDataStore.updateGeneralSettings(
+                autoClipboard,
+                vibrateOnRecord,
+                silenceThresholdMs,
+                historyEnabled,
+                keepStatsWithoutHistory
+            )
         }
     }
 

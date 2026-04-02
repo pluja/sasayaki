@@ -55,14 +55,16 @@ class TranscriptionManager @Inject constructor(
         val processedText = textProcessor.process(rawText, dictionaryWords, sourceApp)
         val wordCount = processedText.split("\\s+".toRegex()).filter { it.isNotBlank() }.size
 
-        if (prefs.historyEnabled) {
+        if (prefs.historyEnabled || prefs.keepStatsWithoutHistory) {
+            val saveFullHistory = prefs.historyEnabled
             dictationDao.insert(
                 Dictation(
-                    text = processedText,
-                    rawText = rawText,
+                    text = if (saveFullHistory) processedText else "",
+                    rawText = if (saveFullHistory) rawText else "",
                     wordCount = wordCount,
-                    sourceApp = sourceApp,
-                    durationMs = durationMs
+                    sourceApp = if (saveFullHistory) sourceApp else null,
+                    durationMs = durationMs,
+                    historyVisible = saveFullHistory
                 )
             )
             dictationDao.pruneOldEntries(MAX_HISTORY_ENTRIES)

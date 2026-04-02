@@ -43,6 +43,7 @@ class PreferencesDataStore @Inject constructor(
         val PREFERRED_LANGUAGES = stringPreferencesKey("preferred_languages")
         val ACTIVE_LANGUAGE = stringPreferencesKey("active_language")
         val HISTORY_ENABLED = booleanPreferencesKey("history_enabled")
+        val KEEP_STATS_WITHOUT_HISTORY = booleanPreferencesKey("keep_stats_without_history")
     }
 
     val preferences: Flow<UserPreferences> = context.dataStore.data
@@ -70,7 +71,8 @@ class PreferencesDataStore @Inject constructor(
             silenceThresholdMs = prefs[Keys.SILENCE_THRESHOLD_MS] ?: 2000L,
             preferredLanguages = parsePreferredLanguages(prefs),
             activeLanguage = resolveActiveLanguage(prefs),
-            historyEnabled = prefs[Keys.HISTORY_ENABLED] ?: true
+            historyEnabled = prefs[Keys.HISTORY_ENABLED] ?: true,
+            keepStatsWithoutHistory = prefs[Keys.KEEP_STATS_WITHOUT_HISTORY] ?: false
         )
     }
     .distinctUntilChanged()
@@ -99,13 +101,15 @@ class PreferencesDataStore @Inject constructor(
         autoClipboard: Boolean,
         vibrateOnRecord: Boolean,
         silenceThresholdMs: Long,
-        historyEnabled: Boolean
+        historyEnabled: Boolean,
+        keepStatsWithoutHistory: Boolean
     ) {
         context.dataStore.edit { prefs ->
             prefs[Keys.AUTO_CLIPBOARD] = autoClipboard
             prefs[Keys.VIBRATE_ON_RECORD] = vibrateOnRecord
             prefs[Keys.SILENCE_THRESHOLD_MS] = silenceThresholdMs
             prefs[Keys.HISTORY_ENABLED] = historyEnabled
+            prefs[Keys.KEEP_STATS_WITHOUT_HISTORY] = keepStatsWithoutHistory
         }
     }
 

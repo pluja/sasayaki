@@ -21,8 +21,10 @@ import androidx.compose.material.icons.filled.Delete
 import com.sasayaki.ui.theme.SasayakiIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,13 +56,25 @@ fun HistoryScreen(
 ) {
     val dayGroups by viewModel.dayGroups.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var showClearHistoryDialog by remember { mutableStateOf(false) }
 
     SasayakiScaffold(
         topBar = {
             SasayakiTopBar(
                 title = "History",
                 subtitle = "Review, copy, or clear previous dictations stored on this device.",
-                onBack = onBack
+                onBack = onBack,
+                actions = {
+                    if (dayGroups.isNotEmpty()) {
+                        IconButton(onClick = { showClearHistoryDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Clear history",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
             )
         }
     ) { padding ->
@@ -98,6 +112,29 @@ fun HistoryScreen(
                 }
             }
         }
+    }
+
+    if (showClearHistoryDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearHistoryDialog = false },
+            title = { Text("Clear saved history?") },
+            text = { Text("This removes saved dictation text from the history screen but keeps your usage stats.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.clearHistory()
+                        showClearHistoryDialog = false
+                    }
+                ) {
+                    Text("Clear")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearHistoryDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

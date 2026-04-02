@@ -9,7 +9,7 @@ import com.sasayaki.data.db.entity.DictionaryWord
 
 @Database(
     entities = [Dictation::class, DictionaryWord::class],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class SasayakiDatabase : RoomDatabase() {

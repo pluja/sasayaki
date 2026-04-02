@@ -148,7 +148,8 @@ fun SettingsScreen(
                         autoClipboard = it,
                         vibrateOnRecord = preferences.vibrateOnRecord,
                         silenceThresholdMs = silenceThreshold.toLong(),
-                        historyEnabled = preferences.historyEnabled
+                        historyEnabled = preferences.historyEnabled,
+                        keepStatsWithoutHistory = preferences.keepStatsWithoutHistory
                     )
                 },
                 onVibrateOnRecordChange = {
@@ -156,7 +157,8 @@ fun SettingsScreen(
                         autoClipboard = preferences.autoClipboard,
                         vibrateOnRecord = it,
                         silenceThresholdMs = silenceThreshold.toLong(),
-                        historyEnabled = preferences.historyEnabled
+                        historyEnabled = preferences.historyEnabled,
+                        keepStatsWithoutHistory = preferences.keepStatsWithoutHistory
                     )
                 },
                 onSilenceThresholdChange = { silenceThreshold = it },
@@ -165,7 +167,8 @@ fun SettingsScreen(
                         autoClipboard = preferences.autoClipboard,
                         vibrateOnRecord = preferences.vibrateOnRecord,
                         silenceThresholdMs = silenceThreshold.toLong(),
-                        historyEnabled = preferences.historyEnabled
+                        historyEnabled = preferences.historyEnabled,
+                        keepStatsWithoutHistory = preferences.keepStatsWithoutHistory
                     )
                 },
                 onHistoryEnabledChange = {
@@ -173,7 +176,17 @@ fun SettingsScreen(
                         autoClipboard = preferences.autoClipboard,
                         vibrateOnRecord = preferences.vibrateOnRecord,
                         silenceThresholdMs = silenceThreshold.toLong(),
-                        historyEnabled = it
+                        historyEnabled = it,
+                        keepStatsWithoutHistory = preferences.keepStatsWithoutHistory
+                    )
+                },
+                onKeepStatsWithoutHistoryChange = {
+                    viewModel.saveGeneralSettings(
+                        autoClipboard = preferences.autoClipboard,
+                        vibrateOnRecord = preferences.vibrateOnRecord,
+                        silenceThresholdMs = silenceThreshold.toLong(),
+                        historyEnabled = preferences.historyEnabled,
+                        keepStatsWithoutHistory = it
                     )
                 }
             ) }
@@ -385,7 +398,8 @@ private fun GeneralSettingsSection(
     onVibrateOnRecordChange: (Boolean) -> Unit,
     onSilenceThresholdChange: (Float) -> Unit,
     onSilenceThresholdSave: () -> Unit,
-    onHistoryEnabledChange: (Boolean) -> Unit
+    onHistoryEnabledChange: (Boolean) -> Unit,
+    onKeepStatsWithoutHistoryChange: (Boolean) -> Unit
 ) {
     SectionCard(
         title = "Behavior",
@@ -439,6 +453,18 @@ private fun GeneralSettingsSection(
             description = "Keep recent dictations on the device so you can review and copy them later.",
             checked = preferences.historyEnabled,
             onCheckedChange = onHistoryEnabledChange
+        )
+
+        SettingSwitchRow(
+            title = "Keep stats without history",
+            description = if (preferences.historyEnabled) {
+                "Turn off saved dictation history first if you want to keep only counts and durations without storing content."
+            } else {
+                "Keep counting dictations, words, and recording time even though saved text history is off. No dictated content is stored."
+            },
+            checked = preferences.keepStatsWithoutHistory,
+            onCheckedChange = onKeepStatsWithoutHistoryChange,
+            enabled = !preferences.historyEnabled
         )
     }
 }

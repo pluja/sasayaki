@@ -13,5 +13,6 @@ data class UserPreferences(
     val silenceThresholdMs: Long = 2000,
     val preferredLanguages: List<String> = emptyList(),
     val activeLanguage: String? = null,
-    val historyEnabled: Boolean = true
+    val historyEnabled: Boolean = true,
+    val keepStatsWithoutHistory: Boolean = false
 )

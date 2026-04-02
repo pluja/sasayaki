@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,7 +53,8 @@ fun SasayakiScaffold(
 fun SasayakiTopBar(
     title: String,
     subtitle: String? = null,
-    onBack: (() -> Unit)? = null
+    onBack: (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
     TopAppBar(
         title = {
@@ -76,6 +78,7 @@ fun SasayakiTopBar(
                 }
             }
         },
+        actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.background,
             scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
