@@ -8,6 +8,7 @@ NUM_EXAMPLES    ?= 2000
 LANGUAGES       ?= $(error Set LANGUAGES in .env, e.g. LANGUAGES=English German Japanese)
 BASE_MODEL      ?= unsloth/Qwen3.5-2B
 GGUF_QUANTIZATION ?= q4_k_m q8_0
+BATCH_SIZE        ?= 4
 DOCKER_IMAGE      ?= unsloth/unsloth:latest
 LANGUAGE_WEIGHTS ?=
 CONTEXT_WEIGHTS  ?=
@@ -33,6 +34,7 @@ sample: ## Generate a small sample to compare model quality
 		--base-url "$(LLM_BASE_URL)" \
 		--api-key "$(LLM_API_KEY)" \
 		--model "$(LLM_MODEL)" \
+		--batch-size $(BATCH_SIZE) \
 		--languages $(LANGUAGES) \
 		$(WEIGHT_FLAGS) --sample
 
@@ -42,6 +44,7 @@ generate: ## Generate synthetic training data
 		--api-key "$(LLM_API_KEY)" \
 		--model "$(LLM_MODEL)" \
 		--num-examples $(NUM_EXAMPLES) \
+		--batch-size $(BATCH_SIZE) \
 		--languages $(LANGUAGES) \
 		--output-dir $(DATA_DIR) \
 		$(WEIGHT_FLAGS)
@@ -52,6 +55,7 @@ resume: ## Resume interrupted data generation
 		--api-key "$(LLM_API_KEY)" \
 		--model "$(LLM_MODEL)" \
 		--num-examples $(NUM_EXAMPLES) \
+		--batch-size $(BATCH_SIZE) \
 		--languages $(LANGUAGES) \
 		--output-dir $(DATA_DIR) \
 		$(WEIGHT_FLAGS) --resume

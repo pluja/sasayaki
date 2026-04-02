@@ -12,9 +12,25 @@ import android.view.animation.LinearInterpolator
 class BubbleView(context: Context) : View(context) {
     companion object {
         const val SIZE_DP = 56
+        private const val CANCEL_SIZE_DP = 20
+        private const val CANCEL_GAP_DP = 8
     }
 
-    private val sizePx = (SIZE_DP * resources.displayMetrics.density).toInt()
+    private val density = resources.displayMetrics.density
+    private val sizePx = (SIZE_DP * density).toInt()
+    private val cancelSizePx = CANCEL_SIZE_DP * density
+    private val cancelGapPx = CANCEL_GAP_DP * density
+    private val expandedHeightPx = (sizePx + cancelGapPx + cancelSizePx).toInt()
+
+    private val cancelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+
+    private val cancelStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2.5f * density
+        strokeCap = Paint.Cap.ROUND
+    }
 
     private val basePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
@@ -47,18 +63,22 @@ class BubbleView(context: Context) : View(context) {
 
     init {
         minimumWidth = sizePx
-        minimumHeight = sizePx
+        minimumHeight = expandedHeightPx
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        setMeasuredDimension(sizePx, sizePx)
+        val desiredHeight = if (state is ServiceState.Recording) expandedHeightPx else sizePx
+        setMeasuredDimension(
+            resolveSize(sizePx, widthMeasureSpec),
+            resolveSize(desiredHeight, heightMeasureSpec)
+        )
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        val cx = width / 2f
-        val cy = height / 2f
-        val baseRadius = width / 2f * 0.7f
+        val cx = sizePx / 2f
+        val cy = height - (sizePx / 2f)
+        val baseRadius = sizePx / 2f * 0.7f
 
         when (state) {
             is ServiceState.Idle -> {
@@ -75,6 +95,7 @@ class BubbleView(context: Context) : View(context) {
                 canvas.drawCircle(cx, cy, radius, basePaint)
                 basePaint.color = Color.WHITE
                 canvas.drawCircle(cx, cy, baseRadius * 0.3f, basePaint)
+                drawCancelButton(canvas, cx)
             }
             is ServiceState.Transcribing -> {
                 basePaint.color = Color.argb(180, 60, 120, 220)
@@ -98,6 +119,7 @@ class BubbleView(context: Context) : View(context) {
     }
 
     fun updateState(newState: ServiceState) {
+        val heightChanged = (state is ServiceState.Recording) != (newState is ServiceState.Recording)
         state = newState
         when (newState) {
             is ServiceState.Recording -> {
@@ -114,6 +136,7 @@ class BubbleView(context: Context) : View(context) {
                 pulseScale = 1f
             }
         }
+        if (heightChanged) requestLayout()
         invalidate()
     }
 
@@ -125,5 +148,33 @@ class BubbleView(context: Context) : View(context) {
     fun cleanup() {
         pulseAnimator.cancel()
         arcAnimator.cancel()
+    }
+
+    fun collapsedWidthPx(): Int = sizePx
+
+    fun collapsedHeightPx(): Int = sizePx
+
+    fun expandedHeightPx(): Int = expandedHeightPx
+
+    fun isCancelHit(x: Float, y: Float): Boolean {
+        if (state !is ServiceState.Recording) return false
+        val centerX = sizePx / 2f
+        val centerY = cancelSizePx / 2f
+        val touchRadius = cancelSizePx * 0.75f
+        val dx = x - centerX
+        val dy = y - centerY
+        return dx * dx + dy * dy <= touchRadius * touchRadius
+    }
+
+    private fun drawCancelButton(canvas: Canvas, centerX: Float) {
+        val radius = cancelSizePx / 2f
+        val centerY = radius
+        cancelPaint.color = Color.argb(235, 45, 45, 45)
+        canvas.drawCircle(centerX, centerY, radius, cancelPaint)
+
+        cancelStrokePaint.color = Color.WHITE
+        val arm = radius * 0.45f
+        canvas.drawLine(centerX - arm, centerY - arm, centerX + arm, centerY + arm, cancelStrokePaint)
+        canvas.drawLine(centerX - arm, centerY + arm, centerX + arm, centerY - arm, cancelStrokePaint)
     }
 }

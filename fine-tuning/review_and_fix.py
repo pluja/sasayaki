@@ -14,7 +14,7 @@ from openai import OpenAI
 from tqdm import tqdm
 
 
-def check_entry(raw: str, clean: str) -> list[str]:
+def check_entry(raw: str, clean: str, is_passthrough: bool = False) -> list[str]:
     """Return a list of issue descriptions. Language-agnostic heuristics only."""
     issues = []
     raw_l = raw.lower()
@@ -27,7 +27,7 @@ def check_entry(raw: str, clean: str) -> list[str]:
     if len(clean) > len(raw) * 1.3:
         issues.append(f"clean longer than raw ({len(clean)} vs {len(raw)} chars)")
 
-    if len(clean) / max(len(raw), 1) > 0.98 and clean_l == raw_l:
+    if not is_passthrough and len(clean) / max(len(raw), 1) > 0.98 and clean_l == raw_l:
         issues.append("clean identical to raw, nothing was cleaned")
 
     sentences = clean.split(".")
@@ -129,7 +129,8 @@ def main():
         convos = ex["conversations"]
         raw = convos[1]["content"]
         clean = convos[2]["content"]
-        issues = check_entry(raw, clean)
+        is_passthrough = ex.get("metadata", {}).get("passthrough", False)
+        issues = check_entry(raw, clean, is_passthrough=is_passthrough)
         if issues:
             flagged.append((i, issues))
         else:
@@ -190,7 +191,8 @@ def main():
         clean = convos[2]["content"]
         try:
             new_clean = fix_entry(client, args.model, system_prompt, raw, clean, issues)
-            remaining = check_entry(raw, new_clean)
+            is_pt = examples[idx].get("metadata", {}).get("passthrough", False)
+            remaining = check_entry(raw, new_clean, is_passthrough=is_pt)
             if remaining:
                 tqdm.write(f"[{idx}] Partial fix (remaining: {remaining}), keeping best version")
             examples[idx]["conversations"][2]["content"] = new_clean

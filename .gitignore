@@ -6,6 +6,7 @@
 /build
 /app/build
 /captures
+/backend/
 .externalNativeBuild
 .cxx
 local.properties
@@ -19,5 +20,6 @@ sasayaki-*.apk
 .android-cache
 .kotlin
 .claude
+.codex
 output/
 .*-cache

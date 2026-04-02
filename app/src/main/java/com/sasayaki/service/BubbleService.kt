@@ -73,7 +73,7 @@ class BubbleService : Service() {
     private var hapticFeedback: HapticFeedback? = null
     private var audioRecorder: AudioRecorder? = null
     private var silenceDetector: SilenceDetector? = null
-    private var recordingJob: Job? = null
+    @Volatile private var recordingJob: Job? = null
     private var silenceCheckJob: Job? = null
     private var levelJob: Job? = null
     private var longPressJob: Job? = null
@@ -82,7 +82,7 @@ class BubbleService : Service() {
     private var state: ServiceState = ServiceState.Idle
     private var recordingStartTime: Long = 0
     private var recordingSourceApp: String? = null
-    private var pcmFile: File? = null
+    @Volatile private var pcmFile: File? = null
     private var bubbleAdded = false
 
     // Keyboard-aware visibility
@@ -166,8 +166,8 @@ class BubbleService : Service() {
 
         bubbleView = BubbleView(this)
         layoutParams = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            bubbleView?.collapsedWidthPx() ?: WindowManager.LayoutParams.WRAP_CONTENT,
+            bubbleView?.collapsedHeightPx() ?: BubbleView.SIZE_DP.dpToPx(),
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
@@ -227,12 +227,20 @@ class BubbleService : Service() {
         var initialTouchY = 0f
         var isDragging = false
         var longPressTriggered = false
+        var cancelPressed = false
+        var cancelGesture = false
         val tapThreshold = 10 * resources.displayMetrics.density
         val longPressDelayMs = 400L
 
         bubbleView?.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
+                    cancelPressed = state is ServiceState.Recording && (bubbleView?.isCancelHit(event.x, event.y) == true)
+                    cancelGesture = cancelPressed
+                    if (cancelPressed) {
+                        longPressJob?.cancel()
+                        return@setOnTouchListener true
+                    }
                     initialX = params.x
                     initialY = params.y
                     initialTouchX = event.rawX
@@ -253,6 +261,10 @@ class BubbleService : Service() {
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
+                    if (cancelGesture) {
+                        cancelPressed = bubbleView?.isCancelHit(event.x, event.y) == true
+                        return@setOnTouchListener true
+                    }
                     val dx = event.rawX - initialTouchX
                     val dy = event.rawY - initialTouchY
                     if (dx * dx + dy * dy > tapThreshold * tapThreshold) {
@@ -267,6 +279,15 @@ class BubbleService : Service() {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
+                    if (cancelGesture) {
+                        longPressJob?.cancel()
+                        if (cancelPressed && bubbleView?.isCancelHit(event.x, event.y) == true) {
+                            cancelRecording()
+                        }
+                        cancelPressed = false
+                        cancelGesture = false
+                        return@setOnTouchListener true
+                    }
                     longPressJob?.cancel()
                     if (longPressTriggered) {
                         // Long press already handled, do nothing
@@ -282,6 +303,13 @@ class BubbleService : Service() {
                             stopSelf()
                         }
                     }
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    longPressJob?.cancel()
+                    cancelPressed = false
+                    cancelGesture = false
+                    isDragging = false
                     true
                 }
                 else -> false
@@ -413,6 +441,40 @@ class BubbleService : Service() {
             } finally {
                 currentPcmFile?.delete()
                 wavFile?.delete()
+                recordingJob = null
+                pcmFile = null
+                audioRecorder = null
+                silenceDetector = null
+            }
+        }
+    }
+
+    private fun cancelRecording() {
+        if (state !is ServiceState.Recording) return
+
+        audioRecorder?.stop()
+        recordingJob?.cancel()
+        silenceCheckJob?.cancel()
+        levelJob?.cancel()
+
+        scope.launch {
+            val prefs = preferencesDataStore.preferences.first()
+            if (prefs.vibrateOnRecord) hapticFeedback?.recordStop()
+        }
+
+        updateState(ServiceState.Idle)
+
+        scope.launch(Dispatchers.IO) {
+            try {
+                recordingJob?.join()
+            } catch (e: Exception) {
+                Log.w(TAG, "Recording cleanup interrupted", e)
+            } finally {
+                pcmFile?.delete()
+                recordingJob = null
+                pcmFile = null
+                audioRecorder = null
+                silenceDetector = null
             }
         }
     }
@@ -431,10 +493,33 @@ class BubbleService : Service() {
         state = newState
         scope.launch(Dispatchers.Main) {
             bubbleView?.updateState(newState)
+            syncBubbleLayout()
             // When done transcribing, hide bubble if keyboard is gone
             if (newState is ServiceState.Idle && !TextInjectorService.isKeyboardVisible) {
                 hideBubble()
             }
         }
     }
+
+    private fun syncBubbleLayout() {
+        val params = layoutParams ?: return
+        val view = bubbleView ?: return
+        val targetWidth = view.collapsedWidthPx()
+        val targetHeight = if (state is ServiceState.Recording) view.expandedHeightPx() else view.collapsedHeightPx()
+
+        if (params.width == targetWidth && params.height == targetHeight) return
+        val previousHeight = params.height
+        params.width = targetWidth
+        params.height = targetHeight
+        params.y -= (targetHeight - previousHeight)
+        if (bubbleAdded) {
+            try {
+                windowManager?.updateViewLayout(view, params)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to resize bubble", e)
+            }
+        }
+    }
+
+    private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
 }
