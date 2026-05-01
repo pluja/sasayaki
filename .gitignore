@@ -21,5 +21,8 @@ sasayaki-*.apk
 .kotlin
 .claude
 .codex
+.omx
 output/
 .*-cache
+*.md
+!README.md
