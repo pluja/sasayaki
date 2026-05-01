@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -262,13 +261,4 @@ internal fun SettingSwitchRow(
 internal fun isSecureUrl(value: String): Boolean {
     val trimmed = value.trim()
     return trimmed.isBlank() || trimmed.startsWith("https://")
-}
-
-internal fun settingsContentPadding(padding: PaddingValues): PaddingValues {
-    return PaddingValues(
-        start = 20.dp,
-        end = 20.dp,
-        top = padding.calculateTopPadding() + 16.dp,
-        bottom = padding.calculateBottomPadding() + 28.dp
-    )
 }

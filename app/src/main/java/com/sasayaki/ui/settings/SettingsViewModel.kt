@@ -9,6 +9,9 @@ import com.sasayaki.data.api.model.ChatCompletionRequest
 import com.sasayaki.data.api.model.ChatMessage
 import com.sasayaki.data.preferences.PreferencesDataStore
 import com.sasayaki.data.preferences.UserPreferences
+import com.sasayaki.data.repository.ProcessingRepository
+import com.sasayaki.domain.model.PostProcessingPrompt
+import com.sasayaki.domain.model.TextReplacementRule
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -34,7 +37,8 @@ sealed class TestState {
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val preferencesDataStore: PreferencesDataStore,
-    private val apiClientFactory: ApiClientFactory
+    private val apiClientFactory: ApiClientFactory,
+    private val processingRepository: ProcessingRepository
 ) : ViewModel() {
     private var asrSavedResetJob: Job? = null
     private var llmSavedResetJob: Job? = null
@@ -45,6 +49,12 @@ class SettingsViewModel @Inject constructor(
 
     val preferences: StateFlow<UserPreferences> = preferencesDataStore.preferences
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserPreferences())
+
+    val rules: StateFlow<List<TextReplacementRule>> = processingRepository.rules
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val prompts: StateFlow<List<PostProcessingPrompt>> = processingRepository.prompts
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     override fun onCleared() {
         asrTestJob?.cancel()
@@ -95,19 +105,39 @@ class SettingsViewModel @Inject constructor(
     fun saveGeneralSettings(
         autoClipboard: Boolean,
         vibrateOnRecord: Boolean,
+        pauseOtherAudio: Boolean,
         silenceThresholdMs: Long,
         historyEnabled: Boolean,
-        keepStatsWithoutHistory: Boolean
+        keepStatsWithoutHistory: Boolean,
+        historyRetentionLimit: Int
     ) {
         viewModelScope.launch {
             preferencesDataStore.updateGeneralSettings(
                 autoClipboard,
                 vibrateOnRecord,
+                pauseOtherAudio,
                 silenceThresholdMs,
                 historyEnabled,
-                keepStatsWithoutHistory
+                keepStatsWithoutHistory,
+                historyRetentionLimit
             )
         }
+    }
+
+    fun saveRule(rule: TextReplacementRule) {
+        viewModelScope.launch { processingRepository.saveRule(rule) }
+    }
+
+    fun deleteRule(id: Long) {
+        viewModelScope.launch { processingRepository.deleteRule(id) }
+    }
+
+    fun savePrompt(prompt: PostProcessingPrompt) {
+        viewModelScope.launch { processingRepository.savePrompt(prompt) }
+    }
+
+    fun deletePrompt(id: Long) {
+        viewModelScope.launch { processingRepository.deletePrompt(id) }
     }
 
     fun addPreferredLanguage(code: String) {
