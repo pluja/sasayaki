@@ -40,3 +40,14 @@ enum class DictationStatus {
     FAILURE
 }
 
+@Immutable
+data class AppContext(
+    val label: String?,
+    val packageName: String?
+) {
+    val hasData: Boolean
+        get() = !label.isNullOrBlank() || !packageName.isNullOrBlank()
+
+    val displayName: String?
+        get() = label?.takeIf { it.isNotBlank() } ?: packageName?.takeIf { it.isNotBlank() }
+}

@@ -21,6 +21,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import com.sasayaki.data.preferences.PreferencesDataStore
 import com.sasayaki.data.repository.ProfileRepository
+import com.sasayaki.domain.model.AppContext
 import com.sasayaki.domain.transcription.AudioConverter
 import com.sasayaki.domain.transcription.TranscriptionManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -95,7 +96,7 @@ class BubbleService : Service() {
     private var recordingStartTime: Long = 0
     private var pausedStartedAt: Long = 0
     private var totalPausedMs: Long = 0
-    private var recordingSourceApp: String? = null
+    private var recordingAppContext: AppContext? = null
     @Volatile private var pcmFile: File? = null
     private var bubbleAdded = false
 
@@ -398,7 +399,7 @@ class BubbleService : Service() {
         recordingStartTime = System.currentTimeMillis()
         pausedStartedAt = 0
         totalPausedMs = 0
-        recordingSourceApp = textInjectionBridge.focusedAppName
+        recordingAppContext = textInjectionBridge.currentAppContext
 
         audioRecorder = AudioRecorder()
         pcmFile = File(cacheDir, "recording_${System.currentTimeMillis()}.pcm")
@@ -511,10 +512,10 @@ class BubbleService : Service() {
                     AudioConverter.pcmToWav(currentPcmFile, wavFile)
                 }
 
-                val sourceApp = recordingSourceApp
+                val appContext = recordingAppContext
 
                 val result = withContext(Dispatchers.IO) {
-                    transcriptionManager.transcribe(wavFile, durationMs, sourceApp)
+                    transcriptionManager.transcribe(wavFile, durationMs, appContext)
                 }
 
                 result.onSuccess { text ->

@@ -9,6 +9,7 @@ data class DictationSummary(
     val wordCount: Int,
     val timestamp: Long,
     val sourceApp: String?,
+    val sourceAppPackage: String?,
     val durationMs: Long,
     val status: String,
     val errorMessage: String?,

@@ -5,6 +5,7 @@ import com.sasayaki.data.db.dao.TextReplacementRuleDao
 import com.sasayaki.data.db.entity.PostProcessingPromptEntity
 import com.sasayaki.data.db.entity.TextReplacementRuleEntity
 import com.sasayaki.data.db.entity.toEntity
+import com.sasayaki.domain.model.AppContext
 import com.sasayaki.domain.model.PostProcessingPrompt
 import com.sasayaki.domain.model.Profile
 import com.sasayaki.domain.model.TextReplacementRule
@@ -62,7 +63,7 @@ class ProcessingRepository @Inject constructor(
             }
     }
 
-    suspend fun buildSystemPrompt(profile: Profile, sourceApp: String?): String {
+    suspend fun buildSystemPrompt(profile: Profile, appContext: AppContext?): String {
         val promptTexts = promptDao.getAll()
             .map(PostProcessingPromptEntity::toDomain)
             .filter { it.id in profile.selectedPromptIds }
@@ -77,8 +78,8 @@ class ProcessingRepository @Inject constructor(
             promptTexts += "The user is dictating in: ${profile.language}. Handle speech disfluencies for this language."
         }
 
-        if (!sourceApp.isNullOrBlank()) {
-            inferStyleForApp(sourceApp)?.let { promptTexts += "The user is dictating into $sourceApp. $it" }
+        if (appContext?.hasData == true) {
+            promptTexts += buildAppContextPrompt(appContext)
         }
 
         if (promptTexts.isEmpty()) {
@@ -89,12 +90,21 @@ class ProcessingRepository @Inject constructor(
         return promptTexts.joinToString("\n")
     }
 
-    private fun inferStyleForApp(sourceApp: String): String? {
-        val appLower = sourceApp.lowercase()
+    private fun buildAppContextPrompt(appContext: AppContext): String {
+        val lines = mutableListOf<String>()
+        appContext.displayName?.let { lines += "- Target app: $it" }
+        appContext.packageName?.takeIf { it.isNotBlank() }?.let { lines += "- Target package: $it" }
+        inferStyleForApp(appContext)?.let { lines += "- App style hint: $it" }
+        lines += "- Adapt formatting for the target app, but do not mention the app unless the dictated text requires it."
+        return "Context:\n${lines.joinToString("\n")}"
+    }
+
+    private fun inferStyleForApp(appContext: AppContext): String? {
+        val appLower = listOfNotNull(appContext.label, appContext.packageName).joinToString(" ").lowercase()
         return when {
             appLower.containsAny("mail", "outlook", "gmail", "proton") ->
                 "Use a professional written tone with proper greetings and sign-offs if present."
-            appLower.containsAny("slack", "discord", "telegram", "whatsapp", "messenger", "signal", "messages", "molly") ->
+            appLower.containsAny("slack", "discord", "telegram", "whatsapp", "messenger", "signal", "messages", "molly", "element", "matrix") ->
                 "Use a casual conversational tone. Keep it concise and natural for chat."
             appLower.containsAny("docs", "notion", "notes", "obsidian", "keep", "evernote", "writer") ->
                 "Use a clear, structured writing style suitable for documents and notes."
@@ -108,4 +118,3 @@ class ProcessingRepository @Inject constructor(
         return terms.any { contains(it) }
     }
 }
-

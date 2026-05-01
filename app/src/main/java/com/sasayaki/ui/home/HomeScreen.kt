@@ -241,8 +241,8 @@ private fun TranscriptCard(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(formatTime(dictation.timestamp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                dictation.sourceApp?.takeIf(String::isNotBlank)?.let {
-                    StatusPill(displaySourceApp(it))
+                displaySourceApp(dictation.sourceApp, dictation.sourceAppPackage)?.let {
+                    StatusPill(it)
                 }
                 if (isRetrying) {
                     StatusPill("Retrying")
@@ -327,21 +327,42 @@ private fun formatCompactNumber(number: Int): String {
     }
 }
 
-private fun displaySourceApp(sourceApp: String): String {
-    val trimmed = sourceApp.trim()
-    if (trimmed.isBlank()) return "Unknown app"
-    if (!trimmed.contains('.')) return trimmed.take(24)
+private fun displaySourceApp(sourceApp: String?, sourceAppPackage: String?): String? {
+    val label = sourceApp?.trim()
+        ?.takeIf { it.isNotBlank() && !it.equals("App", ignoreCase = true) }
+    if (label != null && !label.contains('.')) return label.take(24)
+
+    val packageName = sourceAppPackage?.trim()?.takeIf { it.isNotBlank() }
+        ?: label?.takeIf { it.contains('.') }
+        ?: return label?.take(24)
 
     return when {
-        trimmed.contains("whatsapp", ignoreCase = true) -> "WhatsApp"
-        trimmed.contains("signal", ignoreCase = true) -> "Signal"
-        trimmed.contains("telegram", ignoreCase = true) -> "Telegram"
-        trimmed.contains("gmail", ignoreCase = true) -> "Gmail"
-        trimmed.contains("outlook", ignoreCase = true) -> "Outlook"
-        trimmed.contains("discord", ignoreCase = true) -> "Discord"
-        trimmed.contains("slack", ignoreCase = true) -> "Slack"
-        else -> trimmed.substringAfterLast('.').replaceFirstChar { it.uppercase() }.take(24)
+        packageName.contains("whatsapp", ignoreCase = true) -> "WhatsApp"
+        packageName.contains("signal", ignoreCase = true) -> "Signal"
+        packageName.contains("molly", ignoreCase = true) -> "Molly"
+        packageName.contains("element", ignoreCase = true) -> "Element"
+        packageName.contains("telegram", ignoreCase = true) -> "Telegram"
+        packageName.contains("gmail", ignoreCase = true) -> "Gmail"
+        packageName.contains("outlook", ignoreCase = true) -> "Outlook"
+        packageName.contains("discord", ignoreCase = true) -> "Discord"
+        packageName.contains("slack", ignoreCase = true) -> "Slack"
+        else -> appLabelFromPackage(packageName).take(24)
     }
+}
+
+private fun appLabelFromPackage(packageName: String): String {
+    val ignoredSegments = setOf("android", "app", "apps", "client", "com", "debug", "im", "io", "mobile", "net", "org", "release", "x")
+    val segment = packageName.split('.')
+        .firstOrNull { part ->
+            val normalized = part.lowercase()
+            normalized.length > 1 && normalized !in ignoredSegments
+        }
+        ?: packageName.substringAfterLast('.')
+    return segment
+        .replace('_', ' ')
+        .replace('-', ' ')
+        .trim()
+        .replaceFirstChar { it.uppercase() }
 }
 
 private fun homeContentPadding(padding: PaddingValues): PaddingValues {

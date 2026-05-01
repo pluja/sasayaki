@@ -15,6 +15,7 @@ data class Dictation(
     val wordCount: Int,
     val timestamp: Long = System.currentTimeMillis(),
     val sourceApp: String? = null,
+    val sourceAppPackage: String? = null,
     val durationMs: Long = 0,
     val historyVisible: Boolean = true,
     val status: String = DictationStatus.SUCCESS.name,

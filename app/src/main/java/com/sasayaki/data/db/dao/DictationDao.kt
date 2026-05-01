@@ -17,7 +17,7 @@ interface DictationDao {
     @Update
     suspend fun update(dictation: Dictation)
 
-    @Query("SELECT id, text, wordCount, timestamp, sourceApp, durationMs, status, errorMessage, profileId, audioPath FROM dictations WHERE historyVisible = 1 ORDER BY timestamp DESC LIMIT :limit")
+    @Query("SELECT id, text, wordCount, timestamp, sourceApp, sourceAppPackage, durationMs, status, errorMessage, profileId, audioPath FROM dictations WHERE historyVisible = 1 ORDER BY timestamp DESC LIMIT :limit")
     fun getRecent(limit: Int = 500): Flow<List<DictationSummary>>
 
     @Query("SELECT * FROM dictations WHERE id = :id")
@@ -35,13 +35,13 @@ interface DictationDao {
     @Query("SELECT audioPath FROM dictations WHERE historyVisible = 1 AND audioPath IS NOT NULL AND id NOT IN (SELECT id FROM dictations WHERE historyVisible = 1 ORDER BY timestamp DESC LIMIT :keep)")
     suspend fun getPrunableAudioPaths(keep: Int): List<String>
 
-    @Query("UPDATE dictations SET text = '', rawText = '', sourceApp = NULL, errorMessage = NULL, audioPath = NULL, historyVisible = 0 WHERE id = :id")
+    @Query("UPDATE dictations SET text = '', rawText = '', sourceApp = NULL, sourceAppPackage = NULL, errorMessage = NULL, audioPath = NULL, historyVisible = 0 WHERE id = :id")
     suspend fun removeFromHistory(id: Long)
 
     @Query("SELECT audioPath FROM dictations WHERE historyVisible = 1 AND audioPath IS NOT NULL")
     suspend fun getAllVisibleAudioPaths(): List<String>
 
-    @Query("UPDATE dictations SET text = '', rawText = '', sourceApp = NULL, errorMessage = NULL, audioPath = NULL, historyVisible = 0 WHERE historyVisible = 1")
+    @Query("UPDATE dictations SET text = '', rawText = '', sourceApp = NULL, sourceAppPackage = NULL, errorMessage = NULL, audioPath = NULL, historyVisible = 0 WHERE historyVisible = 1")
     suspend fun removeAllFromHistory()
 
     @Query("DELETE FROM dictations WHERE historyVisible = 1 AND id NOT IN (SELECT id FROM dictations WHERE historyVisible = 1 ORDER BY timestamp DESC LIMIT :keep)")
@@ -55,6 +55,8 @@ interface DictationDao {
             timestamp = :timestamp,
             status = :status,
             errorMessage = :errorMessage,
+            sourceApp = :sourceApp,
+            sourceAppPackage = :sourceAppPackage,
             profileId = :profileId,
             audioPath = :audioPath,
             historyVisible = :historyVisible
@@ -68,6 +70,8 @@ interface DictationDao {
         timestamp: Long,
         status: String,
         errorMessage: String?,
+        sourceApp: String?,
+        sourceAppPackage: String?,
         profileId: Long?,
         audioPath: String?,
         historyVisible: Boolean

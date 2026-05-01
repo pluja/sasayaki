@@ -6,6 +6,7 @@ import com.sasayaki.data.db.dao.DictationDao
 import com.sasayaki.data.db.entity.Dictation
 import com.sasayaki.data.preferences.PreferencesDataStore
 import com.sasayaki.data.repository.ProfileRepository
+import com.sasayaki.domain.model.AppContext
 import com.sasayaki.domain.model.DictationStatus
 import com.sasayaki.domain.model.Profile
 import com.sasayaki.domain.processing.TextProcessor
@@ -29,9 +30,9 @@ class TranscriptionManager @Inject constructor(
         private const val RETAINED_AUDIO_DIR = "retained_audio"
     }
 
-    suspend fun transcribe(audioFile: File, durationMs: Long, sourceApp: String?): Result<String> {
+    suspend fun transcribe(audioFile: File, durationMs: Long, appContext: AppContext?): Result<String> {
         val profile = profileRepository.getActiveProfile()
-        return transcribeWithProfile(audioFile, durationMs, sourceApp, profile, retryEntryId = null)
+        return transcribeWithProfile(audioFile, durationMs, appContext, profile, retryEntryId = null)
     }
 
     suspend fun retry(dictationId: Long): Result<String> {
@@ -46,7 +47,7 @@ class TranscriptionManager @Inject constructor(
 
         val profile = entry.profileId?.let { profileRepository.getProfile(it) }
             ?: profileRepository.getActiveProfile()
-        return transcribeWithProfile(audioFile, entry.durationMs, entry.sourceApp, profile, retryEntryId = entry.id)
+        return transcribeWithProfile(audioFile, entry.durationMs, entry.toAppContext(), profile, retryEntryId = entry.id)
     }
 
     suspend fun latestRetriableFailureId(): Long? = dictationDao.getLatestRetriableFailureId()
@@ -54,20 +55,20 @@ class TranscriptionManager @Inject constructor(
     private suspend fun transcribeWithProfile(
         audioFile: File,
         durationMs: Long,
-        sourceApp: String?,
+        appContext: AppContext?,
         profile: Profile,
         retryEntryId: Long?
     ): Result<String> {
         val prefs = preferencesDataStore.preferences.first()
         if (prefs.asrBaseUrl.isBlank() || prefs.asrApiKey.isBlank()) {
             val error = Exception("ASR not configured. Go to Settings to set up your Whisper endpoint.")
-            persistFailure(audioFile, durationMs, sourceApp, profile, prefs.historyEnabled, error, retryEntryId)
+            persistFailure(audioFile, durationMs, appContext, profile, prefs.historyEnabled, error, retryEntryId)
             return Result.failure(error)
         }
 
         if (!whisperEngine.isAvailable()) {
             val error = Exception("No network connection. Cannot reach ASR server.")
-            persistFailure(audioFile, durationMs, sourceApp, profile, prefs.historyEnabled, error, retryEntryId)
+            persistFailure(audioFile, durationMs, appContext, profile, prefs.historyEnabled, error, retryEntryId)
             return Result.failure(error)
         }
 
@@ -75,21 +76,21 @@ class TranscriptionManager @Inject constructor(
         val rawResult = whisperEngine.transcribe(audioFile, profile.asrModel, profile.language)
         val rawText = rawResult.getOrElse { error ->
             Log.e(TAG, "Whisper API error", error)
-            persistFailure(audioFile, durationMs, sourceApp, profile, prefs.historyEnabled, error, retryEntryId)
+            persistFailure(audioFile, durationMs, appContext, profile, prefs.historyEnabled, error, retryEntryId)
             return Result.failure(error)
         }
 
         if (rawText.isBlank()) {
-            persistSuccess("", "", durationMs, sourceApp, profile, prefs.historyEnabled, prefs.keepStatsWithoutHistory, audioFile, retryEntryId)
+            persistSuccess("", "", durationMs, appContext, profile, prefs.historyEnabled, prefs.keepStatsWithoutHistory, audioFile, retryEntryId)
             return Result.success("")
         }
 
-        val processedText = textProcessor.process(rawText, profile, sourceApp)
+        val processedText = textProcessor.process(rawText, profile, appContext)
         persistSuccess(
             text = processedText,
             rawText = rawText,
             durationMs = durationMs,
-            sourceApp = sourceApp,
+            appContext = appContext,
             profile = profile,
             historyEnabled = prefs.historyEnabled,
             keepStatsWithoutHistory = prefs.keepStatsWithoutHistory,
@@ -103,7 +104,7 @@ class TranscriptionManager @Inject constructor(
         text: String,
         rawText: String,
         durationMs: Long,
-        sourceApp: String?,
+        appContext: AppContext?,
         profile: Profile,
         historyEnabled: Boolean,
         keepStatsWithoutHistory: Boolean,
@@ -119,7 +120,7 @@ class TranscriptionManager @Inject constructor(
             rawText = if (historyEnabled) rawText else "",
             wordCount = wordCount,
             durationMs = durationMs,
-            sourceApp = if (historyEnabled) sourceApp else null,
+            appContext = if (historyEnabled) appContext else null,
             profile = profile,
             status = DictationStatus.SUCCESS,
             errorMessage = null,
@@ -132,7 +133,7 @@ class TranscriptionManager @Inject constructor(
     private suspend fun persistFailure(
         audioFile: File,
         durationMs: Long,
-        sourceApp: String?,
+        appContext: AppContext?,
         profile: Profile,
         historyEnabled: Boolean,
         error: Throwable,
@@ -146,7 +147,7 @@ class TranscriptionManager @Inject constructor(
             rawText = "",
             wordCount = 0,
             durationMs = durationMs,
-            sourceApp = sourceApp,
+            appContext = appContext,
             profile = profile,
             status = DictationStatus.FAILURE,
             errorMessage = error.message ?: "Unknown transcription error",
@@ -162,7 +163,7 @@ class TranscriptionManager @Inject constructor(
         rawText: String,
         wordCount: Int,
         durationMs: Long,
-        sourceApp: String?,
+        appContext: AppContext?,
         profile: Profile,
         status: DictationStatus,
         errorMessage: String?,
@@ -177,7 +178,8 @@ class TranscriptionManager @Inject constructor(
                     rawText = rawText,
                     wordCount = wordCount,
                     timestamp = timestamp,
-                    sourceApp = sourceApp,
+                    sourceApp = appContext?.label,
+                    sourceAppPackage = appContext?.packageName,
                     durationMs = durationMs,
                     historyVisible = historyVisible,
                     status = status.name,
@@ -199,6 +201,8 @@ class TranscriptionManager @Inject constructor(
                 timestamp = timestamp,
                 status = status.name,
                 errorMessage = errorMessage,
+                sourceApp = appContext?.label,
+                sourceAppPackage = appContext?.packageName,
                 profileId = profile.id.takeIf { it != 0L },
                 audioPath = audioPath,
                 historyVisible = historyVisible
@@ -231,5 +235,15 @@ class TranscriptionManager @Inject constructor(
                 file.delete()
             }
         }
+    }
+
+    private fun Dictation.toAppContext(): AppContext? {
+        val storedLabel = sourceApp?.takeIf { it.isNotBlank() && !it.equals("App", ignoreCase = true) }
+        val inferredPackage = sourceAppPackage ?: storedLabel?.takeIf { it.contains('.') }
+        val context = AppContext(
+            label = storedLabel?.takeUnless { sourceAppPackage == null && it.contains('.') },
+            packageName = inferredPackage
+        )
+        return context.takeIf { it.hasData }
     }
 }

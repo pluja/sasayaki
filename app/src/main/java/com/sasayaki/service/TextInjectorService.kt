@@ -37,6 +37,7 @@ class TextInjectorService : AccessibilityService() {
     }
 
     private var lastFocusedPackage: String? = null
+    private var lastFocusedEditablePackage: String? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -50,10 +51,13 @@ class TextInjectorService : AccessibilityService() {
         when (event.eventType) {
             AccessibilityEvent.TYPE_VIEW_FOCUSED,
             AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
-                val packageName = event.packageName?.toString()
+                val packageName = event.packageName?.toString()?.takeIf { it.isNotBlank() }
                 if (packageName != null) {
                     lastFocusedPackage = packageName
                     focusedAppPackage = packageName
+                    if (event.source?.isEditable == true) {
+                        lastFocusedEditablePackage = packageName
+                    }
                 }
             }
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
@@ -79,6 +83,7 @@ class TextInjectorService : AccessibilityService() {
     override fun onDestroy() {
         instance = null
         lastFocusedPackage = null
+        lastFocusedEditablePackage = null
         isKeyboardVisible = false
         keyboardListener = null
         focusedAppPackage = null
@@ -98,6 +103,7 @@ class TextInjectorService : AccessibilityService() {
 
     fun getFocusedAppPackageName(): String? {
         return findCurrentFocusedEditable()?.packageName?.toString()
+            ?: lastFocusedEditablePackage
             ?: focusedAppPackage
             ?: lastFocusedPackage
             ?: rootInActiveWindow?.packageName?.toString()

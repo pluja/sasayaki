@@ -6,6 +6,7 @@ import com.sasayaki.data.api.model.ChatCompletionRequest
 import com.sasayaki.data.api.model.ChatMessage
 import com.sasayaki.data.preferences.PreferencesDataStore
 import com.sasayaki.data.repository.ProcessingRepository
+import com.sasayaki.domain.model.AppContext
 import com.sasayaki.domain.model.Profile
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -20,7 +21,7 @@ class TextProcessor @Inject constructor(
     suspend fun process(
         rawText: String,
         profile: Profile,
-        sourceApp: String? = null
+        appContext: AppContext? = null
     ): String {
         return try {
             val ruleProcessedText = processingRepository.applySelectedRules(rawText, profile.selectedRuleIds)
@@ -35,7 +36,7 @@ class TextProcessor @Inject constructor(
                 prefs.llmApiKey
             )
 
-            val systemPrompt = processingRepository.buildSystemPrompt(profile, sourceApp)
+            val systemPrompt = processingRepository.buildSystemPrompt(profile, appContext)
 
             val request = ChatCompletionRequest(
                 model = profile.llmModel,

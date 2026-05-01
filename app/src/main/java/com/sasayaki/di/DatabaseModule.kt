@@ -87,6 +87,12 @@ object DatabaseModule {
         }
     }
 
+    private val migration4To5 = object : Migration(4, 5) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE `dictations` ADD COLUMN `sourceAppPackage` TEXT")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): SasayakiDatabase {
@@ -94,7 +100,7 @@ object DatabaseModule {
             context,
             SasayakiDatabase::class.java,
             "sasayaki.db"
-        ).addMigrations(migration1To2, migration2To3, migration3To4)
+        ).addMigrations(migration1To2, migration2To3, migration3To4, migration4To5)
             .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
             .build()
     }
