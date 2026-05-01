@@ -10,9 +10,11 @@ data class UserPreferences(
     val llmEnabled: Boolean = false,
     val autoClipboard: Boolean = true,
     val vibrateOnRecord: Boolean = true,
+    val pauseOtherAudio: Boolean = false,
     val silenceThresholdMs: Long = 2000,
     val preferredLanguages: List<String> = emptyList(),
     val activeLanguage: String? = null,
     val historyEnabled: Boolean = true,
-    val keepStatsWithoutHistory: Boolean = false
+    val keepStatsWithoutHistory: Boolean = false,
+    val historyRetentionLimit: Int = 500
 )

@@ -6,7 +6,9 @@ import androidx.room.Room
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sasayaki.data.db.SasayakiDatabase
 import com.sasayaki.data.db.dao.DictationDao
-import com.sasayaki.data.db.dao.DictionaryDao
+import com.sasayaki.data.db.dao.PostProcessingPromptDao
+import com.sasayaki.data.db.dao.ProfileDao
+import com.sasayaki.data.db.dao.TextReplacementRuleDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -33,6 +35,58 @@ object DatabaseModule {
         }
     }
 
+    private val migration3To4 = object : Migration(3, 4) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE `dictations` ADD COLUMN `status` TEXT NOT NULL DEFAULT 'SUCCESS'")
+            database.execSQL("ALTER TABLE `dictations` ADD COLUMN `errorMessage` TEXT")
+            database.execSQL("ALTER TABLE `dictations` ADD COLUMN `profileId` INTEGER")
+            database.execSQL("ALTER TABLE `dictations` ADD COLUMN `audioPath` TEXT")
+            database.execSQL("DROP TABLE IF EXISTS `dictionary_words`")
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `profiles` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `isActive` INTEGER NOT NULL,
+                    `asrModel` TEXT NOT NULL,
+                    `language` TEXT,
+                    `llmEnabled` INTEGER NOT NULL,
+                    `llmModel` TEXT NOT NULL,
+                    `profilePrompt` TEXT NOT NULL,
+                    `selectedRuleIds` TEXT NOT NULL,
+                    `selectedPromptIds` TEXT NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    `updatedAt` INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_profiles_isActive` ON `profiles` (`isActive`)")
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `text_replacement_rules` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `pattern` TEXT NOT NULL,
+                    `replacement` TEXT NOT NULL,
+                    `isRegex` INTEGER NOT NULL,
+                    `createdAt` INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `post_processing_prompts` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `title` TEXT NOT NULL,
+                    `prompt` TEXT NOT NULL,
+                    `builtIn` INTEGER NOT NULL,
+                    `createdAt` INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): SasayakiDatabase {
@@ -40,7 +94,7 @@ object DatabaseModule {
             context,
             SasayakiDatabase::class.java,
             "sasayaki.db"
-        ).addMigrations(migration1To2, migration2To3)
+        ).addMigrations(migration1To2, migration2To3, migration3To4)
             .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
             .build()
     }
@@ -49,5 +103,11 @@ object DatabaseModule {
     fun provideDictationDao(db: SasayakiDatabase): DictationDao = db.dictationDao()
 
     @Provides
-    fun provideDictionaryDao(db: SasayakiDatabase): DictionaryDao = db.dictionaryDao()
+    fun provideProfileDao(db: SasayakiDatabase): ProfileDao = db.profileDao()
+
+    @Provides
+    fun provideTextReplacementRuleDao(db: SasayakiDatabase): TextReplacementRuleDao = db.textReplacementRuleDao()
+
+    @Provides
+    fun providePostProcessingPromptDao(db: SasayakiDatabase): PostProcessingPromptDao = db.postProcessingPromptDao()
 }

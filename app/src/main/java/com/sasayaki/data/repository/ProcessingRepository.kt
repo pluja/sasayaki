@@ -1,0 +1,111 @@
+package com.sasayaki.data.repository
+
+import com.sasayaki.data.db.dao.PostProcessingPromptDao
+import com.sasayaki.data.db.dao.TextReplacementRuleDao
+import com.sasayaki.data.db.entity.PostProcessingPromptEntity
+import com.sasayaki.data.db.entity.TextReplacementRuleEntity
+import com.sasayaki.data.db.entity.toEntity
+import com.sasayaki.domain.model.PostProcessingPrompt
+import com.sasayaki.domain.model.Profile
+import com.sasayaki.domain.model.TextReplacementRule
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class ProcessingRepository @Inject constructor(
+    private val ruleDao: TextReplacementRuleDao,
+    private val promptDao: PostProcessingPromptDao
+) {
+    val rules: Flow<List<TextReplacementRule>> = ruleDao.observeAll()
+        .map { rules -> rules.map(TextReplacementRuleEntity::toDomain) }
+
+    val prompts: Flow<List<PostProcessingPrompt>> = promptDao.observeAll()
+        .map { prompts -> prompts.map(PostProcessingPromptEntity::toDomain) }
+
+    suspend fun saveRule(rule: TextReplacementRule): Long {
+        return if (rule.id == 0L) ruleDao.insert(rule.toEntity()) else {
+            ruleDao.update(rule.toEntity())
+            rule.id
+        }
+    }
+
+    suspend fun deleteRule(id: Long) {
+        ruleDao.deleteById(id)
+    }
+
+    suspend fun savePrompt(prompt: PostProcessingPrompt): Long {
+        return if (prompt.id == 0L) promptDao.insert(prompt.toEntity()) else {
+            val existing = promptDao.getById(prompt.id) ?: return 0L
+            if (!existing.builtIn) promptDao.update(prompt.copy(builtIn = false).toEntity())
+            prompt.id
+        }
+    }
+
+    suspend fun deletePrompt(id: Long) {
+        promptDao.deleteCustomById(id)
+    }
+
+    suspend fun applySelectedRules(text: String, selectedRuleIds: Set<Long>): String {
+        if (selectedRuleIds.isEmpty()) return text
+        return ruleDao.getAll()
+            .map(TextReplacementRuleEntity::toDomain)
+            .filter { it.id in selectedRuleIds && it.pattern.isNotBlank() }
+            .fold(text) { current, rule ->
+                if (rule.isRegex) {
+                    runCatching { Regex(rule.pattern).replace(current, rule.replacement) }
+                        .getOrElse { current }
+                } else {
+                    current.replace(rule.pattern, rule.replacement)
+                }
+            }
+    }
+
+    suspend fun buildSystemPrompt(profile: Profile, sourceApp: String?): String {
+        val promptTexts = promptDao.getAll()
+            .map(PostProcessingPromptEntity::toDomain)
+            .filter { it.id in profile.selectedPromptIds }
+            .map { it.prompt }
+            .toMutableList()
+
+        if (profile.profilePrompt.isNotBlank()) {
+            promptTexts += profile.profilePrompt
+        }
+
+        if (profile.language != null) {
+            promptTexts += "The user is dictating in: ${profile.language}. Handle speech disfluencies for this language."
+        }
+
+        if (!sourceApp.isNullOrBlank()) {
+            inferStyleForApp(sourceApp)?.let { promptTexts += "The user is dictating into $sourceApp. $it" }
+        }
+
+        if (promptTexts.isEmpty()) {
+            promptTexts += "Clean the raw dictation with minimal changes, preserving the speaker's meaning and tone."
+        }
+
+        promptTexts += "Return ONLY the cleaned text, nothing else."
+        return promptTexts.joinToString("\n")
+    }
+
+    private fun inferStyleForApp(sourceApp: String): String? {
+        val appLower = sourceApp.lowercase()
+        return when {
+            appLower.containsAny("mail", "outlook", "gmail", "proton") ->
+                "Use a professional written tone with proper greetings and sign-offs if present."
+            appLower.containsAny("slack", "discord", "telegram", "whatsapp", "messenger", "signal", "messages", "molly") ->
+                "Use a casual conversational tone. Keep it concise and natural for chat."
+            appLower.containsAny("docs", "notion", "notes", "obsidian", "keep", "evernote", "writer") ->
+                "Use a clear, structured writing style suitable for documents and notes."
+            appLower.containsAny("twitter", "x", "mastodon", "threads", "bluesky") ->
+                "Keep it concise and suitable for social media posts."
+            else -> null
+        }
+    }
+
+    private fun String.containsAny(vararg terms: String): Boolean {
+        return terms.any { contains(it) }
+    }
+}
+

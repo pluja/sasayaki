@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -39,12 +40,14 @@ class PreferencesDataStore @Inject constructor(
         val LLM_ENABLED = booleanPreferencesKey("llm_enabled")
         val AUTO_CLIPBOARD = booleanPreferencesKey("auto_clipboard")
         val VIBRATE_ON_RECORD = booleanPreferencesKey("vibrate_on_record")
+        val PAUSE_OTHER_AUDIO = booleanPreferencesKey("pause_other_audio")
         val SILENCE_THRESHOLD_MS = longPreferencesKey("silence_threshold_ms")
         val LANGUAGE = stringPreferencesKey("language")
         val PREFERRED_LANGUAGES = stringPreferencesKey("preferred_languages")
         val ACTIVE_LANGUAGE = stringPreferencesKey("active_language")
         val HISTORY_ENABLED = booleanPreferencesKey("history_enabled")
         val KEEP_STATS_WITHOUT_HISTORY = booleanPreferencesKey("keep_stats_without_history")
+        val HISTORY_RETENTION_LIMIT = intPreferencesKey("history_retention_limit")
     }
 
     val preferences: Flow<UserPreferences> = context.dataStore.data
@@ -67,11 +70,13 @@ class PreferencesDataStore @Inject constructor(
             llmEnabled = prefs[Keys.LLM_ENABLED] ?: false,
             autoClipboard = prefs[Keys.AUTO_CLIPBOARD] ?: true,
             vibrateOnRecord = prefs[Keys.VIBRATE_ON_RECORD] ?: true,
+            pauseOtherAudio = prefs[Keys.PAUSE_OTHER_AUDIO] ?: false,
             silenceThresholdMs = prefs[Keys.SILENCE_THRESHOLD_MS] ?: 2000L,
             preferredLanguages = parsePreferredLanguages(prefs),
             activeLanguage = resolveActiveLanguage(prefs),
             historyEnabled = prefs[Keys.HISTORY_ENABLED] ?: true,
-            keepStatsWithoutHistory = prefs[Keys.KEEP_STATS_WITHOUT_HISTORY] ?: false
+            keepStatsWithoutHistory = prefs[Keys.KEEP_STATS_WITHOUT_HISTORY] ?: false,
+            historyRetentionLimit = (prefs[Keys.HISTORY_RETENTION_LIMIT] ?: 500).coerceIn(1, 5000)
         )
     }
     .distinctUntilChanged()
@@ -99,16 +104,20 @@ class PreferencesDataStore @Inject constructor(
     suspend fun updateGeneralSettings(
         autoClipboard: Boolean,
         vibrateOnRecord: Boolean,
+        pauseOtherAudio: Boolean,
         silenceThresholdMs: Long,
         historyEnabled: Boolean,
-        keepStatsWithoutHistory: Boolean
+        keepStatsWithoutHistory: Boolean,
+        historyRetentionLimit: Int
     ) {
         context.dataStore.edit { prefs ->
             prefs[Keys.AUTO_CLIPBOARD] = autoClipboard
             prefs[Keys.VIBRATE_ON_RECORD] = vibrateOnRecord
+            prefs[Keys.PAUSE_OTHER_AUDIO] = pauseOtherAudio
             prefs[Keys.SILENCE_THRESHOLD_MS] = silenceThresholdMs
             prefs[Keys.HISTORY_ENABLED] = historyEnabled
             prefs[Keys.KEEP_STATS_WITHOUT_HISTORY] = keepStatsWithoutHistory
+            prefs[Keys.HISTORY_RETENTION_LIMIT] = historyRetentionLimit.coerceIn(1, 5000)
         }
     }
 
