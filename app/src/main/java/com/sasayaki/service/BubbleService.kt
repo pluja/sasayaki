@@ -7,6 +7,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.graphics.PixelFormat
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
+import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
 import android.util.Log
@@ -16,6 +20,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import com.sasayaki.data.preferences.PreferencesDataStore
+import com.sasayaki.data.repository.ProfileRepository
 import com.sasayaki.domain.transcription.AudioConverter
 import com.sasayaki.domain.transcription.TranscriptionManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -64,6 +69,7 @@ class BubbleService : Service() {
     @Inject lateinit var transcriptionManager: TranscriptionManager
     @Inject lateinit var textInjectionBridge: TextInjectionBridge
     @Inject lateinit var preferencesDataStore: PreferencesDataStore
+    @Inject lateinit var profileRepository: ProfileRepository
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var windowManager: WindowManager? = null
@@ -76,11 +82,19 @@ class BubbleService : Service() {
     @Volatile private var recordingJob: Job? = null
     private var silenceCheckJob: Job? = null
     private var levelJob: Job? = null
+    private var timerJob: Job? = null
+    private var profileJob: Job? = null
     private var longPressJob: Job? = null
     private var fanMenuController: FanMenuController? = null
+    private var audioManager: AudioManager? = null
+    private var audioFocusRequest: AudioFocusRequest? = null
+    private var collapsedBubbleX: Int? = null
+    private var collapsedBubbleY: Int? = null
 
     private var state: ServiceState = ServiceState.Idle
     private var recordingStartTime: Long = 0
+    private var pausedStartedAt: Long = 0
+    private var totalPausedMs: Long = 0
     private var recordingSourceApp: String? = null
     @Volatile private var pcmFile: File? = null
     private var bubbleAdded = false
@@ -113,7 +127,13 @@ class BubbleService : Service() {
         val helper = NotificationHelper(this)
         notificationHelper = helper
         hapticFeedback = HapticFeedback(this)
+        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         helper.createNotificationChannel()
+        profileJob = scope.launch {
+            profileRepository.activeProfile.collect { profile ->
+                bubbleView?.updateActiveProfileName(profile?.name ?: "AUTO")
+            }
+        }
 
         registerReceiver(stopReceiver, IntentFilter(NotificationHelper.ACTION_STOP), RECEIVER_NOT_EXPORTED)
     }
@@ -165,6 +185,9 @@ class BubbleService : Service() {
         if (bubbleView != null) return
 
         bubbleView = BubbleView(this)
+        scope.launch {
+            bubbleView?.updateActiveProfileName(profileRepository.getActiveProfile().name)
+        }
         layoutParams = WindowManager.LayoutParams(
             bubbleView?.collapsedWidthPx() ?: WindowManager.LayoutParams.WRAP_CONTENT,
             bubbleView?.collapsedHeightPx() ?: BubbleView.SIZE_DP.dpToPx(),
@@ -182,7 +205,7 @@ class BubbleService : Service() {
         fanMenuController = FanMenuController(
             context = this,
             windowManager = wm,
-            preferencesDataStore = preferencesDataStore,
+            profileRepository = profileRepository,
             scope = scope,
             hapticFeedback = hapticFeedback
         )
@@ -229,12 +252,20 @@ class BubbleService : Service() {
         var longPressTriggered = false
         var cancelPressed = false
         var cancelGesture = false
+        var profileTapCandidate = false
+        var pauseTapCandidate = false
+        var errorRetryCandidate = false
+        var errorCancelCandidate = false
         val tapThreshold = 10 * resources.displayMetrics.density
         val longPressDelayMs = 400L
 
         bubbleView?.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
+                    profileTapCandidate = state is ServiceState.Recording && bubbleView?.isProfileHit(event.x, event.y) == true
+                    pauseTapCandidate = state is ServiceState.Recording && bubbleView?.isPauseHit(event.x, event.y) == true
+                    errorRetryCandidate = state is ServiceState.Error && bubbleView?.isErrorRetryHit(event.x, event.y) == true
+                    errorCancelCandidate = state is ServiceState.Error && bubbleView?.isErrorCancelHit(event.x, event.y) == true
                     cancelPressed = state is ServiceState.Recording && (bubbleView?.isCancelHit(event.x, event.y) == true)
                     cancelGesture = cancelPressed
                     if (cancelPressed) {
@@ -251,11 +282,7 @@ class BubbleService : Service() {
                     if (state is ServiceState.Idle) {
                         longPressJob = scope.launch {
                             delay(longPressDelayMs)
-                            if (!isDragging) {
-                                longPressTriggered = true
-                                val bubbleSizePx = bubbleView?.measuredWidth ?: 0
-                                fanMenuController?.show(params.x, params.y, bubbleSizePx)
-                            }
+                            if (!isDragging) longPressTriggered = true
                         }
                     }
                     true
@@ -269,6 +296,10 @@ class BubbleService : Service() {
                     val dy = event.rawY - initialTouchY
                     if (dx * dx + dy * dy > tapThreshold * tapThreshold) {
                         isDragging = true
+                        profileTapCandidate = false
+                        pauseTapCandidate = false
+                        errorRetryCandidate = false
+                        errorCancelCandidate = false
                         longPressJob?.cancel()
                     }
                     if (isDragging && bubbleAdded) {
@@ -279,6 +310,27 @@ class BubbleService : Service() {
                     true
                 }
                 MotionEvent.ACTION_UP -> {
+                    if (profileTapCandidate && !isDragging) {
+                        val profileAnchorX = params.x + (bubbleView?.profileSegmentCenterXPx() ?: event.x)
+                        fanMenuController?.show(profileAnchorX, params.y.toFloat())
+                        profileTapCandidate = false
+                        return@setOnTouchListener true
+                    }
+                    if (pauseTapCandidate && !isDragging) {
+                        toggleRecordingPause()
+                        pauseTapCandidate = false
+                        return@setOnTouchListener true
+                    }
+                    if (errorRetryCandidate && !isDragging) {
+                        retryBubbleError()
+                        errorRetryCandidate = false
+                        return@setOnTouchListener true
+                    }
+                    if (errorCancelCandidate && !isDragging) {
+                        cancelBubbleError()
+                        errorCancelCandidate = false
+                        return@setOnTouchListener true
+                    }
                     if (cancelGesture) {
                         longPressJob?.cancel()
                         if (cancelPressed && bubbleView?.isCancelHit(event.x, event.y) == true) {
@@ -309,6 +361,10 @@ class BubbleService : Service() {
                     longPressJob?.cancel()
                     cancelPressed = false
                     cancelGesture = false
+                    profileTapCandidate = false
+                    pauseTapCandidate = false
+                    errorRetryCandidate = false
+                    errorCancelCandidate = false
                     isDragging = false
                     true
                 }
@@ -322,19 +378,26 @@ class BubbleService : Service() {
             is ServiceState.Idle -> startRecording()
             is ServiceState.Recording -> stopRecordingAndTranscribe()
             is ServiceState.Transcribing -> {}
+            is ServiceState.PostProcessing -> {}
             is ServiceState.Injecting -> {}
-            is ServiceState.Error -> updateState(ServiceState.Idle)
+            is ServiceState.Error -> {
+                val retryEntryId = (state as ServiceState.Error).retryEntryId
+                if (retryEntryId != null) retrySavedFailure(retryEntryId) else updateState(ServiceState.Idle)
+            }
         }
     }
 
     private fun startRecording() {
         scope.launch {
             val prefs = preferencesDataStore.preferences.first()
+            if (prefs.pauseOtherAudio) requestRecordingAudioFocus()
             if (prefs.vibrateOnRecord) hapticFeedback?.recordStart()
         }
 
-        updateState(ServiceState.Recording)
+        updateState(ServiceState.Recording())
         recordingStartTime = System.currentTimeMillis()
+        pausedStartedAt = 0
+        totalPausedMs = 0
         recordingSourceApp = textInjectionBridge.focusedAppName
 
         audioRecorder = AudioRecorder()
@@ -357,6 +420,13 @@ class BubbleService : Service() {
             }
         }
 
+        timerJob = scope.launch {
+            while (state is ServiceState.Recording) {
+                bubbleView?.updateRecordingElapsed(recordedDurationMs() / 1000)
+                delay(250)
+            }
+        }
+
         silenceCheckJob = scope.launch {
             val prefs = preferencesDataStore.preferences.first()
             silenceDetector = SilenceDetector(
@@ -365,6 +435,10 @@ class BubbleService : Service() {
             )
             delay(1000) // grace period
             while (state is ServiceState.Recording) {
+                if ((state as? ServiceState.Recording)?.paused == true) {
+                    delay(100)
+                    continue
+                }
                 if (silenceDetector?.checkSilence() == true) {
                     stopRecordingAndTranscribe()
                     break
@@ -374,11 +448,28 @@ class BubbleService : Service() {
         }
     }
 
+    private fun toggleRecordingPause() {
+        val current = state as? ServiceState.Recording ?: return
+        if (current.paused) {
+            totalPausedMs += System.currentTimeMillis() - pausedStartedAt
+            pausedStartedAt = 0
+            silenceDetector?.reset()
+            audioRecorder?.resume()
+            updateState(ServiceState.Recording(paused = false))
+        } else {
+            pausedStartedAt = System.currentTimeMillis()
+            silenceDetector?.reset()
+            audioRecorder?.pause()
+            updateState(ServiceState.Recording(paused = true))
+        }
+    }
+
     /** Stop recording without transcribing (for cleanup on destroy) */
     private fun stopRecordingAndWait() {
         if (state !is ServiceState.Recording) return
         audioRecorder?.stop()
         levelJob?.cancel()
+        timerJob?.cancel()
         silenceCheckJob?.cancel()
         // Don't cancel recordingJob — let it finish flushing the file
     }
@@ -391,13 +482,15 @@ class BubbleService : Service() {
         audioRecorder?.stop()
         silenceCheckJob?.cancel()
         levelJob?.cancel()
+        timerJob?.cancel()
+        fanMenuController?.dismiss()
 
         scope.launch {
             val prefs = preferencesDataStore.preferences.first()
             if (prefs.vibrateOnRecord) hapticFeedback?.recordStop()
         }
 
-        val durationMs = System.currentTimeMillis() - recordingStartTime
+        val durationMs = recordedDurationMs()
         updateState(ServiceState.Transcribing)
 
         scope.launch {
@@ -433,12 +526,19 @@ class BubbleService : Service() {
                     updateState(ServiceState.Idle)
                 }.onFailure { error ->
                     Log.e(TAG, "Transcription failed", error)
-                    showError("Transcription failed: ${error.message}")
+                    val retryEntryId = withContext(Dispatchers.IO) {
+                        transcriptionManager.latestRetriableFailureId()
+                    }
+                    showError("Transcription failed: ${error.message}", retryEntryId)
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Processing failed", e)
-                showError(e.message ?: "Unknown error")
+                val retryEntryId = withContext(Dispatchers.IO) {
+                    transcriptionManager.latestRetriableFailureId()
+                }
+                showError(e.message ?: "Unknown error", retryEntryId)
             } finally {
+                abandonRecordingAudioFocus()
                 currentPcmFile?.delete()
                 wavFile?.delete()
                 recordingJob = null
@@ -456,10 +556,13 @@ class BubbleService : Service() {
         recordingJob?.cancel()
         silenceCheckJob?.cancel()
         levelJob?.cancel()
+        timerJob?.cancel()
+        fanMenuController?.dismiss()
 
         scope.launch {
             val prefs = preferencesDataStore.preferences.first()
             if (prefs.vibrateOnRecord) hapticFeedback?.recordStop()
+            abandonRecordingAudioFocus()
         }
 
         updateState(ServiceState.Idle)
@@ -479,13 +582,58 @@ class BubbleService : Service() {
         }
     }
 
-    private fun showError(message: String) {
-        updateState(ServiceState.Error(message))
-        hapticFeedback?.error()
-        Toast.makeText(this@BubbleService, message, Toast.LENGTH_SHORT).show()
+    private fun recordedDurationMs(): Long {
+        val now = System.currentTimeMillis()
+        val currentPauseMs = if ((state as? ServiceState.Recording)?.paused == true && pausedStartedAt > 0) {
+            now - pausedStartedAt
+        } else {
+            0L
+        }
+        return (now - recordingStartTime - totalPausedMs - currentPauseMs).coerceAtLeast(0L)
+    }
+
+    private fun retrySavedFailure(entryId: Long) {
+        updateState(ServiceState.Transcribing)
         scope.launch {
-            delay(2000)
+            val result = withContext(Dispatchers.IO) {
+                transcriptionManager.retry(entryId)
+            }
+            result.onSuccess { text ->
+                if (text.isNotBlank()) {
+                    updateState(ServiceState.Injecting)
+                    textInjectionBridge.inject(text)
+                    hapticFeedback?.complete()
+                }
+                updateState(ServiceState.Idle)
+            }.onFailure { error ->
+                showError("Retry failed: ${error.message}", entryId)
+            }
+        }
+    }
+
+    private fun retryBubbleError() {
+        val retryEntryId = (state as? ServiceState.Error)?.retryEntryId
+        if (retryEntryId != null) {
+            retrySavedFailure(retryEntryId)
+        } else {
             updateState(ServiceState.Idle)
+        }
+    }
+
+    private fun cancelBubbleError() {
+        updateState(ServiceState.Idle)
+    }
+
+    private fun showError(message: String, retryEntryId: Long? = null) {
+        updateState(ServiceState.Error(message, retryEntryId))
+        hapticFeedback?.error()
+        val retryHint = if (retryEntryId != null) " Tap bubble to retry." else ""
+        Toast.makeText(this@BubbleService, message + retryHint, Toast.LENGTH_SHORT).show()
+        scope.launch {
+            delay(if (retryEntryId == null) 2500 else 6000)
+            if (state is ServiceState.Error) {
+                updateState(ServiceState.Idle)
+            }
         }
     }
 
@@ -504,14 +652,31 @@ class BubbleService : Service() {
     private fun syncBubbleLayout() {
         val params = layoutParams ?: return
         val view = bubbleView ?: return
+        val wasRecording = params.width == view.recordingWidthPx()
+        val isRecording = state is ServiceState.Recording
         val targetWidth = view.collapsedWidthPx()
-        val targetHeight = if (state is ServiceState.Recording) view.expandedHeightPx() else view.collapsedHeightPx()
+        val targetHeight = view.collapsedHeightPx()
 
         if (params.width == targetWidth && params.height == targetHeight) return
+        val previousWidth = params.width
         val previousHeight = params.height
+        if (!wasRecording && isRecording) {
+            collapsedBubbleX = params.x
+            collapsedBubbleY = params.y
+        }
+        val centerX = params.x + previousWidth / 2
         params.width = targetWidth
         params.height = targetHeight
-        params.y -= (targetHeight - previousHeight)
+        val restoredX = if (wasRecording && !isRecording) collapsedBubbleX else null
+        val restoredY = if (wasRecording && !isRecording) collapsedBubbleY else null
+        params.x = restoredX ?: (centerX - targetWidth / 2)
+        params.y = restoredY ?: (params.y - (targetHeight - previousHeight))
+        val maxX = (resources.displayMetrics.widthPixels - targetWidth).coerceAtLeast(0)
+        params.x = params.x.coerceIn(0, maxX)
+        if (wasRecording && !isRecording) {
+            collapsedBubbleX = null
+            collapsedBubbleY = null
+        }
         if (bubbleAdded) {
             try {
                 windowManager?.updateViewLayout(view, params)
@@ -522,4 +687,34 @@ class BubbleService : Service() {
     }
 
     private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
+
+    private fun requestRecordingAudioFocus() {
+        val manager = audioManager ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build()
+                )
+                .build()
+            audioFocusRequest = request
+            manager.requestAudioFocus(request)
+        } else {
+            @Suppress("DEPRECATION")
+            manager.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+        }
+    }
+
+    private fun abandonRecordingAudioFocus() {
+        val manager = audioManager ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            audioFocusRequest?.let(manager::abandonAudioFocusRequest)
+            audioFocusRequest = null
+        } else {
+            @Suppress("DEPRECATION")
+            manager.abandonAudioFocus(null)
+        }
+    }
 }

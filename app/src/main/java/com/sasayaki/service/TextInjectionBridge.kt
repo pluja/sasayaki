@@ -57,9 +57,8 @@ class TextInjectionBridge @Inject constructor(
     val focusedAppName: String?
         get() {
             val injector = TextInjectorService.instance ?: return null
-            val packageName = TextInjectorService.focusedAppPackage
-                ?: injector.rootInActiveWindow?.packageName?.toString()
-            return injector.getAppName(packageName)
+            val packageName = injector.getFocusedAppPackageName()
+            return injector.getAppName(packageName) ?: packageName
         }
 
     private fun copyToClipboard(text: String) {

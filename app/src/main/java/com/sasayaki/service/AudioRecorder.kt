@@ -25,6 +25,8 @@ class AudioRecorder {
 
     @Volatile
     private var isRecording = false
+    @Volatile
+    private var isPaused = false
     private var audioRecord: AudioRecord? = null
     private val _audioLevel = MutableStateFlow(0f)
     val audioLevel: StateFlow<Float> = _audioLevel.asStateFlow()
@@ -52,6 +54,7 @@ class AudioRecorder {
 
         audioRecord = recorder
         isRecording = true
+        isPaused = false
         val buffer = ShortArray(bufferSize / 2)
 
         try {
@@ -61,6 +64,10 @@ class AudioRecorder {
                 while (isRecording && isActive) {
                     val read = recorder.read(buffer, 0, buffer.size)
                     if (read > 0) {
+                        if (isPaused) {
+                            _audioLevel.value = 0f
+                            continue
+                        }
                         var sum = 0.0
                         for (i in 0 until read) {
                             sum += buffer[i].toDouble() * buffer[i].toDouble()
@@ -90,5 +97,15 @@ class AudioRecorder {
 
     fun stop() {
         isRecording = false
+        isPaused = false
+    }
+
+    fun pause() {
+        isPaused = true
+        _audioLevel.value = 0f
+    }
+
+    fun resume() {
+        isPaused = false
     }
 }

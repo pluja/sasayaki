@@ -5,13 +5,11 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.view.MotionEvent
 import android.view.View
 import android.view.animation.OvershootInterpolator
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
 
 data class FanMenuItem(
     val label: String,
@@ -23,132 +21,151 @@ class FanMenuView(
     private val onItemTap: (index: Int) -> Unit,
     private val onDismiss: () -> Unit
 ) : View(context) {
-
     private val density = resources.displayMetrics.density
-    private val satelliteRadius = 18f * density
-    private val fanRadius = 56f * density
-    private val spreadAngleDeg = 45.0
+    private val barHeight = 74f * density
+    private val minSegmentWidth = 92f * density
+    private val closeWidth = 74f * density
+    private val cornerRadius = 24f * density
 
-    private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
+    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2f * density
     }
-
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        textSize = 11f * density
+        color = Color.rgb(230, 231, 238)
+        textSize = 13f * density
         textAlign = Paint.Align.CENTER
         typeface = Typeface.DEFAULT_BOLD
     }
-
     private val scrimPaint = Paint().apply {
         color = Color.argb(1, 0, 0, 0)
         style = Paint.Style.FILL
     }
 
     var items: List<FanMenuItem> = emptyList()
-        set(value) { field = value; invalidate() }
+        set(value) {
+            field = value
+            invalidate()
+        }
 
     var anchorX: Float = 0f
     var anchorY: Float = 0f
     var fanRight: Boolean = true
 
     private var progress: Float = 0f
+    private var barRect = RectF()
 
-    private val expandAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+    private val animator = ValueAnimator.ofFloat(0f, 1f).apply {
         duration = 220
-        interpolator = OvershootInterpolator(1.5f)
-        addUpdateListener { progress = it.animatedValue as Float; invalidate() }
+        interpolator = OvershootInterpolator(1.2f)
+        addUpdateListener {
+            progress = it.animatedValue as Float
+            invalidate()
+        }
     }
 
     fun expand() {
-        expandAnimator.cancel()
-        expandAnimator.setFloatValues(progress, 1f)
-        expandAnimator.start()
+        animator.cancel()
+        animator.setFloatValues(progress, 1f)
+        animator.start()
     }
 
     fun collapse(onEnd: () -> Unit) {
-        expandAnimator.cancel()
-        val collapseAnimator = ValueAnimator.ofFloat(progress, 0f).apply {
+        animator.cancel()
+        ValueAnimator.ofFloat(progress, 0f).apply {
             duration = 120
-            addUpdateListener { progress = animatedValue as Float; invalidate() }
+            addUpdateListener {
+                progress = animatedValue as Float
+                invalidate()
+            }
             addListener(object : android.animation.AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: android.animation.Animator) { onEnd() }
+                override fun onAnimationEnd(animation: android.animation.Animator) = onEnd()
             })
+            start()
         }
-        collapseAnimator.start()
     }
 
     override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), scrimPaint)
-        if (progress <= 0f || items.isEmpty()) return
+        if (items.isEmpty() || progress <= 0f) return
 
-        val positions = computePositions()
-        for (i in items.indices) {
-            val (cx, cy) = positions[i]
-            val item = items[i]
-            val currentRadius = satelliteRadius * progress
+        computeBarRect()
+        val scaled = RectF(
+            barRect.centerX() + (barRect.left - barRect.centerX()) * progress,
+            barRect.centerY() + (barRect.top - barRect.centerY()) * progress,
+            barRect.centerX() + (barRect.right - barRect.centerX()) * progress,
+            barRect.centerY() + (barRect.bottom - barRect.centerY()) * progress
+        )
 
-            bgPaint.color = if (item.active) {
-                Color.argb(220, 60, 160, 90)
-            } else {
-                Color.argb(200, 100, 100, 100)
+        fillPaint.color = Color.rgb(30, 31, 34)
+        canvas.drawRoundRect(scaled, cornerRadius, cornerRadius, fillPaint)
+        strokePaint.color = Color.rgb(95, 96, 106)
+        canvas.drawRoundRect(scaled, cornerRadius, cornerRadius, strokePaint)
+        if (progress < 0.75f) return
+
+        val segmentWidth = (barRect.width() - closeWidth) / items.size
+        items.forEachIndexed { index, item ->
+            val left = barRect.left + segmentWidth * index
+            val rect = RectF(left, barRect.top, left + segmentWidth, barRect.bottom)
+            if (item.active) {
+                fillPaint.color = Color.rgb(74, 78, 98)
+                canvas.drawRoundRect(rect, cornerRadius, cornerRadius, fillPaint)
             }
-            canvas.drawCircle(cx, cy, currentRadius, bgPaint)
-
-            if (progress > 0.5f) {
-                val textAlpha = ((progress - 0.5f) / 0.5f * 255).toInt().coerceIn(0, 255)
-                textPaint.alpha = textAlpha
-                val textY = cy - (textPaint.descent() + textPaint.ascent()) / 2
-                canvas.drawText(item.label, cx, textY, textPaint)
-            }
+            strokePaint.color = Color.rgb(68, 69, 76)
+            canvas.drawLine(rect.right, rect.top, rect.right, rect.bottom, strokePaint)
+            drawCenteredText(canvas, item.label.uppercase(), rect.centerX(), rect.centerY())
         }
+        drawClose(canvas, RectF(barRect.right - closeWidth, barRect.top, barRect.right, barRect.bottom))
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (event.action == MotionEvent.ACTION_UP) {
-            val tappedIndex = hitTest(event.x, event.y)
-            if (tappedIndex >= 0) {
-                onItemTap(tappedIndex)
-            } else {
-                onDismiss()
+            val hit = hitTest(event.x, event.y)
+            when {
+                hit in items.indices -> onItemTap(hit)
+                hit == items.size -> onDismiss()
+                else -> onDismiss()
             }
-            return true
         }
         return true
     }
 
     private fun hitTest(x: Float, y: Float): Int {
-        if (progress < 0.3f) return -1
-        val positions = computePositions()
-        val hitRadius = satelliteRadius * 1.5f
-        for (i in positions.indices) {
-            val (cx, cy) = positions[i]
-            val dx = x - cx
-            val dy = y - cy
-            if (sqrt(dx * dx + dy * dy) <= hitRadius) return i
-        }
-        return -1
+        computeBarRect()
+        if (!barRect.contains(x, y)) return -1
+        val segmentWidth = (barRect.width() - closeWidth) / items.size
+        val relativeX = x - barRect.left
+        if (relativeX >= segmentWidth * items.size) return items.size
+        return (relativeX / segmentWidth).toInt().coerceIn(0, items.lastIndex)
     }
 
-    private fun computePositions(): List<Pair<Float, Float>> {
-        val baseAngle = if (fanRight) 0.0 else 180.0
-        val startAngle = baseAngle - spreadAngleDeg
-        val step = if (items.size > 1) {
-            (spreadAngleDeg * 2) / (items.size - 1)
-        } else 0.0
+    private fun computeBarRect() {
+        val desiredWidth = (items.size * minSegmentWidth + closeWidth).coerceAtMost(width - 32f * density)
+        val margin = 16f * density
+        val maxLeft = (width - desiredWidth - margin).coerceAtLeast(margin)
+        val left = (anchorX - desiredWidth / 2f).coerceIn(margin, maxLeft)
+        val top = (anchorY - barHeight - 18f * density).coerceAtLeast(36f * density)
+        barRect = RectF(left, top, left + desiredWidth, top + barHeight)
+    }
 
-        return items.indices.map { i ->
-            val angleDeg = startAngle + step * i
-            val angleRad = Math.toRadians(angleDeg)
-            val distance = fanRadius * progress
-            val cx = anchorX + (cos(angleRad) * distance).toFloat()
-            val cy = anchorY + (sin(angleRad) * distance).toFloat()
-            cx to cy
-        }
+    private fun drawCenteredText(canvas: Canvas, text: String, x: Float, y: Float) {
+        val baseline = y - (textPaint.descent() + textPaint.ascent()) / 2
+        canvas.drawText(text, x, baseline, textPaint)
+    }
+
+    private fun drawClose(canvas: Canvas, rect: RectF) {
+        strokePaint.color = Color.rgb(230, 231, 238)
+        strokePaint.strokeWidth = 3f * density
+        val arm = 13f * density
+        val cx = rect.centerX()
+        val cy = rect.centerY()
+        canvas.drawLine(cx - arm, cy - arm, cx + arm, cy + arm, strokePaint)
+        canvas.drawLine(cx - arm, cy + arm, cx + arm, cy - arm, strokePaint)
+        strokePaint.strokeWidth = 2f * density
     }
 
     fun cleanup() {
-        expandAnimator.cancel()
+        animator.cancel()
     }
 }

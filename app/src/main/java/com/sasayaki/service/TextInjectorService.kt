@@ -96,6 +96,13 @@ class TextInjectorService : AccessibilityService() {
         }
     }
 
+    fun getFocusedAppPackageName(): String? {
+        return findCurrentFocusedEditable()?.packageName?.toString()
+            ?: focusedAppPackage
+            ?: lastFocusedPackage
+            ?: rootInActiveWindow?.packageName?.toString()
+    }
+
     fun injectText(text: String): InjectionResult {
         val node = findCurrentFocusedEditable() ?: return InjectionResult.NoFocusedNode
         try {
