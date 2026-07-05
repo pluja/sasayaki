@@ -118,7 +118,11 @@ class TextInjectorService : AccessibilityService() {
 
             val rawText = node.text?.toString() ?: ""
             val hintText = node.hintText?.toString() ?: ""
-            val existingText = if (rawText == hintText) "" else rawText
+            val noCursor = node.textSelectionStart < 0 && node.textSelectionEnd < 0
+            val isPlaceholder = node.isShowingHintText ||
+                (hintText.isNotBlank() && rawText.trim().equals(hintText.trim(), ignoreCase = true)) ||
+                (noCursor && rawText.isNotBlank() && rawText.trim().length <= 64)
+            val existingText = if (isPlaceholder) "" else rawText
 
             val cursorPos = if (existingText.isNotEmpty() && node.textSelectionEnd >= 0) {
                 node.textSelectionEnd.coerceAtMost(existingText.length)
@@ -126,9 +130,11 @@ class TextInjectorService : AccessibilityService() {
                 existingText.length
             }
 
+            val textToInsert = if (existingText.isEmpty()) text.trimStart() else text
+
             val newText = buildString {
                 append(existingText.substring(0, cursorPos))
-                append(text)
+                append(textToInsert)
                 append(existingText.substring(cursorPos))
             }
 
@@ -138,7 +144,7 @@ class TextInjectorService : AccessibilityService() {
             val setResult = node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
 
             if (setResult) {
-                val newCursorPos = cursorPos + text.length
+                val newCursorPos = cursorPos + textToInsert.length
                 val selectionArgs = Bundle().apply {
                     putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, newCursorPos)
                     putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, newCursorPos)
