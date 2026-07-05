@@ -26,3 +26,7 @@ output/
 .*-cache
 *.md
 !README.md
+
+# Local tooling
+.kilo
+run-build.cmd
