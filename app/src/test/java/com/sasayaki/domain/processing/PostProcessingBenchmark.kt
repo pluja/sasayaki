@@ -83,6 +83,18 @@ class PostProcessingBenchmark {
             }
         }
         report(outcomes)
+
+        // Failing checks are a model-quality signal and only get reported, but a request
+        // that never completed means the run measured nothing. Without this, an endpoint
+        // outage reports "0/31 passed" and still exits green.
+        val errors = outcomes.filter { it.error != null }
+        if (errors.isNotEmpty()) {
+            val summary = errors.groupingBy { it.error!!.substringBefore(':') }.eachCount()
+            throw AssertionError(
+                "${errors.size} of ${outcomes.size} benchmark requests failed: $summary. " +
+                    "The run measured nothing; see the report for details."
+            )
+        }
     }
 
     private fun runCase(model: String, case: BenchmarkCase): Outcome {
