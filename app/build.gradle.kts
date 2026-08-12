@@ -77,6 +77,22 @@ android {
     }
 }
 
+/**
+ * The benchmark reads its endpoint, key and model list from the environment and skips
+ * itself when they are absent, so ordinary builds never touch the network. Values are
+ * forwarded through providers so the configuration cache stays valid.
+ */
+tasks.withType<Test>().configureEach {
+    testLogging {
+        showStandardStreams = true
+        events("passed", "skipped", "failed")
+    }
+    listOf("OPENAI_ENDPOINT", "OPENAI_API_KEY", "OPENAI_MODEL", "BENCH_MODELS").forEach { key ->
+        val value = providers.environmentVariable(key)
+        if (value.isPresent) environment(key, value.get())
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

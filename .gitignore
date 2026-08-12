@@ -24,5 +24,10 @@ sasayaki-*.apk
 .omx
 output/
 .*-cache
+
+# Credentials for the post-processing benchmark
+.env
+.env.*
+!.env.example
 *.md
 !README.md
