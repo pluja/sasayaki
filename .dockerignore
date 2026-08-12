@@ -5,3 +5,5 @@ app/build
 *.iml
 local.properties
 .claude
+.env
+.env.*
