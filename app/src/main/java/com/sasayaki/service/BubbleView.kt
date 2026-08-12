@@ -109,6 +109,10 @@ class BubbleView(context: Context) : View(context) {
                 strokePaint.color = Color.rgb(225, 226, 238)
                 val rect = RectF(cx - baseRadius * 0.52f, cy - baseRadius * 0.52f, cx + baseRadius * 0.52f, cy + baseRadius * 0.52f)
                 canvas.drawArc(rect, arcAngle, 90f, false, strokePaint)
+                // Cross inside the spinner: tapping while processing aborts the request.
+                val arm = baseRadius * 0.2f
+                canvas.drawLine(cx - arm, cy - arm, cx + arm, cy + arm, strokePaint)
+                canvas.drawLine(cx + arm, cy - arm, cx - arm, cy + arm, strokePaint)
             }
             is ServiceState.Injecting -> {
                 fillPaint.color = Color.argb(220, 45, 130, 80)

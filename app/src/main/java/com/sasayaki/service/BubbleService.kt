@@ -25,6 +25,7 @@ import com.sasayaki.domain.model.AppContext
 import com.sasayaki.domain.transcription.AudioConverter
 import com.sasayaki.domain.transcription.TranscriptionManager
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -81,6 +82,7 @@ class BubbleService : Service() {
     private var audioRecorder: AudioRecorder? = null
     private var silenceDetector: SilenceDetector? = null
     @Volatile private var recordingJob: Job? = null
+    private var transcriptionJob: Job? = null
     private var silenceCheckJob: Job? = null
     private var levelJob: Job? = null
     private var timerJob: Job? = null
@@ -378,8 +380,9 @@ class BubbleService : Service() {
         when (state) {
             is ServiceState.Idle -> startRecording()
             is ServiceState.Recording -> stopRecordingAndTranscribe()
-            is ServiceState.Transcribing -> {}
-            is ServiceState.PostProcessing -> {}
+            is ServiceState.Transcribing -> cancelProcessing()
+            is ServiceState.PostProcessing -> cancelProcessing()
+            // Injection is already underway and cannot be meaningfully undone.
             is ServiceState.Injecting -> {}
             is ServiceState.Error -> {
                 val retryEntryId = (state as ServiceState.Error).retryEntryId
@@ -494,7 +497,7 @@ class BubbleService : Service() {
         val durationMs = recordedDurationMs()
         updateState(ServiceState.Transcribing)
 
-        scope.launch {
+        transcriptionJob = scope.launch {
             var currentPcmFile: File? = null
             var wavFile: File? = null
             try {
@@ -515,7 +518,9 @@ class BubbleService : Service() {
                 val appContext = recordingAppContext
 
                 val result = withContext(Dispatchers.IO) {
-                    transcriptionManager.transcribe(wavFile, durationMs, appContext)
+                    transcriptionManager.transcribe(wavFile, durationMs, appContext) {
+                        scope.launch { updateState(ServiceState.PostProcessing) }
+                    }
                 }
 
                 result.onSuccess { text ->
@@ -532,6 +537,9 @@ class BubbleService : Service() {
                     }
                     showError("Transcription failed: ${error.message}", retryEntryId)
                 }
+            } catch (e: CancellationException) {
+                // Cancelled by the user; cancelProcessing() owns the state transition.
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Processing failed", e)
                 val retryEntryId = withContext(Dispatchers.IO) {
@@ -548,6 +556,23 @@ class BubbleService : Service() {
                 silenceDetector = null
             }
         }
+    }
+
+    /**
+     * Aborts an in-flight transcription or post-processing request. The ASR and LLM calls
+     * are suspending Retrofit calls, so cancelling the job cancels the HTTP request; the
+     * coroutine's finally block still runs to release audio focus and temp files.
+     */
+    private fun cancelProcessing() {
+        if (state !is ServiceState.Transcribing && state !is ServiceState.PostProcessing) return
+        Log.d(TAG, "Cancelling processing at state=$state")
+        transcriptionJob?.cancel()
+        transcriptionJob = null
+        scope.launch {
+            val prefs = preferencesDataStore.preferences.first()
+            if (prefs.vibrateOnRecord) hapticFeedback?.recordStop()
+        }
+        updateState(ServiceState.Idle)
     }
 
     private fun cancelRecording() {

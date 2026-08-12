@@ -33,9 +33,21 @@ class TranscriptionManager @Inject constructor(
         private const val RETAINED_AUDIO_DIR = "retained_audio"
     }
 
-    suspend fun transcribe(audioFile: File, durationMs: Long, appContext: AppContext?): Result<String> {
+    suspend fun transcribe(
+        audioFile: File,
+        durationMs: Long,
+        appContext: AppContext?,
+        onPostProcessing: (() -> Unit)? = null
+    ): Result<String> {
         val profile = profileRepository.getActiveProfile()
-        return transcribeWithProfile(audioFile, durationMs, appContext, profile, retryEntryId = null)
+        return transcribeWithProfile(
+            audioFile,
+            durationMs,
+            appContext,
+            profile,
+            retryEntryId = null,
+            onPostProcessing = onPostProcessing
+        )
     }
 
     suspend fun retry(dictationId: Long): Result<String> {
@@ -60,7 +72,8 @@ class TranscriptionManager @Inject constructor(
         durationMs: Long,
         appContext: AppContext?,
         profile: Profile,
-        retryEntryId: Long?
+        retryEntryId: Long?,
+        onPostProcessing: (() -> Unit)? = null
     ): Result<String> {
         val prefs = preferencesDataStore.preferences.first()
         if (prefs.asrBaseUrl.isBlank() || prefs.asrApiKey.isBlank()) {
@@ -88,7 +101,7 @@ class TranscriptionManager @Inject constructor(
             return Result.success("")
         }
 
-        val processedText = textProcessor.process(rawText, profile, appContext)
+        val processedText = textProcessor.process(rawText, profile, appContext, onPostProcessing)
         recordLifetimeStats(processedText, durationMs)
         persistSuccess(
             text = processedText,
