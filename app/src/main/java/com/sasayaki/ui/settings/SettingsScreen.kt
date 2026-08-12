@@ -182,7 +182,7 @@ private fun SettingsMainScreen(
     onSaveLlm: (String, String, String, Boolean) -> Unit,
     onTestAsr: (String, String, String) -> Unit,
     onTestLlm: (String, String, String) -> Unit,
-    onSaveGeneral: (Boolean, Boolean, Boolean, Long, Boolean, Boolean, Int) -> Unit,
+    onSaveGeneral: (Boolean, Boolean, Boolean, Long, Boolean, Boolean, Int, Boolean) -> Unit,
     onRules: () -> Unit,
     onPrompts: () -> Unit,
     outerPadding: PaddingValues
@@ -514,7 +514,7 @@ private fun ProviderSettingsSection(
 @Composable
 private fun RecordingHistorySection(
     preferences: UserPreferences,
-    onSave: (Boolean, Boolean, Boolean, Long, Boolean, Boolean, Int) -> Unit
+    onSave: (Boolean, Boolean, Boolean, Long, Boolean, Boolean, Int, Boolean) -> Unit
 ) {
     var silenceThreshold by rememberSaveable(preferences.silenceThresholdMs) {
         mutableStateOf(preferences.silenceThresholdMs.toFloat())
@@ -530,12 +530,14 @@ private fun RecordingHistorySection(
         silenceThresholdMs: Long = silenceThreshold.toLong(),
         historyEnabled: Boolean = preferences.historyEnabled,
         keepStatsWithoutHistory: Boolean = preferences.keepStatsWithoutHistory,
-        historyRetentionLimit: Int = retentionText.toIntOrNull() ?: preferences.historyRetentionLimit
+        historyRetentionLimit: Int = retentionText.toIntOrNull() ?: preferences.historyRetentionLimit,
+        startOnBoot: Boolean = preferences.startOnBoot
     ) {
-        onSave(autoClipboard, vibrateOnRecord, pauseOtherAudio, silenceThresholdMs, historyEnabled, keepStatsWithoutHistory, historyRetentionLimit)
+        onSave(autoClipboard, vibrateOnRecord, pauseOtherAudio, silenceThresholdMs, historyEnabled, keepStatsWithoutHistory, historyRetentionLimit, startOnBoot)
     }
 
     SectionCard(title = "Recording and history", subtitle = "Control recording feedback, audio focus, and saved transcript retention.") {
+        SettingSwitchRow("Start on boot", "Bring the dictation service back after the device restarts.", preferences.startOnBoot, { save(startOnBoot = it) })
         SettingSwitchRow("Clipboard fallback", "Copy text when direct insertion is unavailable.", preferences.autoClipboard, { save(autoClipboard = it) })
         SettingSwitchRow("Haptic feedback", "Vibrate when recording starts, stops, or fails.", preferences.vibrateOnRecord, { save(vibrateOnRecord = it) })
         SettingSwitchRow("Pause other audio", "Request audio focus while recording so other apps pause.", preferences.pauseOtherAudio, { save(pauseOtherAudio = it) })

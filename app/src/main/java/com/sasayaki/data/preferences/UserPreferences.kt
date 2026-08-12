@@ -16,5 +16,6 @@ data class UserPreferences(
     val activeLanguage: String? = null,
     val historyEnabled: Boolean = true,
     val keepStatsWithoutHistory: Boolean = false,
-    val historyRetentionLimit: Int = 500
+    val historyRetentionLimit: Int = 500,
+    val startOnBoot: Boolean = true
 )

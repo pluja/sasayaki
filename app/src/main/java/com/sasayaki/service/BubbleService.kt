@@ -147,10 +147,12 @@ class BubbleService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        // Idle as specialUse so the service can also be started from the boot receiver;
+        // promoteToMicrophoneService() upgrades the type when recording actually starts.
         startForeground(
             NotificationHelper.NOTIFICATION_ID,
             notification,
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
         )
 
         if (!Settings.canDrawOverlays(this)) {
@@ -391,7 +393,51 @@ class BubbleService : Service() {
         }
     }
 
+    /**
+     * Adds the microphone type to the running foreground service for the duration of a
+     * recording. The service idles as specialUse so it can be started at boot, but the
+     * platform requires the microphone type to be active while the mic is in use.
+     *
+     * @return false if the platform refused the promotion, in which case recording must
+     *   not start — the user is told rather than left with a bubble that does nothing.
+     */
+    private fun promoteToMicrophoneService(): Boolean {
+        val notification = notificationHelper?.buildForegroundNotification() ?: return false
+        return try {
+            startForeground(
+                NotificationHelper.NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE or
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Could not switch to microphone foreground service", e)
+            showError("Microphone unavailable. Reopen Sasayaki and try again.", null)
+            false
+        }
+    }
+
+    /**
+     * Drops back to specialUse once the microphone is released, so the system's
+     * microphone-in-use indicator does not stay lit while the bubble sits idle.
+     */
+    private fun demoteToIdleService() {
+        val notification = notificationHelper?.buildForegroundNotification() ?: return
+        try {
+            startForeground(
+                NotificationHelper.NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not drop microphone foreground service type", e)
+        }
+    }
+
     private fun startRecording() {
+        if (!promoteToMicrophoneService()) return
+
         scope.launch {
             val prefs = preferencesDataStore.preferences.first()
             if (prefs.pauseOtherAudio) requestRecordingAudioFocus()
@@ -484,6 +530,7 @@ class BubbleService : Service() {
 
         // Signal the recorder to stop — do NOT cancel the job
         audioRecorder?.stop()
+        demoteToIdleService()
         silenceCheckJob?.cancel()
         levelJob?.cancel()
         timerJob?.cancel()
@@ -579,6 +626,7 @@ class BubbleService : Service() {
         if (state !is ServiceState.Recording) return
 
         audioRecorder?.stop()
+        demoteToIdleService()
         recordingJob?.cancel()
         silenceCheckJob?.cancel()
         levelJob?.cancel()

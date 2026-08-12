@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -32,10 +34,30 @@
             </intent-filter>
         </activity>
 
+        <!--
+            The service idles as specialUse (waiting for a keyboard) and only promotes
+            itself to microphone while actually recording. Starting it as a microphone
+            service from the boot receiver would be a background start of a while-in-use
+            type, which the platform rejects.
+        -->
         <service
             android:name=".service.BubbleService"
             android:exported="false"
-            android:foregroundServiceType="microphone" />
+            android:foregroundServiceType="specialUse|microphone">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the dictation bubble available over the keyboard while idle" />
+        </service>
+
+        <receiver
+            android:name=".service.BootReceiver"
+            android:exported="true"
+            android:directBootAware="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <service
             android:name=".service.TextInjectorService"

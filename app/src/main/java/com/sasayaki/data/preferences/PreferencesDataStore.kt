@@ -48,6 +48,7 @@ class PreferencesDataStore @Inject constructor(
         val HISTORY_ENABLED = booleanPreferencesKey("history_enabled")
         val KEEP_STATS_WITHOUT_HISTORY = booleanPreferencesKey("keep_stats_without_history")
         val HISTORY_RETENTION_LIMIT = intPreferencesKey("history_retention_limit")
+        val START_ON_BOOT = booleanPreferencesKey("start_on_boot")
     }
 
     val preferences: Flow<UserPreferences> = context.dataStore.data
@@ -76,7 +77,8 @@ class PreferencesDataStore @Inject constructor(
             activeLanguage = resolveActiveLanguage(prefs),
             historyEnabled = prefs[Keys.HISTORY_ENABLED] ?: true,
             keepStatsWithoutHistory = prefs[Keys.KEEP_STATS_WITHOUT_HISTORY] ?: false,
-            historyRetentionLimit = (prefs[Keys.HISTORY_RETENTION_LIMIT] ?: 500).coerceIn(1, 5000)
+            historyRetentionLimit = (prefs[Keys.HISTORY_RETENTION_LIMIT] ?: 500).coerceIn(1, 5000),
+            startOnBoot = prefs[Keys.START_ON_BOOT] ?: true
         )
     }
     .distinctUntilChanged()
@@ -108,7 +110,8 @@ class PreferencesDataStore @Inject constructor(
         silenceThresholdMs: Long,
         historyEnabled: Boolean,
         keepStatsWithoutHistory: Boolean,
-        historyRetentionLimit: Int
+        historyRetentionLimit: Int,
+        startOnBoot: Boolean
     ) {
         context.dataStore.edit { prefs ->
             prefs[Keys.AUTO_CLIPBOARD] = autoClipboard
@@ -118,6 +121,7 @@ class PreferencesDataStore @Inject constructor(
             prefs[Keys.HISTORY_ENABLED] = historyEnabled
             prefs[Keys.KEEP_STATS_WITHOUT_HISTORY] = keepStatsWithoutHistory
             prefs[Keys.HISTORY_RETENTION_LIMIT] = historyRetentionLimit.coerceIn(1, 5000)
+            prefs[Keys.START_ON_BOOT] = startOnBoot
         }
     }
 

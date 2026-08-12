@@ -109,7 +109,8 @@ class SettingsViewModel @Inject constructor(
         silenceThresholdMs: Long,
         historyEnabled: Boolean,
         keepStatsWithoutHistory: Boolean,
-        historyRetentionLimit: Int
+        historyRetentionLimit: Int,
+        startOnBoot: Boolean
     ) {
         viewModelScope.launch {
             preferencesDataStore.updateGeneralSettings(
@@ -119,7 +120,8 @@ class SettingsViewModel @Inject constructor(
                 silenceThresholdMs,
                 historyEnabled,
                 keepStatsWithoutHistory,
-                historyRetentionLimit
+                historyRetentionLimit,
+                startOnBoot
             )
         }
     }
