@@ -5,7 +5,6 @@ import com.sasayaki.data.db.dao.ProfileDao
 import com.sasayaki.data.db.entity.PostProcessingPromptEntity
 import com.sasayaki.data.db.entity.ProfileEntity
 import com.sasayaki.data.db.entity.toEntity
-import com.sasayaki.data.db.entity.toIdCsv
 import com.sasayaki.data.preferences.PreferencesDataStore
 import com.sasayaki.domain.model.Profile
 import kotlinx.coroutines.flow.Flow
@@ -27,7 +26,7 @@ class ProfileRepository @Inject constructor(
         .map { it?.toDomain() }
 
     suspend fun ensureDefaults() {
-        val builtInPromptIds = seedBuiltInPrompts()
+        seedBuiltInPrompts()
         if (profileDao.countProfiles() == 0) {
             val prefs = preferencesDataStore.preferences.first()
             profileDao.insert(
@@ -37,8 +36,7 @@ class ProfileRepository @Inject constructor(
                     asrModel = prefs.asrModel,
                     language = prefs.activeLanguage,
                     llmEnabled = prefs.llmEnabled,
-                    llmModel = prefs.llmModel,
-                    selectedPromptIds = builtInPromptIds.toIdCsv()
+                    llmModel = prefs.llmModel
                 )
             )
         } else if (profileDao.activeCount() == 0) {
@@ -122,7 +120,7 @@ class ProfileRepository @Inject constructor(
             ),
             BuiltInPromptSeed(
                 title = "Preserve voice and intent",
-                prompt = "Preserve the speaker's meaning, language, point of view, tone, and level of formality. Make the smallest edits that turn the raw dictation into text the speaker plausibly meant to type."
+                prompt = "Preserve the speaker's meaning, language, point of view, and intent. Follow the profile style controls even when they change tone or formatting."
             ),
             BuiltInPromptSeed(
                 title = "Clean speech artifacts",
@@ -134,7 +132,7 @@ class ProfileRepository @Inject constructor(
             ),
             BuiltInPromptSeed(
                 title = "Punctuation and casing",
-                prompt = "Fix capitalization, sentence boundaries, paragraph breaks, and punctuation by reading the whole transcript for meaning. Do not over-punctuate, and do not preserve raw ASR punctuation when it is clearly wrong.",
+                prompt = "Infer sentence boundaries and paragraph breaks from meaning. Apply capitalization and punctuation according to the profile style controls, not raw ASR punctuation.",
                 legacyTitles = setOf("Fixes", "Punctuation")
             ),
             BuiltInPromptSeed(

@@ -12,9 +12,31 @@ data class Profile(
     val llmEnabled: Boolean = false,
     val llmModel: String = "gpt-4o-mini",
     val profilePrompt: String = "",
+    val outputStyle: OutputStyle = OutputStyle.STANDARD,
+    val rewriteMode: RewriteMode = RewriteMode.FIX,
+    val summarizeMode: SummarizeMode = SummarizeMode.NONE,
+    val emojiAllowed: Boolean = false,
     val selectedRuleIds: Set<Long> = emptySet(),
     val selectedPromptIds: Set<Long> = emptySet()
 )
+
+enum class OutputStyle {
+    STANDARD,
+    RELAXED,
+    MINIMAL
+}
+
+enum class RewriteMode {
+    NONE,
+    FIX,
+    POLISH
+}
+
+enum class SummarizeMode {
+    NONE,
+    LIGHT,
+    HARD
+}
 
 @Immutable
 data class TextReplacementRule(

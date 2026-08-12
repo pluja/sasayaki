@@ -51,8 +51,11 @@ import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.domain.model.OutputStyle
 import com.sasayaki.domain.model.PostProcessingPrompt
 import com.sasayaki.domain.model.Profile
+import com.sasayaki.domain.model.RewriteMode
+import com.sasayaki.domain.model.SummarizeMode
 import com.sasayaki.domain.model.TextReplacementRule
 import com.sasayaki.ui.common.SasayakiScaffold
 import com.sasayaki.ui.common.SasayakiTopBar
@@ -64,6 +67,7 @@ private sealed interface ProfilesMode {
     data class Edit(val profile: Profile) : ProfilesMode
     data class Rules(val profile: Profile) : ProfilesMode
     data class Prompts(val profile: Profile) : ProfilesMode
+    data class Style(val profile: Profile) : ProfilesMode
 }
 
 @Composable
@@ -99,6 +103,7 @@ fun ProfilesScreen(
             },
             onRules = { mode = ProfilesMode.Rules(it) },
             onPrompts = { mode = ProfilesMode.Prompts(it) },
+            onStyle = { mode = ProfilesMode.Style(it) },
             outerPadding = outerPadding
         )
         is ProfilesMode.Rules -> ProfileRulePickerScreen(
@@ -110,6 +115,11 @@ fun ProfilesScreen(
         is ProfilesMode.Prompts -> ProfilePromptPickerScreen(
             profile = currentMode.profile,
             prompts = uiState.prompts,
+            onBack = { updated -> mode = ProfilesMode.Edit(updated) },
+            outerPadding = outerPadding
+        )
+        is ProfilesMode.Style -> ProfileStyleScreen(
+            profile = currentMode.profile,
             onBack = { updated -> mode = ProfilesMode.Edit(updated) },
             outerPadding = outerPadding
         )
@@ -268,6 +278,7 @@ private fun ProfileEditScreen(
     onSave: (Profile) -> Unit,
     onRules: (Profile) -> Unit,
     onPrompts: (Profile) -> Unit,
+    onStyle: (Profile) -> Unit,
     outerPadding: PaddingValues
 ) {
     var name by rememberSaveable(profile.id) { mutableStateOf(profile.name) }
@@ -276,8 +287,19 @@ private fun ProfileEditScreen(
     var llmEnabled by rememberSaveable(profile.id) { mutableStateOf(profile.llmEnabled) }
     var llmModel by rememberSaveable(profile.id) { mutableStateOf(profile.llmModel) }
     var profilePrompt by rememberSaveable(profile.id) { mutableStateOf(profile.profilePrompt) }
+    var outputStyleName by rememberSaveable(profile.id, profile.outputStyle) { mutableStateOf(profile.outputStyle.name) }
+    var rewriteModeName by rememberSaveable(profile.id, profile.rewriteMode) { mutableStateOf(profile.rewriteMode.name) }
+    var summarizeModeName by rememberSaveable(profile.id, profile.summarizeMode) { mutableStateOf(profile.summarizeMode.name) }
+    var emojiAllowed by rememberSaveable(profile.id, profile.emojiAllowed) { mutableStateOf(profile.emojiAllowed) }
     var selectedRuleIds by remember(profile.id, profile.selectedRuleIds) { mutableStateOf(profile.selectedRuleIds) }
     var selectedPromptIds by remember(profile.id, profile.selectedPromptIds) { mutableStateOf(profile.selectedPromptIds) }
+
+    val outputStyle = enumValueOrDefault(outputStyleName, OutputStyle.STANDARD)
+    val rewriteMode = enumValueOrDefault(rewriteModeName, RewriteMode.FIX)
+    val summarizeMode = enumValueOrDefault(summarizeModeName, SummarizeMode.NONE)
+    val customPrompts = prompts.filterNot(PostProcessingPrompt::builtIn)
+    val customPromptIds = customPrompts.map(PostProcessingPrompt::id).toSet()
+    val selectedCustomPromptCount = selectedPromptIds.count { it in customPromptIds }
 
     fun draft(): Profile = profile.copy(
         name = name,
@@ -286,6 +308,10 @@ private fun ProfileEditScreen(
         llmEnabled = llmEnabled,
         llmModel = llmModel,
         profilePrompt = profilePrompt,
+        outputStyle = outputStyle,
+        rewriteMode = rewriteMode,
+        summarizeMode = summarizeMode,
+        emojiAllowed = emojiAllowed,
         selectedRuleIds = selectedRuleIds,
         selectedPromptIds = selectedPromptIds
     )
@@ -335,6 +361,11 @@ private fun ProfileEditScreen(
                     )
                     ToggleRow("Enable post-processing", llmEnabled, onCheckedChange = { llmEnabled = it })
                     EditableInlineRow("Post-processing model", llmModel, enabled = llmEnabled, onValueChange = { llmModel = it })
+                    FieldRow(
+                        title = "Style",
+                        value = styleSummary(outputStyle, rewriteMode, summarizeMode, emojiAllowed),
+                        onClick = { onStyle(draft()) }
+                    )
                     EditableInlineRow(
                         title = "Profile-specific prompt",
                         value = profilePrompt,
@@ -343,8 +374,8 @@ private fun ProfileEditScreen(
                         onValueChange = { profilePrompt = it }
                     )
                     FieldRow(
-                        title = "Post-processing prompts",
-                        value = "${selectedPromptIds.size} of ${prompts.size} enabled",
+                        title = "Custom prompts",
+                        value = "$selectedCustomPromptCount of ${customPrompts.size} enabled",
                         onClick = { onPrompts(draft()) }
                     )
                 }
@@ -387,22 +418,95 @@ private fun ProfilePromptPickerScreen(
     onBack: (Profile) -> Unit,
     outerPadding: PaddingValues
 ) {
-    var selectedIds by remember(profile.id, profile.selectedPromptIds) { mutableStateOf(profile.selectedPromptIds) }
+    val customPrompts = prompts.filterNot(PostProcessingPrompt::builtIn)
+    val customPromptIds = customPrompts.map(PostProcessingPrompt::id).toSet()
+    var selectedIds by remember(profile.id, profile.selectedPromptIds, customPromptIds) {
+        mutableStateOf(profile.selectedPromptIds.filterTo(mutableSetOf<Long>()) { it in customPromptIds }.toSet())
+    }
     BackHandler {
         onBack(profile.copy(selectedPromptIds = selectedIds))
     }
     PickerScreen(
-        title = "Post-processing prompts",
+        title = "Custom prompts",
         onBack = { onBack(profile.copy(selectedPromptIds = selectedIds)) },
         floatingAction = null,
         outerPadding = outerPadding
     ) {
-        items(prompts, key = { it.id }) { prompt ->
+        items(customPrompts, key = { it.id }) { prompt ->
             ToggleTextRow(
                 title = prompt.prompt.ifBlank { prompt.title },
                 selected = prompt.id in selectedIds,
                 onToggle = { selectedIds = selectedIds.toggle(prompt.id) }
             )
+        }
+    }
+}
+
+@Composable
+private fun ProfileStyleScreen(
+    profile: Profile,
+    onBack: (Profile) -> Unit,
+    outerPadding: PaddingValues
+) {
+    var outputStyle by rememberSaveable(profile.id) { mutableStateOf(profile.outputStyle.name) }
+    var rewriteMode by rememberSaveable(profile.id) { mutableStateOf(profile.rewriteMode.name) }
+    var summarizeMode by rememberSaveable(profile.id) { mutableStateOf(profile.summarizeMode.name) }
+    var emojiAllowed by rememberSaveable(profile.id) { mutableStateOf(profile.emojiAllowed) }
+
+    fun draft(): Profile = profile.copy(
+        outputStyle = enumValueOrDefault(outputStyle, OutputStyle.STANDARD),
+        rewriteMode = enumValueOrDefault(rewriteMode, RewriteMode.FIX),
+        summarizeMode = enumValueOrDefault(summarizeMode, SummarizeMode.NONE),
+        emojiAllowed = emojiAllowed
+    )
+
+    BackHandler { onBack(draft()) }
+    PickerScreen(
+        title = "Style",
+        onBack = { onBack(draft()) },
+        floatingAction = null,
+        outerPadding = outerPadding
+    ) {
+        item {
+            StyleChoiceGroup(
+                title = "Punctuation & casing",
+                options = listOf(
+                    StyleOption(OutputStyle.STANDARD.name, "Standard", "Caps and punctuation."),
+                    StyleOption(OutputStyle.RELAXED.name, "Relaxed", "Caps with lighter punctuation."),
+                    StyleOption(OutputStyle.MINIMAL.name, "Minimal", "Lowercase, almost no punctuation.")
+                ),
+                selected = outputStyle,
+                onSelect = { outputStyle = it }
+            )
+        }
+        item {
+            StyleChoiceGroup(
+                title = "Rewrite",
+                options = listOf(
+                    StyleOption(RewriteMode.FIX.name, "Fix", "Keep wording close; repair rough edges."),
+                    StyleOption(RewriteMode.NONE.name, "None", "Only apply prompts and rules."),
+                    StyleOption(RewriteMode.POLISH.name, "Polish", "Rewrite into a more formal tone.")
+                ),
+                selected = rewriteMode,
+                onSelect = { rewriteMode = it }
+            )
+        }
+        item {
+            StyleChoiceGroup(
+                title = "Condense",
+                options = listOf(
+                    StyleOption(SummarizeMode.NONE.name, "None", "Do not summarize."),
+                    StyleOption(SummarizeMode.LIGHT.name, "Light", "Tighten spoken rambling."),
+                    StyleOption(SummarizeMode.HARD.name, "Hard", "Short concise summary.")
+                ),
+                selected = summarizeMode,
+                onSelect = { summarizeMode = it }
+            )
+        }
+        item {
+            SettingsGroup {
+                ToggleRow("Emoji", emojiAllowed, onCheckedChange = { emojiAllowed = it })
+            }
         }
     }
 }
@@ -484,6 +588,73 @@ private fun ToggleTextRow(title: String, selected: Boolean, onToggle: () -> Unit
             Switch(checked = selected, onCheckedChange = { onToggle() })
         }
     }
+}
+
+private data class StyleOption(
+    val value: String,
+    val title: String,
+    val subtitle: String
+)
+
+@Composable
+private fun StyleChoiceGroup(
+    title: String,
+    options: List<StyleOption>,
+    selected: String,
+    onSelect: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionTitle(title)
+        SettingsGroup {
+            options.forEach { option ->
+                StyleChoiceRow(
+                    option = option,
+                    selected = option.value == selected,
+                    onSelect = { onSelect(option.value) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StyleChoiceRow(
+    option: StyleOption,
+    selected: Boolean,
+    onSelect: () -> Unit
+) {
+    Surface(
+        onClick = onSelect,
+        color = Color.Transparent
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(option.title, style = MaterialTheme.typography.titleMedium)
+                Text(option.subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Surface(
+                shape = MaterialTheme.shapes.small,
+                color = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
+            ) {
+                Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+                    if (selected) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+        }
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.background.copy(alpha = 0.35f))
 }
 
 @Composable
@@ -587,6 +758,38 @@ private fun ToggleRow(title: String, checked: Boolean, onCheckedChange: (Boolean
 }
 
 private fun Set<Long>.toggle(id: Long): Set<Long> = if (id in this) this - id else this + id
+
+private fun styleSummary(
+    outputStyle: OutputStyle,
+    rewriteMode: RewriteMode,
+    summarizeMode: SummarizeMode,
+    emojiAllowed: Boolean
+): String {
+    val emoji = if (emojiAllowed) "Emoji" else "No emoji"
+    return "${outputStyle.label()} · ${rewriteMode.label()} · ${summarizeMode.label()} · $emoji"
+}
+
+private fun OutputStyle.label(): String = when (this) {
+    OutputStyle.STANDARD -> "Standard"
+    OutputStyle.RELAXED -> "Relaxed"
+    OutputStyle.MINIMAL -> "Minimal"
+}
+
+private fun RewriteMode.label(): String = when (this) {
+    RewriteMode.NONE -> "No rewrite"
+    RewriteMode.FIX -> "Fix"
+    RewriteMode.POLISH -> "Polish"
+}
+
+private fun SummarizeMode.label(): String = when (this) {
+    SummarizeMode.NONE -> "No summary"
+    SummarizeMode.LIGHT -> "Light summary"
+    SummarizeMode.HARD -> "Hard summary"
+}
+
+private inline fun <reified T : Enum<T>> enumValueOrDefault(value: String, default: T): T {
+    return enumValues<T>().firstOrNull { it.name == value } ?: default
+}
 
 private fun profilesContentPadding(padding: PaddingValues, outerPadding: PaddingValues): PaddingValues {
     return PaddingValues(

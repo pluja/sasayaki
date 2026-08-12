@@ -18,7 +18,7 @@ import com.sasayaki.data.db.entity.TextReplacementRuleEntity
         TextReplacementRuleEntity::class,
         PostProcessingPromptEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class SasayakiDatabase : RoomDatabase() {

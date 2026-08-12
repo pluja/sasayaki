@@ -6,8 +6,11 @@ import com.sasayaki.data.db.entity.PostProcessingPromptEntity
 import com.sasayaki.data.db.entity.TextReplacementRuleEntity
 import com.sasayaki.data.db.entity.toEntity
 import com.sasayaki.domain.model.AppContext
+import com.sasayaki.domain.model.OutputStyle
 import com.sasayaki.domain.model.PostProcessingPrompt
 import com.sasayaki.domain.model.Profile
+import com.sasayaki.domain.model.RewriteMode
+import com.sasayaki.domain.model.SummarizeMode
 import com.sasayaki.domain.model.TextReplacementRule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -64,9 +67,9 @@ class ProcessingRepository @Inject constructor(
     }
 
     suspend fun buildSystemPrompt(profile: Profile, appContext: AppContext?): String {
-        val promptTexts = promptDao.getAll()
-            .map(PostProcessingPromptEntity::toDomain)
-            .filter { it.id in profile.selectedPromptIds }
+        val prompts = promptDao.getAll().map(PostProcessingPromptEntity::toDomain)
+        val promptTexts = prompts
+            .filter(PostProcessingPrompt::builtIn)
             .map { it.prompt }
             .toMutableList()
 
@@ -82,6 +85,13 @@ class ProcessingRepository @Inject constructor(
             promptTexts += buildAppContextPrompt(appContext)
         }
 
+        promptTexts += prompts
+            .filterNot(PostProcessingPrompt::builtIn)
+            .filter { it.id in profile.selectedPromptIds }
+            .map { it.prompt }
+
+        promptTexts += buildStylePrompt(profile)
+
         if (promptTexts.isEmpty()) {
             promptTexts += "Clean the raw dictation with minimal changes, preserving the speaker's meaning and tone."
         }
@@ -90,12 +100,36 @@ class ProcessingRepository @Inject constructor(
         return promptTexts.joinToString("\n")
     }
 
+    private fun buildStylePrompt(profile: Profile): String {
+        val style = when (profile.outputStyle) {
+            OutputStyle.STANDARD -> "Use normal capitalization and punctuation."
+            OutputStyle.RELAXED -> "Use capitalization, but keep punctuation light."
+            OutputStyle.MINIMAL -> "Final text must be lowercase; remove punctuation unless needed for clarity."
+        }
+        val rewrite = when (profile.rewriteMode) {
+            RewriteMode.NONE -> "Do not paraphrase; preserve wording while enforcing this style."
+            RewriteMode.FIX -> "Keep wording close; fix grammar, artifacts, and incoherent fragments."
+            RewriteMode.POLISH -> "Polish into a more formal, correct tone."
+        }
+        val summarize = when (profile.summarizeMode) {
+            SummarizeMode.NONE -> "Do not summarize."
+            SummarizeMode.LIGHT -> "Condense lightly by removing redundancy and rambling."
+            SummarizeMode.HARD -> "Return a short summary only; omit supporting details."
+        }
+        val emoji = if (profile.emojiAllowed) {
+            "For casual messages, include one fitting emoji; otherwise add none."
+        } else {
+            "Do not add emoji unless explicitly dictated."
+        }
+        return "Style override: $style $rewrite $summarize $emoji"
+    }
+
     private fun buildAppContextPrompt(appContext: AppContext): String {
         val lines = mutableListOf<String>()
         appContext.displayName?.let { lines += "- Target app: $it" }
         appContext.packageName?.takeIf { it.isNotBlank() }?.let { lines += "- Target package: $it" }
         inferStyleForApp(appContext)?.let { lines += "- App style hint: $it" }
-        lines += "- Adapt formatting for the target app, but do not mention the app unless the dictated text requires it."
+        lines += "- Adapt to the target app without overriding the Style override."
         return "Context:\n${lines.joinToString("\n")}"
     }
 
