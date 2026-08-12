@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sasayaki.data.db.SasayakiDatabase
 import com.sasayaki.data.db.dao.DictationDao
+import com.sasayaki.data.db.dao.LifetimeStatsDao
 import com.sasayaki.data.db.dao.PostProcessingPromptDao
 import com.sasayaki.data.db.dao.ProfileDao
 import com.sasayaki.data.db.dao.TextReplacementRuleDao
@@ -102,6 +103,41 @@ object DatabaseModule {
         }
     }
 
+    /**
+     * Lifetime counters replace the old "sum every dictation row" totals, which
+     * shrank whenever retention pruning deleted rows. Seed them from the rows
+     * still present so existing installs keep the figures they can see today.
+     */
+    private val migration6To7 = object : Migration(6, 7) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `lifetime_stats` (
+                    `id` INTEGER NOT NULL,
+                    `dictationCount` INTEGER NOT NULL,
+                    `wordCount` INTEGER NOT NULL,
+                    `durationMs` INTEGER NOT NULL,
+                    `firstDictationAt` INTEGER,
+                    PRIMARY KEY(`id`)
+                )
+                """.trimIndent()
+            )
+            database.execSQL(
+                """
+                INSERT OR REPLACE INTO `lifetime_stats`
+                    (`id`, `dictationCount`, `wordCount`, `durationMs`, `firstDictationAt`)
+                SELECT 0,
+                       COUNT(*),
+                       COALESCE(SUM(wordCount), 0),
+                       COALESCE(SUM(durationMs), 0),
+                       MIN(timestamp)
+                FROM `dictations`
+                WHERE status = 'SUCCESS'
+                """.trimIndent()
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): SasayakiDatabase {
@@ -109,7 +145,14 @@ object DatabaseModule {
             context,
             SasayakiDatabase::class.java,
             "sasayaki.db"
-        ).addMigrations(migration1To2, migration2To3, migration3To4, migration4To5, migration5To6)
+        ).addMigrations(
+            migration1To2,
+            migration2To3,
+            migration3To4,
+            migration4To5,
+            migration5To6,
+            migration6To7
+        )
             .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
             .build()
     }
@@ -125,4 +168,7 @@ object DatabaseModule {
 
     @Provides
     fun providePostProcessingPromptDao(db: SasayakiDatabase): PostProcessingPromptDao = db.postProcessingPromptDao()
+
+    @Provides
+    fun provideLifetimeStatsDao(db: SasayakiDatabase): LifetimeStatsDao = db.lifetimeStatsDao()
 }

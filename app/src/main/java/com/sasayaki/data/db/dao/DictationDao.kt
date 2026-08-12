@@ -85,11 +85,4 @@ interface DictationDao {
     """)
     fun getTodayStats(startOfDay: Long): Flow<DictationStats>
 
-    @Query("""
-        SELECT COUNT(*) as count,
-               COALESCE(SUM(wordCount), 0) as wordCount,
-               COALESCE(SUM(durationMs), 0) as durationMs
-        FROM dictations
-    """)
-    fun getTotalStats(): Flow<DictationStats>
 }

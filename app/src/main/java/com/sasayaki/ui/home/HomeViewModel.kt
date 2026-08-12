@@ -3,6 +3,7 @@ package com.sasayaki.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sasayaki.data.db.dao.DictationDao
+import com.sasayaki.data.db.dao.LifetimeStatsDao
 import com.sasayaki.data.db.entity.DictationStats
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -22,7 +24,8 @@ private val EMPTY_STATS = DictationStats(count = 0, wordCount = 0, durationMs = 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    dictationDao: DictationDao
+    dictationDao: DictationDao,
+    lifetimeStatsDao: LifetimeStatsDao
 ) : ViewModel() {
     private val startOfToday = MutableStateFlow(currentStartOfDay())
 
@@ -30,7 +33,20 @@ class HomeViewModel @Inject constructor(
         .flatMapLatest(dictationDao::getTodayStats)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EMPTY_STATS)
 
-    val totalStats: StateFlow<DictationStats> = dictationDao.getTotalStats()
+    // Read from the standalone counters, not a sum over dictation rows, so deleting
+    // or pruning history no longer walks the lifetime totals backwards.
+    val totalStats: StateFlow<DictationStats> = lifetimeStatsDao.observe()
+        .map { stats ->
+            if (stats == null) {
+                EMPTY_STATS
+            } else {
+                DictationStats(
+                    count = stats.dictationCount,
+                    wordCount = stats.wordCount,
+                    durationMs = stats.durationMs
+                )
+            }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), EMPTY_STATS)
 
     init {

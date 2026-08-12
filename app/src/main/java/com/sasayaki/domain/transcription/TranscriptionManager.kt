@@ -3,6 +3,7 @@ package com.sasayaki.domain.transcription
 import android.content.Context
 import android.util.Log
 import com.sasayaki.data.db.dao.DictationDao
+import com.sasayaki.data.db.dao.LifetimeStatsDao
 import com.sasayaki.data.db.entity.Dictation
 import com.sasayaki.data.preferences.PreferencesDataStore
 import com.sasayaki.data.repository.ProfileRepository
@@ -11,6 +12,7 @@ import com.sasayaki.domain.model.DictationStatus
 import com.sasayaki.domain.model.Profile
 import com.sasayaki.domain.processing.TextProcessor
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import java.io.File
 import javax.inject.Inject
@@ -22,6 +24,7 @@ class TranscriptionManager @Inject constructor(
     private val whisperEngine: WhisperEngine,
     private val textProcessor: TextProcessor,
     private val dictationDao: DictationDao,
+    private val lifetimeStatsDao: LifetimeStatsDao,
     private val preferencesDataStore: PreferencesDataStore,
     private val profileRepository: ProfileRepository
 ) {
@@ -86,6 +89,7 @@ class TranscriptionManager @Inject constructor(
         }
 
         val processedText = textProcessor.process(rawText, profile, appContext)
+        recordLifetimeStats(processedText, durationMs)
         persistSuccess(
             text = processedText,
             rawText = rawText,
@@ -112,7 +116,7 @@ class TranscriptionManager @Inject constructor(
         retryEntryId: Long?
     ) {
         if (!historyEnabled && !keepStatsWithoutHistory && retryEntryId == null) return
-        val wordCount = text.split("\\s+".toRegex()).count { it.isNotBlank() }
+        val wordCount = countWords(text)
         val savedAudioPath = if (historyEnabled) retainAudio(audioFile, retryEntryId) else null
         upsertHistory(
             retryEntryId = retryEntryId,
@@ -207,6 +211,27 @@ class TranscriptionManager @Inject constructor(
                 audioPath = audioPath,
                 historyVisible = historyVisible
             )
+        }
+    }
+
+    private fun countWords(text: String): Int =
+        text.split("\\s+".toRegex()).count { it.isNotBlank() }
+
+    /**
+     * Lifetime counters are content-free and deliberately independent of the history
+     * settings: they must keep accumulating when history is off, when an entry is
+     * deleted, and when [pruneHistory] drops the row this dictation is stored in.
+     * A counter failure must never fail the dictation itself.
+     */
+    private suspend fun recordLifetimeStats(text: String, durationMs: Long) {
+        val wordCount = countWords(text)
+        if (wordCount == 0) return
+        try {
+            lifetimeStatsDao.record(wordCount, durationMs, System.currentTimeMillis())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to record lifetime stats", e)
         }
     }
 
