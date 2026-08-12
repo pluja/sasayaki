@@ -20,7 +20,7 @@ build: docker-image
 		-v $(ANDROID_SDK_HOME):/home/gradle/.android \
 		-e GRADLE_USER_HOME=/home/gradle/.gradle \
 		-w /project $(DOCKER_IMAGE) \
-		sh -c "./gradlew --no-daemon assembleRelease && chown -R $(HOST_UID):$(HOST_GID) /project/app/build /project/.gradle-build-cache /project/.android-cache"
+		sh -c "./gradlew --no-daemon assembleRelease && chown -Rf $(HOST_UID):$(HOST_GID) /project/app/build /project/.gradle-build-cache /project/.android-cache"
 	cp app/build/outputs/apk/release/app-release.apk $(APK_OUTPUT)
 	@echo "APK built: $(APK_OUTPUT)"
 	@ls -lh $(APK_OUTPUT)
