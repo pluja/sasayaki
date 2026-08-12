@@ -1,147 +1,88 @@
 package com.sasayaki.domain.processing
 
-import com.google.gson.Gson
-import com.sasayaki.data.api.model.ChatCompletionRequest
-import com.sasayaki.data.api.model.ChatCompletionResponse
-import com.sasayaki.data.api.model.ChatMessage
-import com.sasayaki.domain.model.PostProcessingPrompt
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.io.File
-import java.util.concurrent.TimeUnit
-import kotlin.system.measureTimeMillis
 
 /**
  * LLM-in-the-loop benchmark for the post-processing pipeline.
  *
- * Skipped unless OPENAI_ENDPOINT and OPENAI_API_KEY are present in the environment, so
- * normal builds and CI never make a network call or need credentials. Run it with:
+ * Skipped unless OPENAI_ENDPOINT and OPENAI_API_KEY are present, so normal builds and CI
+ * never make a network call or need credentials. Run it with:
  *
- *   docker run --rm --network host --env-file .env ... ./gradlew testDebugUnitTest \
- *       --tests '*PostProcessingBenchmark*' -PbenchModels=model-a,model-b
+ *   docker run --rm --network host --env-file .env \
+ *     -e BENCH_MODELS="model-a,model-b" ... ./gradlew testDebugUnitTest \
+ *     --tests '*PostProcessingBenchmark*'
  *
  * Prompts come from the production [SystemPromptBuilder] and [BuiltInPrompts], so what is
- * measured is what the app actually sends.
+ * measured is what the app actually sends. Every case runs several times: sampling wobbles
+ * at temperature 0.3, and a single sample once made a model look perfect on one run and
+ * flawed on the next.
  */
 class PostProcessingBenchmark {
 
-    private val endpoint: String? = System.getenv("OPENAI_ENDPOINT")?.trimEnd('/')
-    private val apiKey: String? = System.getenv("OPENAI_API_KEY")
+    private val client = BenchmarkClient()
 
-    private val models: List<String> = (
-        System.getenv("BENCH_MODELS")
-            ?: System.getProperty("benchModels")
-            ?: System.getenv("OPENAI_MODEL")
-            ?: ""
-        ).split(",").map(String::trim).filter(String::isNotEmpty)
-
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
-        .build()
-
-    private val gson = Gson()
-
-    private val builtInPrompts: List<PostProcessingPrompt> =
-        BuiltInPrompts.ALL.mapIndexed { index, seed ->
-            PostProcessingPrompt(
-                id = index + 1L,
-                title = seed.title,
-                prompt = seed.prompt,
-                builtIn = true
-            )
-        }
-
-    private data class Outcome(
-        val case: BenchmarkCase,
+    private data class CheckResult(
         val model: String,
-        val output: String,
-        val latencyMs: Long,
-        val failedChecks: List<String>,
-        val totalChecks: Int,
-        val error: String? = null
+        val case: BenchmarkCase,
+        val checkName: String,
+        val passes: Int,
+        val reps: Int
     ) {
-        val passed: Int get() = totalChecks - failedChecks.size
+        val rate: Double get() = passes.toDouble() / reps
+        val flaky: Boolean get() = passes in 1 until reps
     }
 
     @Test
     fun `benchmark models across languages`() {
         assumeTrue(
-            "Set OPENAI_ENDPOINT and OPENAI_API_KEY to run the benchmark",
-            !endpoint.isNullOrBlank() && !apiKey.isNullOrBlank()
+            "Set OPENAI_ENDPOINT, OPENAI_API_KEY and a model list to run the benchmark",
+            client.isConfigured
         )
-        assumeTrue("No models configured (BENCH_MODELS or OPENAI_MODEL)", models.isNotEmpty())
 
-        val outcomes = mutableListOf<Outcome>()
-        models.forEach { model ->
+        val results = mutableListOf<CheckResult>()
+        val latencies = mutableMapOf<String, MutableList<Long>>()
+        val outputs = mutableMapOf<Pair<String, String>, List<String>>()
+        var errors = 0
+        var requests = 0
+
+        client.models.forEach { model ->
             BENCHMARK_CASES.forEach { case ->
-                outcomes += runCase(model, case)
-            }
-        }
-        report(outcomes)
+                val prompt = SystemPromptBuilder.build(
+                    profile = case.profile,
+                    appContext = case.appContext,
+                    prompts = client.builtInPrompts
+                )
+                val completions = client.completeRepeatedly(model, prompt, case.rawText)
+                requests += completions.size
+                errors += completions.count { it.error != null }
+                latencies.getOrPut(model) { mutableListOf() } += completions.map(Completion::latencyMs)
+                outputs[model to case.id] = completions.map(Completion::text)
 
-        // Failing checks are a model-quality signal and only get reported, but a request
-        // that never completed means the run measured nothing. Without this, an endpoint
-        // outage reports "0/31 passed" and still exits green.
-        val errors = outcomes.filter { it.error != null }
-        if (errors.isNotEmpty()) {
-            val summary = errors.groupingBy { it.error!!.substringBefore(':') }.eachCount()
-            throw AssertionError(
-                "${errors.size} of ${outcomes.size} benchmark requests failed: $summary. " +
-                    "The run measured nothing; see the report for details."
-            )
-        }
-    }
-
-    private fun runCase(model: String, case: BenchmarkCase): Outcome {
-        val systemPrompt = SystemPromptBuilder.build(
-            profile = case.profile,
-            appContext = case.appContext,
-            prompts = builtInPrompts
-        )
-        val request = ChatCompletionRequest(
-            model = model,
-            messages = listOf(
-                ChatMessage(role = "system", content = systemPrompt),
-                ChatMessage(role = "user", content = case.rawText)
-            )
-        )
-
-        var body = ""
-        var failure: String? = null
-        val latency = measureTimeMillis {
-            try {
-                val http = Request.Builder()
-                    .url("$endpoint/chat/completions")
-                    .addHeader("Authorization", "Bearer $apiKey")
-                    .post(gson.toJson(request).toRequestBody("application/json".toMediaType()))
-                    .build()
-                client.newCall(http).execute().use { response ->
-                    val raw = response.body?.string().orEmpty()
-                    if (!response.isSuccessful) {
-                        failure = "HTTP ${response.code}"
-                    } else {
-                        body = gson.fromJson(raw, ChatCompletionResponse::class.java).text.trim()
-                    }
+                case.checks.forEach { check ->
+                    val passes = completions.count { it.error == null && check.passes(it.text) }
+                    results += CheckResult(model, case, check.name, passes, completions.size)
                 }
-            } catch (e: Exception) {
-                failure = e::class.simpleName + ": " + (e.message ?: "")
             }
         }
 
-        val failed = if (failure != null) {
-            case.checks.map(Check::name)
-        } else {
-            case.checks.filterNot { it.passes(body) }.map(Check::name)
+        report(results, latencies, outputs, errors, requests)
+
+        // Failing checks are a model-quality signal and only get reported. A request that
+        // never completed means the run measured nothing, which must not exit green.
+        if (errors > 0) {
+            throw AssertionError("$errors of $requests requests failed; the run measured nothing.")
         }
-        return Outcome(case, model, body, latency, failed, case.checks.size, failure)
     }
 
-    private fun report(outcomes: List<Outcome>) {
+    private fun report(
+        results: List<CheckResult>,
+        latencies: Map<String, List<Long>>,
+        outputs: Map<Pair<String, String>, List<String>>,
+        errors: Int,
+        requests: Int
+    ) {
         val sb = StringBuilder()
         fun line(text: String = "") {
             println(text)
@@ -151,63 +92,72 @@ class PostProcessingBenchmark {
         line()
         line("# Post-processing benchmark")
         line()
-        line("| Model | Checks passed | Cases fully passed | p50 latency | mean | max | Errors |")
+        line("${client.reps} repetitions per case. \"Checks\" counts each check once per")
+        line("repetition, so a check that passes 2 of 3 times scores 2/3 rather than pass or fail.")
+        line()
+        line("| Model | Checks | Always-pass cases | Flaky checks | p50 | mean | max |")
         line("|---|---|---|---|---|---|---|")
-        outcomes.groupBy(Outcome::model).forEach { (model, rows) ->
-            val latencies = rows.map(Outcome::latencyMs).sorted()
-            val p50 = latencies[latencies.size / 2]
-            val mean = latencies.average().toLong()
-            val checksPassed = rows.sumOf(Outcome::passed)
-            val checksTotal = rows.sumOf(Outcome::totalChecks)
-            val clean = rows.count { it.failedChecks.isEmpty() }
-            val errors = rows.count { it.error != null }
+        results.groupBy(CheckResult::model).forEach { (model, rows) ->
+            val passed = rows.sumOf(CheckResult::passes)
+            val total = rows.sumOf(CheckResult::reps)
+            val perCase = rows.groupBy { it.case.id }
+            val clean = perCase.count { (_, checks) -> checks.all { it.passes == it.reps } }
+            val flaky = rows.count(CheckResult::flaky)
+            val ms = latencies.getValue(model).sorted()
             line(
-                "| $model | $checksPassed/$checksTotal | $clean/${rows.size} | ${p50}ms | " +
-                    "${mean}ms | ${latencies.last()}ms | $errors |"
+                "| $model | $passed/$total (${(100.0 * passed / total).toInt()}%) | " +
+                    "$clean/${perCase.size} | $flaky | ${ms[ms.size / 2]}ms | " +
+                    "${ms.average().toLong()}ms | ${ms.last()}ms |"
             )
         }
 
         line()
-        line("## Per-language checks passed")
+        line("## Per-language pass rate")
         line()
         val languages = BENCHMARK_CASES.map(BenchmarkCase::language).distinct()
         line("| Model | ${languages.joinToString(" | ")} |")
         line("|---|${languages.joinToString("") { "---|" }}")
-        outcomes.groupBy(Outcome::model).forEach { (model, rows) ->
+        results.groupBy(CheckResult::model).forEach { (model, rows) ->
             val cells = languages.map { lang ->
                 val forLang = rows.filter { it.case.language == lang }
-                "${forLang.sumOf(Outcome::passed)}/${forLang.sumOf(Outcome::totalChecks)}"
+                "${forLang.sumOf(CheckResult::passes)}/${forLang.sumOf(CheckResult::reps)}"
             }
             line("| $model | ${cells.joinToString(" | ")} |")
         }
 
         line()
-        line("## Failures")
+        line("## Checks that did not always pass")
         line()
-        val failures = outcomes.filter { it.failedChecks.isNotEmpty() }
-        if (failures.isEmpty()) {
+        val imperfect = results.filter { it.passes < it.reps }.sortedBy { it.rate }
+        if (imperfect.isEmpty()) {
             line("None.")
         } else {
-            failures.forEach { o ->
-                line("### ${o.model} — ${o.case.id} (${o.case.language})")
-                line("- intent: ${o.case.intent}")
-                o.error?.let { line("- request error: $it") }
-                line("- failed: ${o.failedChecks.joinToString("; ")}")
-                line("- raw: `${o.case.rawText.take(160)}`")
-                line("- out: `${o.output.take(300)}`")
-                line()
+            line("| Model | Case | Language | Check | Passed |")
+            line("|---|---|---|---|---|")
+            imperfect.forEach {
+                val tag = if (it.flaky) " (flaky)" else ""
+                line(
+                    "| ${it.model} | ${it.case.id} | ${it.case.language} | ${it.checkName} | " +
+                        "${it.passes}/${it.reps}$tag |"
+                )
             }
         }
 
         line()
-        line("## All outputs")
+        line("## Outputs")
         line()
-        outcomes.groupBy { it.case.id }.forEach { (id, rows) ->
-            line("### $id (${rows.first().case.language}) — ${rows.first().case.intent}")
-            line("- raw: `${rows.first().case.rawText}`")
-            rows.forEach { line("- **${it.model}** (${it.latencyMs}ms): `${it.output}`") }
+        BENCHMARK_CASES.forEach { case ->
+            line("### ${case.id} (${case.language}) — ${case.intent}")
+            line("- raw: `${case.rawText}`")
+            client.models.forEach { model ->
+                outputs[model to case.id]?.forEachIndexed { i, text ->
+                    line("- **$model** #${i + 1}: `$text`")
+                }
+            }
             line()
         }
+
+        if (errors > 0) line("**$errors of $requests requests failed.**")
 
         val out = File("build/reports/benchmark/post-processing.md")
         out.parentFile?.mkdirs()

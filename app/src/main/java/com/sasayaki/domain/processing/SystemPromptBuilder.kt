@@ -85,8 +85,8 @@ object SystemPromptBuilder {
     }
 
     private fun casingRule(style: OutputStyle): String = when (style) {
-        OutputStyle.STANDARD -> "Use standard capitalisation and punctuation."
-        OutputStyle.RELAXED -> "Capitalise normally, but keep punctuation light."
+        OutputStyle.STANDARD -> "Use standard capitalization and punctuation."
+        OutputStyle.RELAXED -> "Capitalize normally, but keep punctuation light."
         OutputStyle.MINIMAL -> "Write in all lowercase and omit punctuation unless meaning would be lost."
     }
 
@@ -102,7 +102,7 @@ object SystemPromptBuilder {
             "Keep the speaker's wording in whatever text you retain; drop material rather than rephrasing it."
         }
         RewriteMode.FIX ->
-            "Stay close to the speaker's wording; fix grammar, false starts, and dictation artefacts."
+            "Stay close to the speaker's wording; fix grammar, false starts, and dictation artifacts."
         RewriteMode.POLISH ->
             "Rewrite into a clearer, more formal register while preserving the speaker's meaning."
     }

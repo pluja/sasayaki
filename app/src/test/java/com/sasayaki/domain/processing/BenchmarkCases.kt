@@ -51,15 +51,7 @@ fun mustContainAny(vararg terms: String) =
 
 fun mustNotContain(term: String) = Check("drops '$term'") { !word(it, term) }
 
-val noEmoji = Check("no emoji added") { out ->
-    out.none { ch ->
-        val block = Character.UnicodeBlock.of(ch)
-        block == Character.UnicodeBlock.EMOTICONS ||
-            block == Character.UnicodeBlock.MISCELLANEOUS_SYMBOLS_AND_PICTOGRAPHS ||
-            block == Character.UnicodeBlock.TRANSPORT_AND_MAP_SYMBOLS ||
-            block == Character.UnicodeBlock.SUPPLEMENTAL_SYMBOLS_AND_PICTOGRAPHS
-    }
-}
+val noEmoji = Check("no emoji added") { out -> Metrics.emojiCount(out) == 0.0 }
 
 val allLowercase = Check("all lowercase") { out -> out.none(Char::isUpperCase) }
 
