@@ -91,6 +91,14 @@ tasks.withType<Test>().configureEach {
         val value = providers.environmentVariable(key)
         if (value.isPresent) environment(key, value.get())
     }
+
+    // Environment variables are not task inputs, so a benchmark run with a changed model
+    // list would otherwise be skipped as UP-TO-DATE and silently report the previous
+    // run's numbers. Declaring them as inputs would hash the API key into Gradle's task
+    // history on disk, so force re-execution instead whenever the benchmark is wired up.
+    if (providers.environmentVariable("OPENAI_ENDPOINT").isPresent) {
+        outputs.upToDateWhen { false }
+    }
 }
 
 dependencies {
