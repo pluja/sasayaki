@@ -84,9 +84,19 @@ object SystemPromptBuilder {
         return "$PRECEDENCE_HEADER\n${lines.joinToString("\n")}"
     }
 
-    private fun casingRule(style: OutputStyle): String = when (style) {
+    /**
+     * Exposed so tests can assert against the exact emitted text instead of duplicating
+     * it. A copy in the test sources went stale the moment the wording changed, and the
+     * assertion silently stopped matching anything.
+     */
+    internal fun casingRule(style: OutputStyle): String = when (style) {
         OutputStyle.STANDARD -> "Use standard capitalization and punctuation."
-        OutputStyle.RELAXED -> "Capitalize normally, but keep punctuation light."
+        // "Keep punctuation light" measured identically to STANDARD on every model, so
+        // the tier says concretely which marks to drop instead of asking for a degree.
+        OutputStyle.RELAXED ->
+            "Capitalize normally, but punctuate sparingly: no full stop at the end of the " +
+                "final sentence, and commas only where the meaning would otherwise be unclear. " +
+                "Keep question marks."
         OutputStyle.MINIMAL -> "Write in all lowercase and omit punctuation unless meaning would be lost."
     }
 
@@ -95,11 +105,17 @@ object SystemPromptBuilder {
      * verbatim leaves the model to pick one at random. When condensing is on, no-rewrite is
      * resolved to its extractive reading: drop material, but do not reword what survives.
      */
-    private fun rewriteRule(rewrite: RewriteMode, summarize: SummarizeMode): String = when (rewrite) {
+    internal fun rewriteRule(rewrite: RewriteMode, summarize: SummarizeMode): String = when (rewrite) {
+        // Phrased as a hard constraint on word choice. "Change nothing beyond the guidance
+        // above" competed with built-ins that require edits, so NONE drifted toward FIX and
+        // on one model moved the text further from the transcript than FIX did.
         RewriteMode.NONE -> if (summarize == SummarizeMode.NONE) {
-            "Keep the speaker's wording as-is; change nothing beyond the guidance above."
+            "Do not substitute or reorder the speaker's words. Delete filler and abandoned " +
+                "words as instructed above, but never replace a word the speaker used with a " +
+                "different one, and do not repair grammar."
         } else {
-            "Keep the speaker's wording in whatever text you retain; drop material rather than rephrasing it."
+            "Do not substitute or reorder the speaker's words: drop material rather than " +
+                "rephrasing it, and never replace a word the speaker used with a different one."
         }
         RewriteMode.FIX ->
             "Stay close to the speaker's wording; fix grammar, false starts, and dictation artifacts."
@@ -107,13 +123,13 @@ object SystemPromptBuilder {
             "Rewrite into a clearer, more formal register while preserving the speaker's meaning."
     }
 
-    private fun lengthRule(summarize: SummarizeMode): String = when (summarize) {
+    internal fun lengthRule(summarize: SummarizeMode): String = when (summarize) {
         SummarizeMode.NONE -> "Keep every point the speaker made; do not condense."
         SummarizeMode.LIGHT -> "Cut repetition and rambling, but keep every distinct point."
         SummarizeMode.HARD -> "Reduce to a short summary of the main points and drop supporting detail."
     }
 
-    private fun emojiRule(allowed: Boolean): String = if (allowed) {
+    internal fun emojiRule(allowed: Boolean): String = if (allowed) {
         "You may add at most one fitting emoji when the message is casual."
     } else {
         "Do not add emoji the speaker did not dictate."

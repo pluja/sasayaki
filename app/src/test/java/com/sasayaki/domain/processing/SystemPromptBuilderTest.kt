@@ -57,31 +57,62 @@ class SystemPromptBuilderTest {
     // ---- Contradiction sweep -------------------------------------------------------
 
     /**
-     * Phrases that must never appear together. "Do not paraphrase" alongside "return a
-     * short summary" is the regression this guards: the two were emitted verbatim in the
-     * same sentence, leaving the model to pick one at random.
+     * The "leave the text alone" rewrite directive, taken straight from the builder.
+     *
+     * Asserting against a copy of the wording went stale silently the moment the prompt
+     * was reworded: the pair simply stopped matching and the test kept passing. Everything
+     * here is therefore derived from the production strings.
      */
-    private val mutuallyExclusive = listOf(
-        "keep the speaker's wording as-is" to "reduce to a short summary",
-        "keep the speaker's wording as-is" to "cut repetition",
-        "keep the speaker's wording as-is" to "rewrite into",
-        "keep every point the speaker made" to "reduce to a short summary",
-        "keep every point the speaker made" to "cut repetition",
-        "use standard capitalisation and punctuation." to "write in all lowercase",
-        "do not add emoji" to "you may add at most one",
-        "do not condense" to "drop supporting detail"
-    )
+    private val leaveTextAlone = SystemPromptBuilder.rewriteRule(RewriteMode.NONE, SummarizeMode.NONE)
 
     @Test
-    fun `no style combination emits contradictory directives`() {
+    fun `no style combination pairs leave-text-alone with a condensing instruction`() {
         allStyleCombinations().forEach { p ->
-            val prompt = SystemPromptBuilder.build(p, null, listOf(builtIn)).lowercase()
-            mutuallyExclusive.forEach { (a, b) ->
+            val prompt = SystemPromptBuilder.build(p, null, listOf(builtIn))
+            val condensing = p.summarizeMode != SummarizeMode.NONE
+            if (condensing) {
                 assertFalse(
-                    "Contradiction for style=${p.outputStyle} rewrite=${p.rewriteMode} " +
-                        "summarize=${p.summarizeMode} emoji=${p.emojiAllowed}: " +
-                        "both \"$a\" and \"$b\" present",
-                    prompt.contains(a) && prompt.contains(b)
+                    "Contradiction for rewrite=${p.rewriteMode} summarize=${p.summarizeMode}: " +
+                        "the prompt tells the model to change nothing while also demanding a " +
+                        "shorter result",
+                    prompt.contains(leaveTextAlone)
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `every dimension emits exactly the rule its setting selects`() {
+        allStyleCombinations().forEach { p ->
+            val prompt = SystemPromptBuilder.build(p, null, listOf(builtIn))
+            assertTrue(
+                "Casing rule missing for ${p.outputStyle}",
+                prompt.contains(SystemPromptBuilder.casingRule(p.outputStyle))
+            )
+            assertTrue(
+                "Rewrite rule missing for ${p.rewriteMode}/${p.summarizeMode}",
+                prompt.contains(SystemPromptBuilder.rewriteRule(p.rewriteMode, p.summarizeMode))
+            )
+            assertTrue(
+                "Length rule missing for ${p.summarizeMode}",
+                prompt.contains(SystemPromptBuilder.lengthRule(p.summarizeMode))
+            )
+            assertTrue(
+                "Emoji rule missing for ${p.emojiAllowed}",
+                prompt.contains(SystemPromptBuilder.emojiRule(p.emojiAllowed))
+            )
+            // The rules a setting did not select must be absent, so no two casing or
+            // length directives can ever stand in the same prompt.
+            OutputStyle.entries.filter { it != p.outputStyle }.forEach { other ->
+                assertFalse(
+                    "Prompt for ${p.outputStyle} also contains the $other casing rule",
+                    prompt.contains(SystemPromptBuilder.casingRule(other))
+                )
+            }
+            SummarizeMode.entries.filter { it != p.summarizeMode }.forEach { other ->
+                assertFalse(
+                    "Prompt for ${p.summarizeMode} also contains the $other length rule",
+                    prompt.contains(SystemPromptBuilder.lengthRule(other))
                 )
             }
         }
@@ -89,19 +120,15 @@ class SystemPromptBuilderTest {
 
     @Test
     fun `no-rewrite becomes extractive rather than contradictory when condensing`() {
+        val extractive = SystemPromptBuilder.rewriteRule(RewriteMode.NONE, SummarizeMode.HARD)
         val prompt = SystemPromptBuilder.build(
             profile(rewriteMode = RewriteMode.NONE, summarizeMode = SummarizeMode.HARD),
             null,
             listOf(builtIn)
         )
-        assertTrue(
-            "Expected the extractive phrasing when NONE is combined with summarising",
-            prompt.contains("drop material rather than rephrasing it")
-        )
-        assertFalse(
-            "The literal no-change wording must not survive alongside summarisation",
-            prompt.contains("change nothing beyond the guidance above")
-        )
+        assertTrue("Expected the extractive variant when NONE meets summarising", prompt.contains(extractive))
+        assertFalse("The unconditional no-change wording must not survive", prompt.contains(leaveTextAlone))
+        assertTrue("The two NONE variants must actually differ", extractive != leaveTextAlone)
     }
 
     @Test
