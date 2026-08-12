@@ -33,8 +33,8 @@ private data class BottomDestination(
 )
 
 private val bottomDestinations = listOf(
-    BottomDestination(Routes.HOME, "Transcriptions", SasayakiIcons.History),
-    BottomDestination(Routes.PROFILES, "Profiles", SasayakiIcons.Widgets),
+    BottomDestination(Routes.HOME, "Transcriptions", SasayakiIcons.Description),
+    BottomDestination(Routes.PROFILES, "Profiles", SasayakiIcons.Tune),
     BottomDestination(Routes.SETTINGS, "Settings", Icons.Default.Settings)
 )
 

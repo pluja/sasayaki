@@ -68,7 +68,7 @@ fun HistoryScreen(
                     if (dayGroups.isNotEmpty()) {
                         IconButton(onClick = { showClearHistoryDialog = true }) {
                             Icon(
-                                imageVector = Icons.Default.Delete,
+                                imageVector = SasayakiIcons.DeleteSweep,
                                 contentDescription = "Clear history",
                                 tint = MaterialTheme.colorScheme.error
                             )
@@ -86,7 +86,7 @@ fun HistoryScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 EmptyStateCard(
-                    icon = SasayakiIcons.History,
+                    icon = SasayakiIcons.Description,
                     title = "No dictations yet",
                     description = "When history is enabled, your recent transcripts will appear here for quick reuse."
                 )

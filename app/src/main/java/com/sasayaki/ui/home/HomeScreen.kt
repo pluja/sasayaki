@@ -21,6 +21,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -141,7 +143,7 @@ fun HomeScreen(
         if (dayGroups.isEmpty()) {
             item("empty") {
                 EmptyStateCard(
-                    icon = SasayakiIcons.History,
+                    icon = SasayakiIcons.Description,
                     title = "No dictations yet",
                     description = "Recent transcripts and failures will appear here when history is enabled."
                 )
@@ -196,7 +198,7 @@ private fun SummaryCard(
                 if (!serviceReady && !serviceRunning) StatusPill("Setup needed")
             }
             Button(onClick = onToggleService, modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
-                Icon(if (serviceRunning) SasayakiIcons.StopCircle else SasayakiIcons.GraphicEq, contentDescription = null, modifier = Modifier.size(20.dp))
+                Icon(if (serviceRunning) SasayakiIcons.StopCircle else SasayakiIcons.Mic, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.size(10.dp))
                 Text(if (serviceRunning) "Stop dictation service" else "Start dictation service")
             }
@@ -265,7 +267,7 @@ private fun TranscriptCard(
                     if (isRetrying) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                     } else {
-                        Icon(SasayakiIcons.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                     }
                     Spacer(Modifier.size(8.dp))
                     Text(if (isRetrying) "Retrying" else "Retry")
@@ -301,7 +303,7 @@ private fun RestrictedSettingsCard(onOpenAppInfo: () -> Unit) {
         subtitle = "Sideloaded apps need one extra step before overlay and accessibility permissions can be enabled."
     ) {
         OutlinedButton(onClick = onOpenAppInfo, modifier = Modifier.fillMaxWidth()) {
-            Icon(SasayakiIcons.Widgets, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.size(8.dp))
             Text("Open App Info")
         }
