@@ -38,7 +38,7 @@ class WhisperEngine @Inject constructor(
                 it.toRequestBody("text/plain".toMediaType())
             }
 
-            val response = service.transcribe(filePart, modelPart, prompt = null, language = languagePart)
+            val response = service.transcribe(filePart, modelPart, language = languagePart)
             Result.success(response.text)
         } catch (e: Exception) {
             Result.failure(e)
