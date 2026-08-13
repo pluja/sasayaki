@@ -2,24 +2,25 @@
 
 <p align="center"><a href="https://keepandroidopen.org/"><b>ANDROID WILL BECOME A LOCKED-DOWN PLATFORM</b></a></p>
 
-A tiny dictation android app. Connect any OpenAI-Compatible backend, and type faster than you can imagine just by speaking.
+A tiny (2MB) Android dictation app. Point it at any OpenAI-compatible backend and type by speaking.
 
-Sasayaki is like [WisprFlow](https://wisprflow.ai) but free and can run on your own local models.
+Sasayaki does the same job as [WisprFlow](https://wisprflow.ai), except it costs nothing and is more private, connecting to your own models.
 
-> IMPORTANT: This app was coded with AI. I am not an android developer, and I wouldn't be able to do this if it wasn't for AI. I try to enforce good practices, but any contributions or suggestions are very welcome. The app works pretty fine, is small, and gives me what I want. This README was written by me, zero AI.
+> IMPORTANT: This app was coded with AI. I am not an android developer, and I wouldn't be able to do this if it wasn't for AI. I try to enforce good practices, but any contributions or suggestions are very welcome. The app works pretty fine, is small, and gives me what I want.
 
 ## Features
 
-- Floating dot that appears when the keyboard is open.
-  - Click to start dictation; autodetects silence.
-  - Hold for quick options.
-- Lightweight; 2MB apk.
-- Configure your main lanugages; helps improving ASR WER (Word Error Ratio).
-- Word dictionary; sent as prompt to post processing llm and ASR; so the models know common words.
-- History; keep all your dictation history. You can also turn this off.
-- LLM Post Processing; configure an LLM to take your dictation and remove speech quirks and errors:
-  - "So... We can meet at 6, wait no... actually 7, at the restaurant" -> "We can meet at 7 at the restaurant."
-- And some more small features you will discover with usage.
+- A floating dot appears when the keyboard opens. Tap it to dictate, and it stops when you go quiet.
+  - While you speak it widens into a timer with pause, cancel and profile buttons.
+  - Tap the bubble while it is processing to drop the dictation.
+- **Profiles** bundle a language, an ASR model, an LLM model and a writing style. Switch the active one from the bubble.
+- **Post-processing**: a small model turns what you said into a clean written message.
+  - "Uh... Yeah, let's meet at 8.. No sorry, at 9!" → "Let's meet at 9."
+  - Per profile, set the punctuation and casing, how far the model may rewrite you, how much it should condense, and whether emoji are allowed.
+  - Sasayaki passes the app you are dictating into as context, so mail comes out in a different tone from a chat.
+- Your word dictionary reaches both the ASR and the post-processing model, so names and jargon survive the trip.
+- History keeps past dictations, up to a limit you choose, and can be switched off. Word and time totals keep counting either way.
+- The bubble comes back on its own after a reboot.
 
 <table>
   <tr>
@@ -32,52 +33,63 @@ Sasayaki is like [WisprFlow](https://wisprflow.ai) but free and can run on your 
   </tr>
 </table>
 
-## Self Hosting
+## Install
 
-### Requirements
+Grab the latest APK from the [releases](https://github.com/pluja/sasayaki/releases) page and install it. [Obtainium](https://github.com/ImranR98/Obtainium) can keep it updated for you.
 
-- You will need an ASR backend that is compatible with OpenAI API (read below for more info).
-- Optionally, you can set up an LLM to perform post-processing; that means it will remove the quirks from speach/dictation and transform it to a written-like message, removing the 'Uhhh..', 'Ah..', 'What was I gonna say?...'. 
-- Android device.
+You need an Android device and an ASR backend that speaks the OpenAI API. An LLM for post-processing is optional and worth it.
 
-### Self Hosting
+## Backends
 
-This is an android app, so there's nothing to self host really. You can choose any backend provider, it just needs to provide an OpenAI-Compatible API.
+Nothing here needs hosting: the app is the whole product, and it will talk to any OpenAI-compatible API. Run your own if you care about privacy and owning your data. If you would rather not, [ppq.ai](https://ppq.ai/) and [nano-gpt.com](https://nano-gpt.com) are reasonable choices when you trust them. If you want a fully private backend, check out [tinfoil](https://tinfoil.sh).
 
-For privacy and data ownership reasons, I recommend you self host your own backends; but there are reasonably private services such as [ppq.ai](https://ppq.ai/) or [nano-gpt.com](https://nano-gpt.com) that can serve this purpose if you trust them.
+### Speech to text
 
-### Installing
+Plenty of options exist, from [whisper.cpp](https://github.com/ggml-org/whisper.cpp) to [faster-whisper](https://github.com/SYSTRAN/faster-whisper). I run [speaches](https://github.com/speaches-ai/speaches).
 
-Go to the [releases](https://github.com/pluja/sasayaki/releases) page, and get the latest APK. Install and you're good to go! You can also use Obtanium to have automated updates and so.
+For the model itself, [`deepdml/faster-whisper-large-v3-turbo-ct2`](https://huggingface.co/deepdml/faster-whisper-large-v3-turbo-ct2) beat everything else I tried across several European languages. On a GPU it is quick, and it holds up when you talk fast or even whisper.
 
-## Self Hosting your own backends
+Other options:
 
-As mentioned before, I do recommend you self host your own backends. This will give you very good privacy and the joy of owning your data, and selfhosting.
-
-Below you will find my personal recommendations, but the best you can do is just test and find whatever suits you better!
-
-### The ASR (STT) service
-
-There are many services you can self-host; from [whisper.cpp](https://github.com/ggml-org/whisper.cpp) to [faster-whisper](https://github.com/SYSTRAN/faster-whisper). I personally use and recommend [speaches](https://github.com/speaches-ai/speaches).
-
-### Choosing a model
-
-The best model you can use, from my personal testing in various European languages, is [`deepdml/faster-whisper-large-v3-turbo-ct2`](https://huggingface.co/deepdml/faster-whisper-large-v3-turbo-ct2), it's very fast if you have a GPU and very accurate; even when speaking fast or whispering.
-
-Other models you can use are:
-
-- [whisper](https://huggingface.co/collections/openai/whisper-release) family, from the tiny ones to the medium. If you only intend to use it with english, I recommend you get the `en` models, which are more accurate and smaller. 
-- [`Parakeet`](https://parakeettdt.com/) is also nice and has good results. 
-- [`moonshine`](https://github.com/moonshine-ai/moonshine) is very small, multilingual and has very decent results; but I am not aware of any openai-compatible api implementation for it.
+- The [whisper](https://huggingface.co/collections/openai/whisper-release) family, from tiny up to medium. For English only, the `en` models are smaller and sharper.
+- [`Parakeet`](https://parakeettdt.com/) gives good results.
+- [`moonshine`](https://github.com/moonshine-ai/moonshine) is small and multilingual, though I know of no OpenAI-compatible API for it.
 - [`Voxtral Mini`](https://huggingface.co/mistralai/Voxtral-Mini-4B-Realtime-2602)
 
-## The LLM Post Processing
+Setting your main languages in the app lowers the word error rate.
 
-This is completely optional, but I found it has very good improvement on the resulting texts (low modification rate) with minimal overhead if you run small models (2B/4B) on consumer GPUs.
+### LLM post-processing
 
-Personally, I have fine-tuned the 2B version of Qwen3.5 ([unsloth/Qwen3.5-2B](https://huggingface.co/unsloth/Qwen3.5-2B)) with the recipe you can find in the [`fine-tuning`](https://github.com/pluja/sasayaki/tree/main/fine-tuning#fine-tuning) directory on this repo. You can generate synthetic dataset of data in your language and then perform the fine-tuning with [`unsloth`](https://unsloth.ai/), which is very fast and can be done with around 5GB of VRAM.
+Optional. A 2B or 4B model on a consumer GPU adds little delay and cleans the text up well.
 
-For the OpenAI-compatible backend, I recommend you use [`llama-swap`](https://github.com/mostlygeek/llama-swap) with llama.cpp backend; there are other nice options such as plan [`llama.cpp`](https://github.com/ggml-org/llama.cpp) or [`koboldcpp`](https://github.com/LostRuins/koboldcpp) or even [LlamaFiles](https://github.com/mozilla-ai/llamafile). The options are endless.
+I fine-tuned the 2B version of Qwen3.5 ([unsloth/Qwen3.5-2B](https://huggingface.co/unsloth/Qwen3.5-2B)) using the recipe in the [`fine-tuning`](https://github.com/pluja/sasayaki/tree/main/fine-tuning#fine-tuning) directory. Generate a synthetic dataset in your language, then train with [`unsloth`](https://unsloth.ai/) on about 5GB of VRAM.
+
+To serve it, I use [`llama-swap`](https://github.com/mostlygeek/llama-swap) over a llama.cpp backend. Plain [`llama.cpp`](https://github.com/ggml-org/llama.cpp), [`koboldcpp`](https://github.com/LostRuins/koboldcpp) and [LlamaFiles](https://github.com/mozilla-ai/llamafile) all work too.
+
+The same providers are useful if you don't want to host your own ([ppq.ai](https://ppq.ai/) and [nano-gpt.com](https://nano-gpt.com)). If you want private inference, check out [tinfoil](https://tinfoil.sh).
+
+Pick a model that follows instructions. Some will answer a dictated question instead of transcribing it, so that "what is the capital of France" becomes "Paris" in your chat box. The eval suite below catches that.
+
+## Development
+
+Build the release APK in Docker, which avoids installing an Android SDK or a matching JDK:
+
+```sh
+make build      # writes sasayaki-release.apk
+```
+
+Run the prompt tests, which need no network and no credentials:
+
+```sh
+./gradlew testDebugUnitTest
+```
+
+Two further suites measure the post-processing prompts against real models. They skip themselves unless `OPENAI_ENDPOINT` and `OPENAI_API_KEY` are set, so they never run by accident:
+
+- `PostProcessingBenchmark` sends dictations in English, Spanish, French, Catalan and Italian, then checks whether self-corrections were applied, whether the text stayed in its original language, and how long each model took.
+- `StyleControlDifferentialTest` verifies that moving a style control changes the output, which is how I found two settings that did nothing at all.
+
+Both write a report under `app/build/reports/benchmark/`.
 
 ## License
 
