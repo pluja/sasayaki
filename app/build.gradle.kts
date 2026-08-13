@@ -22,8 +22,17 @@ android {
         val tag = findProperty("versionTag")?.toString()?.removePrefix("v") ?: ""
         val cal = Calendar.getInstance()
         val dateCode = cal.get(Calendar.YEAR) * 10000 + (cal.get(Calendar.MONTH) + 1) * 100 + cal.get(Calendar.DAY_OF_MONTH)
-        versionCode = tag.toIntOrNull() ?: dateCode
-        versionName = if (tag.isNotBlank()) "v$tag" else "v$versionCode"
+
+        // Tags are dated, optionally with a same-day patch: v20260813, v20260813.2.
+        // Parsing the whole tag as an Int returned null for the patch form and fell back
+        // to the date, so v20260813.2 shipped the same versionCode as v20260813.1.
+        // Android decides updates by versionCode, so the patch never reached anyone.
+        // Date and patch are packed separately, leaving codes ordered across days.
+        val tagParts = tag.split(".")
+        val baseCode = tagParts.getOrNull(0)?.toIntOrNull() ?: dateCode
+        val patchCode = tagParts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 99) ?: 0
+        versionCode = baseCode * 100 + patchCode
+        versionName = if (tag.isNotBlank()) "v$tag" else "v$baseCode"
     }
 
     signingConfigs {
