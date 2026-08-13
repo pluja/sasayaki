@@ -20,7 +20,8 @@ Sasayaki does the same job as [WisprFlow](https://wisprflow.ai), except it costs
   - "Uh... Yeah, let's meet at 8.. No sorry, at 9!" → "Let's meet at 9."
   - Per profile, set the punctuation and casing, how far the model may rewrite you, how much it should condense, and whether emoji are allowed.
   - Sasayaki passes the app you are dictating into as context, so mail comes out in a different tone from a chat.
-- Your word dictionary reaches both the ASR and the post-processing model, so names and jargon survive the trip.
+- Replacement rules fix the words your ASR keeps mangling. Plain text or regex, and each profile chooses which ones apply.
+- Write your own post-processing prompts and switch them on per profile, alongside the built-in ones.
 - History keeps past dictations, up to a limit you choose, and can be switched off. Word and time totals keep counting either way.
 - The bubble comes back on its own after a reboot.
 
