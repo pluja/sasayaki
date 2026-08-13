@@ -8,6 +8,35 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 
+/**
+ * What the field already holds, ignoring placeholder text.
+ *
+ * Some apps report their placeholder through [android.view.accessibility.AccessibilityNodeInfo.getText]
+ * rather than leaving it empty, so appending a dictation to it would paste the placeholder
+ * into the message. [isShowingHintText] is the platform's own answer and is trusted first;
+ * the hint comparison catches apps that pad or re-case the hint before reporting it.
+ *
+ * Field length and cursor position are deliberately not consulted. Plenty of editors,
+ * WebView- and Flutter-backed ones especially, report no text selection while holding real
+ * typed text, and discarding it on that basis would delete what the user wrote.
+ */
+internal fun resolveExistingText(
+    rawText: String,
+    hintText: String,
+    isShowingHintText: Boolean
+): String {
+    val showsPlaceholder = isShowingHintText ||
+        (hintText.isNotBlank() && rawText.trim().equals(hintText.trim(), ignoreCase = true))
+    return if (showsPlaceholder) "" else rawText
+}
+
+/**
+ * Leading space is dropped when the field is empty, since it would open the message with
+ * whitespace. Mid-message the spacing is the speaker's to decide.
+ */
+internal fun insertionFor(existingText: String, dictated: String): String =
+    if (existingText.isEmpty()) dictated.trimStart() else dictated
+
 sealed class InjectionResult {
     data object Success : InjectionResult()
     data object NoFocusedNode : InjectionResult()
@@ -116,9 +145,11 @@ class TextInjectorService : AccessibilityService() {
                 return InjectionResult.BlockedSensitive
             }
 
-            val rawText = node.text?.toString() ?: ""
-            val hintText = node.hintText?.toString() ?: ""
-            val existingText = if (rawText == hintText) "" else rawText
+            val existingText = resolveExistingText(
+                rawText = node.text?.toString() ?: "",
+                hintText = node.hintText?.toString() ?: "",
+                isShowingHintText = node.isShowingHintText
+            )
 
             val cursorPos = if (existingText.isNotEmpty() && node.textSelectionEnd >= 0) {
                 node.textSelectionEnd.coerceAtMost(existingText.length)
@@ -126,9 +157,11 @@ class TextInjectorService : AccessibilityService() {
                 existingText.length
             }
 
+            val textToInsert = insertionFor(existingText, text)
+
             val newText = buildString {
                 append(existingText.substring(0, cursorPos))
-                append(text)
+                append(textToInsert)
                 append(existingText.substring(cursorPos))
             }
 
@@ -138,7 +171,7 @@ class TextInjectorService : AccessibilityService() {
             val setResult = node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
 
             if (setResult) {
-                val newCursorPos = cursorPos + text.length
+                val newCursorPos = cursorPos + textToInsert.length
                 val selectionArgs = Bundle().apply {
                     putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, newCursorPos)
                     putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, newCursorPos)
