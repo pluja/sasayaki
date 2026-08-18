@@ -3,6 +3,8 @@ package com.sasayaki.service
 import android.accessibilityservice.AccessibilityService
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -52,6 +54,10 @@ class TextInjectorService : AccessibilityService() {
     companion object {
         private const val TAG = "TextInjectorService"
 
+        private val PROBE_DELAYS_MS = longArrayOf(200, 600, 1200)
+        private const val DEBOUNCE_MS = 120L
+        private const val RETRY_DELAY_MS = 300L
+
         var instance: TextInjectorService? = null
             private set
 
@@ -67,6 +73,11 @@ class TextInjectorService : AccessibilityService() {
 
     private var lastFocusedPackage: String? = null
     private var lastFocusedEditablePackage: String? = null
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val debounceCheck = Runnable { checkKeyboardVisibility() }
+    private val imeProbe = Runnable { checkKeyboardVisibility() }
+    private var pendingRetry = false
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -86,30 +97,69 @@ class TextInjectorService : AccessibilityService() {
                     focusedAppPackage = packageName
                     if (event.source?.isEditable == true) {
                         lastFocusedEditablePackage = packageName
+                        if (event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
+                            scheduleImeProbe()
+                        }
+                    } else if (event.eventType == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
+                        cancelAllProbes()
                     }
                 }
             }
-            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                checkKeyboardVisibility()
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED,
+            AccessibilityEvent.TYPE_WINDOWS_CHANGED -> {
+                scheduleDebouncedCheck()
             }
         }
     }
 
+    private fun scheduleDebouncedCheck() {
+        handler.removeCallbacks(debounceCheck)
+        handler.postDelayed(debounceCheck, DEBOUNCE_MS)
+    }
+
+    private fun scheduleImeProbe() {
+        cancelAllProbes()
+        PROBE_DELAYS_MS.forEach { delay ->
+            handler.postDelayed(imeProbe, delay)
+        }
+    }
+
+    private fun cancelAllProbes() {
+        handler.removeCallbacks(imeProbe)
+    }
+
     private fun checkKeyboardVisibility() {
         try {
-            val hasIme = windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            val ws = windows
+            if (ws.isNullOrEmpty()) {
+                scheduleRetry()
+                return
+            }
+            pendingRetry = false
+            val hasIme = ws.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
             if (hasIme != isKeyboardVisible) {
                 isKeyboardVisible = hasIme
                 keyboardListener?.onKeyboardVisibilityChanged(hasIme)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error checking keyboard", e)
+            scheduleRetry()
         }
+    }
+
+    private fun scheduleRetry() {
+        if (pendingRetry) return
+        pendingRetry = true
+        handler.postDelayed({
+            pendingRetry = false
+            checkKeyboardVisibility()
+        }, RETRY_DELAY_MS)
     }
 
     override fun onInterrupt() {}
 
     override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
         instance = null
         lastFocusedPackage = null
         lastFocusedEditablePackage = null
