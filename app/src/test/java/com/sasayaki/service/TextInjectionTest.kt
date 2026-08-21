@@ -1,6 +1,9 @@
 package com.sasayaki.service
 
+import android.text.InputType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -81,5 +84,47 @@ class TextInjectionTest {
     fun `leading space is dropped only into an empty field`() {
         assertEquals("hello", insertionFor(existingText = "", dictated = " hello"))
         assertEquals(" hello", insertionFor(existingText = "hi", dictated = " hello"))
+    }
+
+    @Test
+    fun `leading space is dropped only at the start of the field`() {
+        assertEquals("hello", insertionAtCursor(charsBeforeCursor = 0, dictated = " hello"))
+        assertEquals(" hello", insertionAtCursor(charsBeforeCursor = 1, dictated = " hello"))
+        assertEquals("hello", insertionAtCursor(charsBeforeCursor = 1, dictated = "hello"))
+        // An unanswered request must not read as an empty field.
+        assertEquals(" hello", insertionAtCursor(charsBeforeCursor = null, dictated = " hello"))
+    }
+
+    @Test
+    fun `password editors are refused whatever their class`() {
+        listOf(
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD,
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
+            InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD,
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD or
+                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+        ).forEach { inputType ->
+            assertTrue("inputType $inputType must be refused", isSensitiveInputType(inputType))
+        }
+    }
+
+    /**
+     * The variation bits are only meaningful within a class, and the password variations of
+     * text and number collide numerically with ordinary variations of the other classes.
+     */
+    @Test
+    fun `ordinary editors are accepted`() {
+        listOf(
+            InputType.TYPE_CLASS_TEXT,
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS,
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE,
+            InputType.TYPE_CLASS_NUMBER,
+            InputType.TYPE_CLASS_PHONE,
+            InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_TIME,
+            InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT
+        ).forEach { inputType ->
+            assertFalse("inputType $inputType must be accepted", isSensitiveInputType(inputType))
+        }
     }
 }

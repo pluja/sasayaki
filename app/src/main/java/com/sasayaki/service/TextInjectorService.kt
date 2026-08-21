@@ -2,19 +2,24 @@ package com.sasayaki.service
 
 import android.accessibilityservice.AccessibilityService
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.text.InputType
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
+import androidx.annotation.RequiresApi
 
 /**
  * What the field already holds, ignoring placeholder text.
  *
- * Some apps report their placeholder through [android.view.accessibility.AccessibilityNodeInfo.getText]
- * rather than leaving it empty, so appending a dictation to it would paste the placeholder
- * into the message. [isShowingHintText] is the platform's own answer and is trusted first;
- * the hint comparison catches apps that pad or re-case the hint before reporting it.
+ * Some apps report their placeholder through
+ * [android.view.accessibility.AccessibilityNodeInfo.getText] rather than leaving the field
+ * empty. [isShowingHintText] is the platform's own answer and is trusted first; the hint
+ * comparison catches apps that pad or re-case the hint before reporting it. An app that
+ * reports a placeholder while reporting no hint at all cannot be caught here, because
+ * nothing distinguishes it from an app holding a draft of the same words.
  *
  * Field length and cursor position are deliberately not consulted. Plenty of editors,
  * WebView- and Flutter-backed ones especially, report no text selection while holding real
@@ -36,6 +41,29 @@ internal fun resolveExistingText(
  */
 internal fun insertionFor(existingText: String, dictated: String): String =
     if (existingText.isEmpty()) dictated.trimStart() else dictated
+
+/**
+ * A null count is the editor declining to answer rather than an empty field, so the
+ * speaker's spacing is left alone rather than guessed at.
+ */
+internal fun insertionAtCursor(charsBeforeCursor: Int?, dictated: String): String =
+    if (charsBeforeCursor == 0) dictated.trimStart() else dictated
+
+/**
+ * [AccessibilityNodeInfo.isPassword] is set from the view, and web password inputs reach the
+ * accessibility tree as ordinary editables, so the editor's own input type is checked too.
+ */
+internal fun isSensitiveInputType(inputType: Int): Boolean {
+    val variation = inputType and InputType.TYPE_MASK_VARIATION
+    return when (inputType and InputType.TYPE_MASK_CLASS) {
+        InputType.TYPE_CLASS_TEXT ->
+            variation == InputType.TYPE_TEXT_VARIATION_PASSWORD ||
+                variation == InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ||
+                variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD
+        InputType.TYPE_CLASS_NUMBER -> variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        else -> false
+    }
+}
 
 sealed class InjectionResult {
     data object Success : InjectionResult()
@@ -145,45 +173,81 @@ class TextInjectorService : AccessibilityService() {
                 return InjectionResult.BlockedSensitive
             }
 
-            val existingText = resolveExistingText(
-                rawText = node.text?.toString() ?: "",
-                hintText = node.hintText?.toString() ?: "",
-                isShowingHintText = node.isShowingHintText
-            )
-
-            val cursorPos = if (existingText.isNotEmpty() && node.textSelectionEnd >= 0) {
-                node.textSelectionEnd.coerceAtMost(existingText.length)
-            } else {
-                existingText.length
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                commitAtCursor(text)?.let { return it }
             }
 
-            val textToInsert = insertionFor(existingText, text)
-
-            val newText = buildString {
-                append(existingText.substring(0, cursorPos))
-                append(textToInsert)
-                append(existingText.substring(cursorPos))
-            }
-
-            val arguments = Bundle().apply {
-                putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, newText)
-            }
-            val setResult = node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
-
-            if (setResult) {
-                val newCursorPos = cursorPos + textToInsert.length
-                val selectionArgs = Bundle().apply {
-                    putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, newCursorPos)
-                    putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, newCursorPos)
-                }
-                node.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, selectionArgs)
-            }
-
-            return if (setResult) InjectionResult.Success else InjectionResult.Failed
+            return setWholeFieldText(node, text)
         } catch (e: Exception) {
             Log.e(TAG, "Text injection failed", e)
             return InjectionResult.Failed
         }
+    }
+
+    /**
+     * Inserts at the cursor through the input connection, which never reads the field, so an
+     * app reporting its placeholder as the node's text cannot leak it into the dictation.
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun commitAtCursor(text: String): InjectionResult? {
+        val method = inputMethod ?: return null
+        if (!method.currentInputStarted) return null
+        val connection = method.currentInputConnection ?: return null
+
+        // An editor that will not describe itself cannot be told apart from a password
+        // field, so the node path takes over rather than committing unchecked.
+        val editorInfo = method.currentInputEditorInfo ?: return null
+        if (isSensitiveInputType(editorInfo.inputType) || isBankingPackage(editorInfo.packageName)) {
+            return InjectionResult.BlockedSensitive
+        }
+
+        // Asking for a single character keeps a long draft from crossing processes on
+        // every dictation; only whether anything precedes the cursor matters.
+        val charsBeforeCursor = connection.getSurroundingText(1, 0, 0)?.selectionStart
+        connection.commitText(insertionAtCursor(charsBeforeCursor, text), 1, null)
+        return InjectionResult.Success
+    }
+
+    /**
+     * Rewrites the whole field, used below Android 13 and whenever no editor session is
+     * running.
+     */
+    private fun setWholeFieldText(node: AccessibilityNodeInfo, text: String): InjectionResult {
+        val existingText = resolveExistingText(
+            rawText = node.text?.toString() ?: "",
+            hintText = node.hintText?.toString() ?: "",
+            isShowingHintText = node.isShowingHintText
+        )
+
+        val cursorPos = if (existingText.isNotEmpty() && node.textSelectionEnd >= 0) {
+            node.textSelectionEnd.coerceAtMost(existingText.length)
+        } else {
+            existingText.length
+        }
+
+        val textToInsert = insertionFor(existingText, text)
+
+        val newText = buildString {
+            append(existingText.substring(0, cursorPos))
+            append(textToInsert)
+            append(existingText.substring(cursorPos))
+        }
+
+        val arguments = Bundle().apply {
+            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, newText)
+        }
+        val setResult = node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
+
+        if (setResult) {
+            val newCursorPos = cursorPos + textToInsert.length
+            val selectionArgs = Bundle().apply {
+                putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, newCursorPos)
+                putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, newCursorPos)
+            }
+            node.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, selectionArgs)
+        }
+
+        return if (setResult) InjectionResult.Success else InjectionResult.Failed
     }
 
     private fun findCurrentFocusedEditable(): AccessibilityNodeInfo? {
@@ -201,9 +265,11 @@ class TextInjectorService : AccessibilityService() {
         }
     }
 
-    private fun isSensitiveField(node: AccessibilityNodeInfo): Boolean {
-        if (node.isPassword) return true
-        val packageName = node.packageName?.toString()?.lowercase() ?: return false
-        return BANKING_KEYWORDS.any { packageName.contains(it) }
+    private fun isSensitiveField(node: AccessibilityNodeInfo): Boolean =
+        node.isPassword || isBankingPackage(node.packageName?.toString())
+
+    private fun isBankingPackage(packageName: CharSequence?): Boolean {
+        val normalized = packageName?.toString()?.lowercase() ?: return false
+        return BANKING_KEYWORDS.any { normalized.contains(it) }
     }
 }

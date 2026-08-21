@@ -11,7 +11,9 @@ import com.sasayaki.R
 import com.sasayaki.data.preferences.PreferencesDataStore
 import com.sasayaki.domain.model.AppContext
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,7 +31,10 @@ class TextInjectionBridge @Inject constructor(
     suspend fun inject(text: String): Boolean {
         val injector = TextInjectorService.instance
         if (injector != null) {
-            val injectionResult = injector.injectText(text)
+            // Every step of injection is a blocking call into the focused app, and
+            // getSurroundingText is documented as slow, so it must not run on the main
+            // dispatcher the bubble calls this from.
+            val injectionResult = withContext(Dispatchers.Default) { injector.injectText(text) }
             if (injectionResult is InjectionResult.Success) return true
 
             if (injectionResult is InjectionResult.BlockedSensitive) {
