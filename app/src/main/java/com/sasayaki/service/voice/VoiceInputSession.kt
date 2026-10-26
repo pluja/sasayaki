@@ -7,6 +7,7 @@ import com.sasayaki.domain.model.Profile
 import com.sasayaki.domain.provider.describeConnectionError
 import com.sasayaki.domain.transcription.DictationFailure
 import com.sasayaki.service.AudioRecorder
+import com.sasayaki.service.CarriedDictation
 import com.sasayaki.service.SilenceDetector
 import com.sasayaki.service.bubble.BubblePhase
 import com.sasayaki.service.bubble.BubbleUiState
@@ -47,6 +48,8 @@ class VoiceInputSession(
     // onText reports whether the text reached the field.
     private val onText: (String) -> Boolean,
     private val waveformBars: Int = WAVEFORM_BARS,
+    // recordingScope runs the recording itself, so it can outlive the panel and pass to the bubble.
+    private val recordingScope: CoroutineScope = scope,
     private val newRecorder: () -> AudioRecorder = ::AudioRecorder,
     private val now: () -> Long = System::currentTimeMillis
 ) {
@@ -57,6 +60,10 @@ class VoiceInputSession(
     val levels: StateFlow<List<Float>> = _levels.asStateFlow()
 
     private var target: VoiceInputTarget? = null
+
+    // recordingTarget is the field a dictation started in. Its app shapes the cleanup even after
+    // focus moves to another app, as the bubble's does.
+    private var recordingTarget: VoiceInputTarget? = null
     private var recorder: AudioRecorder? = null
     private var pcm: File? = null
     private var recordingJob: Job? = null
@@ -69,6 +76,12 @@ class VoiceInputSession(
     private var retryEntryId: Long? = null
 
     private val phase: BubblePhase get() = _state.value.phase
+
+    /** busy is true while a dictation is recording or being turned into text. */
+    val busy: Boolean get() = phase is BubblePhase.Recording || phase is BubblePhase.Processing
+
+    /** recording is true while a dictation is recording, paused or not. */
+    val recording: Boolean get() = phase is BubblePhase.Recording
 
     fun start(target: VoiceInputTarget) {
         if (prepare(target)) record(target)
@@ -90,6 +103,11 @@ class VoiceInputSession(
         return false
     }
 
+    /** retarget points the next dictation at a new field, and leaves the one in progress alone. */
+    fun retarget(target: VoiceInputTarget) {
+        this.target = target
+    }
+
     fun stop() {
         if (phase !is BubblePhase.Recording) return
         val durationMs = recordedMs()
@@ -103,10 +121,10 @@ class VoiceInputSession(
                 val outcome = processor.process(
                     pcm = recordedPcm,
                     durationMs = durationMs,
-                    appContext = target?.appContext,
+                    appContext = recordingTarget?.appContext,
                     profile = profile?.await(),
                     onPostProcessing = ::showCleaningUp,
-                    incognito = target?.incognito == true
+                    incognito = recordingTarget?.incognito == true
                 )
                 when (outcome) {
                     ProcessedRecording.Empty -> setPhase(BubblePhase.Idle)
@@ -122,6 +140,55 @@ class VoiceInputSession(
                 recordedPcm.delete()
             }
         }
+    }
+
+    /**
+     * handOver lets go of a recording in progress without stopping it, so the bubble can carry it.
+     * It returns null when nothing is recording.
+     */
+    fun handOver(): CarriedDictation? {
+        val current = phase as? BubblePhase.Recording ?: return null
+        val handed = CarriedDictation(
+            recorder = recorder ?: return null,
+            pcm = pcm ?: return null,
+            job = recordingJob,
+            recordedMs = recordedMs(),
+            paused = current.paused,
+            appContext = recordingTarget?.appContext,
+            profile = profile,
+            incognito = recordingTarget?.incognito == true
+        )
+        watchJob?.cancel()
+        recorder = null
+        pcm = null
+        recordingJob = null
+        setPhase(BubblePhase.Idle)
+        return handed
+    }
+
+    /** takeOver picks up a dictation the bubble carried, still recording, so the panel finishes it. */
+    fun takeOver(dictation: CarriedDictation, target: VoiceInputTarget) {
+        this.target = target
+        recordingTarget = VoiceInputTarget(
+            appContext = dictation.appContext,
+            sensitive = false,
+            micAllowed = true,
+            incognito = dictation.incognito
+        )
+        recorder = dictation.recorder
+        pcm = dictation.pcm
+        recordingJob = dictation.job
+        retryEntryId = null
+        val takenAt = now()
+        startedAt = takenAt - dictation.recordedMs
+        pausedMs = 0
+        pausedAt = if (dictation.paused) takenAt else 0
+        _levels.value = emptyList()
+        profile = dictation.profile
+        dictation.profile?.let(::showProfileName)
+        _state.update { it.copy(elapsedSeconds = dictation.recordedMs / 1000) }
+        setPhase(BubblePhase.Recording(paused = dictation.paused))
+        watchJob = scope.launch { watch(dictation.recorder) }
     }
 
     /** cancel drops whatever is in progress and leaves the field untouched. */
@@ -181,18 +248,19 @@ class VoiceInputSession(
         val newRecorder = newRecorder()
         val file = File(cacheDir, "voice_input_${now()}.pcm")
         recorder = newRecorder
+        recordingTarget = target
         pcm = file
         retryEntryId = null
         startedAt = now()
         pausedMs = 0
         _levels.value = emptyList()
-        val recordingProfile = scope.async { activeProfile(target.appContext?.packageName) }
+        val recordingProfile = recordingScope.async { activeProfile(target.appContext?.packageName) }
         profile = recordingProfile
         showProfileName(recordingProfile)
         _state.update { it.copy(elapsedSeconds = 0) }
         setPhase(BubblePhase.Recording(paused = false))
         onRecordingChanged(true)
-        recordingJob = scope.launch(Dispatchers.IO) {
+        recordingJob = recordingScope.launch(Dispatchers.IO) {
             try {
                 newRecorder.record(file)
             } catch (e: CancellationException) {

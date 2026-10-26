@@ -43,7 +43,8 @@ class BootReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             try {
-                if (preferencesDataStore.preferences.first().startOnBoot) {
+                val prefs = preferencesDataStore.preferences.first()
+                if (prefs.startOnBoot && prefs.showBubble) {
                     BubbleService.start(appContext)
                 }
             } catch (e: Exception) {

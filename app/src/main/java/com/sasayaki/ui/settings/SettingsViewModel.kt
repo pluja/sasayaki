@@ -56,6 +56,8 @@ class SettingsViewModel @Inject constructor(
 
     fun setPauseOtherAudio(enabled: Boolean) = persist { preferencesDataStore.setPauseOtherAudio(enabled) }
 
+    fun setKeepListeningWhenKeyboardHides(enabled: Boolean) = persist { preferencesDataStore.setKeepListeningWhenKeyboardHides(enabled) }
+
     fun setVibrateOnRecord(enabled: Boolean) = persist { preferencesDataStore.setVibrateOnRecord(enabled) }
 
     fun setAutoClipboard(enabled: Boolean) = persist { preferencesDataStore.setAutoClipboard(enabled) }
@@ -80,6 +82,8 @@ class SettingsViewModel @Inject constructor(
     fun startBubble() = bubbleServiceController.start()
 
     fun stopBubble() = bubbleServiceController.stop()
+
+    fun setCarryKeyboardDictation(enabled: Boolean) = persist { preferencesDataStore.setCarryKeyboardDictation(enabled) }
 
     fun setBubbleSize(size: BubbleSize) = persist { preferencesDataStore.setBubbleSize(size) }
 

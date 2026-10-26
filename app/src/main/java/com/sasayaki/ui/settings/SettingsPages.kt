@@ -75,6 +75,16 @@ fun RecordingSettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = hi
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
+                            headline = "Keep listening when the keyboard hides",
+                            supporting = "Hide the keyboard or switch apps while you speak, and the text lands where you stop",
+                            icon = SasayakiIcons.Keyboard,
+                            checked = prefs.keepListeningWhenKeyboardHides,
+                            onCheckedChange = viewModel::setKeepListeningWhenKeyboardHides
+                        )
+                    },
+                    { shapes ->
+                        SwitchItem(
+                            shapes = shapes,
                             headline = "Haptic feedback",
                             supporting = "A short buzz when recording starts and stops",
                             icon = SasayakiIcons.Vibration,
@@ -248,6 +258,7 @@ fun AppearanceSettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = h
             onBubbleEnabled = { enabled ->
                 if (!enabled) viewModel.stopBubble() else bubbleBlocker?.onAction?.invoke() ?: viewModel.startBubble()
             },
+            onCarryKeyboardDictation = viewModel::setCarryKeyboardDictation,
             onThemeMode = viewModel::setThemeMode,
             onWallpaperColors = viewModel::setWallpaperColors,
             onBubbleSize = viewModel::setBubbleSize,
@@ -261,6 +272,7 @@ fun AppearanceSettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = h
 
 class AppearanceActions(
     val onBubbleEnabled: (Boolean) -> Unit,
+    val onCarryKeyboardDictation: (Boolean) -> Unit,
     val onThemeMode: (ThemeMode) -> Unit,
     val onWallpaperColors: (Boolean) -> Unit,
     val onBubbleSize: (BubbleSize) -> Unit,
@@ -313,6 +325,18 @@ fun AppearanceSettingsScreen(
                         checked = bubbleRunning,
                         onCheckedChange = actions.onBubbleEnabled
                     )
+                }
+                if (!bubbleRunning) {
+                    add { shapes ->
+                        SwitchItem(
+                            shapes = shapes,
+                            headline = "Carry keyboard dictations",
+                            supporting = "Show the bubble while a dictation runs after you leave the keyboard panel",
+                            icon = SasayakiIcons.Keyboard,
+                            checked = prefs.carryKeyboardDictation,
+                            onCheckedChange = actions.onCarryKeyboardDictation
+                        )
+                    }
                 }
                 if (bubbleRunning) {
                     add { shapes -> BubblePreview(shapes, appearance, BubbleScales(prefs.bubbleSize.scale, prefs.controlsSize.scale)) }

@@ -3,16 +3,21 @@ package com.sasayaki.service.voice
 import com.sasayaki.data.preferences.UserPreferences
 import com.sasayaki.domain.model.AppContext
 import com.sasayaki.domain.model.Profile
+import com.sasayaki.service.AudioRecorder
 import com.sasayaki.service.bubble.BubblePhase
 import com.sasayaki.service.dictation.ProcessedRecording
 import com.sasayaki.service.dictation.ProcessesRecordings
 import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -20,6 +25,7 @@ import org.junit.Test
 class VoiceInputSessionTest {
     private val typed = mutableListOf<String>()
     private val retried = mutableListOf<Long>()
+    private val heardFrom = Channel<AppContext?>(Channel.UNLIMITED)
     private val retryResult: Result<String> = Result.success("Let's meet at 9.")
 
     private val processor = object : ProcessesRecordings {
@@ -30,7 +36,10 @@ class VoiceInputSessionTest {
             profile: Profile?,
             onPostProcessing: () -> Unit,
             incognito: Boolean
-        ) = ProcessedRecording.Empty
+        ): ProcessedRecording {
+            heardFrom.trySend(appContext)
+            return ProcessedRecording.Empty
+        }
 
         override suspend fun retry(entryId: Long, onPostProcessing: () -> Unit): Result<String> {
             retried += entryId
@@ -39,7 +48,7 @@ class VoiceInputSessionTest {
         }
     }
 
-    private fun TestScope.session() = VoiceInputSession(
+    private fun TestScope.session(newRecorder: () -> AudioRecorder = ::AudioRecorder) = VoiceInputSession(
         scope = backgroundScope,
         processor = processor,
         preferences = flowOf(UserPreferences()),
@@ -50,7 +59,8 @@ class VoiceInputSessionTest {
         onText = {
             typed += it
             true
-        }
+        },
+        newRecorder = newRecorder
     )
 
     @Test
@@ -97,6 +107,17 @@ class VoiceInputSessionTest {
     }
 
     @Test
+    fun `a refused or idle session does not carry over to the next keyboard`() = runTest {
+        val session = session()
+
+        session.start(VoiceInputTarget(appContext = null, sensitive = true, micAllowed = true, incognito = false))
+        assertFalse(session.busy)
+
+        session.prepare(VoiceInputTarget(appContext = null, sensitive = false, micAllowed = true, incognito = false))
+        assertFalse(session.busy)
+    }
+
+    @Test
     fun `prepare waits for a tap instead of recording`() = runTest {
         val session = session()
 
@@ -115,5 +136,56 @@ class VoiceInputSessionTest {
         runCurrent()
 
         assertEquals("Email", session.state.value.profileName)
+    }
+
+    @Test
+    fun `a dictation keeps the app it started in, and the next one takes the new field's`() = runTest {
+        // A recorder stopped before it starts never opens the microphone.
+        val session = session(newRecorder = { AudioRecorder().apply { stop() } })
+        val notes = AppContext(label = "Notes", packageName = "org.notes")
+        val chat = AppContext(label = "Chat", packageName = "org.chat")
+
+        session.start(VoiceInputTarget(appContext = notes, sensitive = false, micAllowed = true, incognito = false))
+        session.retarget(VoiceInputTarget(appContext = chat, sensitive = false, micAllowed = true, incognito = false))
+        assertTrue(session.busy)
+        session.stop()
+        assertEquals(notes, heardFrom.receive())
+        runCurrent()
+
+        session.retry()
+        session.stop()
+        assertEquals(chat, heardFrom.receive())
+    }
+
+    @Test
+    fun `handing over a recording lets the bubble carry it without stopping it`() = runTest {
+        val recorder = AudioRecorder().apply { stop() }
+        val session = session(newRecorder = { recorder })
+        val notes = AppContext(label = "Notes", packageName = "org.notes")
+        session.start(VoiceInputTarget(appContext = notes, sensitive = false, micAllowed = true, incognito = true))
+
+        val handed = session.handOver()
+
+        assertSame(recorder, handed?.recorder)
+        assertEquals(notes, handed?.appContext)
+        assertTrue(handed?.incognito == true)
+        assertFalse(session.busy)
+        assertEquals(BubblePhase.Idle, session.state.value.phase)
+        assertNull(session.handOver())
+    }
+
+    @Test
+    fun `a dictation the bubble gives back keeps recording in the panel`() = runTest {
+        val session = session(newRecorder = { AudioRecorder().apply { stop() } })
+        val notes = AppContext(label = "Notes", packageName = "org.notes")
+        val chat = AppContext(label = "Chat", packageName = "org.chat")
+        session.start(VoiceInputTarget(appContext = notes, sensitive = false, micAllowed = true, incognito = false))
+        val handed = requireNotNull(session.handOver())
+
+        session.takeOver(handed, VoiceInputTarget(appContext = chat, sensitive = false, micAllowed = true, incognito = false))
+
+        assertTrue(session.recording)
+        session.stop()
+        assertEquals(notes, heardFrom.receive())
     }
 }

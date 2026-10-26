@@ -92,7 +92,7 @@ class SettingsScreenshotTest {
             loaded = true,
             prefs = UserPreferences(bubbleTranslucent = true, bubbleSize = BubbleSize.TINY, controlsSize = BubbleSize.LARGE),
             bubbleRunning = true,
-            actions = AppearanceActions({}, {}, {}, {}, {}, {}, {}),
+            actions = AppearanceActions({}, {}, {}, {}, {}, {}, {}, {}),
             onBack = {}
         )
     }
@@ -103,7 +103,7 @@ class SettingsScreenshotTest {
             loaded = true,
             prefs = UserPreferences(),
             bubbleRunning = false,
-            actions = AppearanceActions({}, {}, {}, {}, {}, {}, {}),
+            actions = AppearanceActions({}, {}, {}, {}, {}, {}, {}, {}),
             onBack = {}
         )
     }

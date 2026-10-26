@@ -38,11 +38,13 @@ import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
@@ -65,6 +67,7 @@ class BubbleService : Service() {
         private const val INSERTED_FLASH_MS = 700L
         private const val NO_SPEECH_NOTICE_MS = 2500L
         const val ACTION_START = "com.sasayaki.ACTION_START_BUBBLE"
+        private const val ACTION_CARRY = "com.sasayaki.ACTION_CARRY_DICTATION"
 
         @Volatile
         var isRunning: Boolean = false
@@ -86,6 +89,23 @@ class BubbleService : Service() {
 
         fun stop(context: Context) {
             context.stopService(Intent(context, BubbleService::class.java))
+        }
+
+        /**
+         * carry starts the bubble for a dictation the keyboard panel is about to hand over with
+         * DictationHandover.offer. The panel calls it while still on screen, because Android only
+         * lets a visible app start a microphone service. It reports whether Android allowed the start.
+         */
+        fun carry(context: Context): Boolean = try {
+            context.startForegroundService(
+                Intent(context, BubbleService::class.java).apply {
+                    action = ACTION_CARRY
+                }
+            )
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Could not start the bubble to carry a dictation", e)
+            false
         }
     }
 
@@ -129,6 +149,12 @@ class BubbleService : Service() {
     private var totalPausedMs: Long = 0
     private var recordingAppContext: Deferred<AppContext?>? = null
     private var recordingProfile: Deferred<Profile>? = null
+    private var recordingIncognito = false
+    private var carriedAppContext: AppContext? = null
+
+    // carryOnly is set when the bubble was off and started only to carry a keyboard dictation, so
+    // it stops again once that dictation ends.
+    private var carryOnly = false
     private var profileSwitch: Job? = null
 
     private val dictationInFlight: Boolean
@@ -158,7 +184,7 @@ class BubbleService : Service() {
 
     private val stopReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            stopSelf()
+            turnOff()
         }
     }
 
@@ -208,11 +234,78 @@ class BubbleService : Service() {
             return START_NOT_STICKY
         }
 
+        val carrying = intent?.action == ACTION_CARRY
+        carryOnly = if (carrying) carryOnly || overlay == null else false
         prepareOverlay()
         TextInjectorService.keyboardListener = keyboardListener
         if (TextInjectorService.isKeyboardVisible) overlay?.show()
+        if (carrying) carryHandedDictation()
 
-        return START_STICKY
+        // A bubble started only to carry one dictation must not come back on its own.
+        return if (carryOnly) START_NOT_STICKY else START_STICKY
+    }
+
+    /**
+     * carryHandedDictation picks up a dictation the keyboard panel handed over while it was still
+     * recording. The recording never stopped, so the bubble takes over its timer, its silence check
+     * and its delivery.
+     */
+    private fun carryHandedDictation() {
+        val dictation = DictationHandover.take() ?: return stopIfOnlyCarrying()
+        if (dictationInFlight || !promoteToMicrophoneService()) {
+            Log.w(TAG, "Bubble could not carry the keyboard dictation, state=$state")
+            dictation.recorder.stop()
+            dictation.pcm.delete()
+            return stopIfOnlyCarrying()
+        }
+        DictationHandover.carrying = true
+        DictationHandover.release = ::releaseToPanel
+        carriedAppContext = dictation.appContext
+        audioRecorder = dictation.recorder
+        pcmFile = dictation.pcm
+        recordingJob = dictation.job
+        val now = System.currentTimeMillis()
+        recordingStartTime = now - dictation.recordedMs
+        totalPausedMs = 0
+        pausedStartedAt = if (dictation.paused) now else 0
+        recordingAppContext = CompletableDeferred(dictation.appContext)
+        recordingProfile = dictation.profile
+        recordingIncognito = dictation.incognito
+        uiState.update { it.copy(elapsedSeconds = dictation.recordedMs / 1000) }
+        updateState(ServiceState.Recording(paused = dictation.paused))
+        overlay?.show()
+        watchRecording(dictation.recorder)
+    }
+
+    // releaseToPanel gives a carried dictation back to the keyboard panel when it opens again. The
+    // recording keeps going, and the bubble goes.
+    private fun releaseToPanel(): CarriedDictation? {
+        val current = state as? ServiceState.Recording ?: return null
+        val handed = CarriedDictation(
+            recorder = audioRecorder ?: return null,
+            pcm = pcmFile ?: return null,
+            job = recordingJob,
+            recordedMs = recordedDurationMs(),
+            paused = current.paused,
+            appContext = carriedAppContext,
+            profile = recordingProfile,
+            incognito = recordingIncognito
+        )
+        silenceCheckJob?.cancel()
+        levelJob?.cancel()
+        timerJob?.cancel()
+        overlay?.dismissProfileMenu()
+        audioRecorder = null
+        pcmFile = null
+        recordingJob = null
+        silenceDetector = null
+        demoteToIdleService()
+        updateState(ServiceState.Idle)
+        return handed
+    }
+
+    private fun stopIfOnlyCarrying() {
+        if (carryOnly) stopSelf()
     }
 
     override fun onDestroy() {
@@ -269,8 +362,17 @@ class BubbleService : Service() {
                 // The pill shows the pick at once, so it applies to the dictation in progress.
                 if (state is ServiceState.Recording) recordingProfile = selection
             },
-            onRemove = ::stopSelf
+            onRemove = ::turnOff
         ).also { it.create() }
+    }
+
+    // turnOff stops the bubble at the person's request and remembers it, so a boot or an update
+    // leaves it off. A bubble that was only carrying a dictation was never turned on.
+    private fun turnOff() {
+        if (!carryOnly) {
+            CoroutineScope(Dispatchers.IO).launch { preferencesDataStore.setShowBubble(false) }
+        }
+        stopSelf()
     }
 
     private fun onBubbleTap() {
@@ -370,6 +472,7 @@ class BubbleService : Service() {
             pendingSwitch?.join()
             profileRepository.getActiveProfile()
         }
+        recordingIncognito = false
 
         audioRecorder = AudioRecorder()
         pcmFile = File(cacheDir, "recording_${System.currentTimeMillis()}.pcm")
@@ -387,6 +490,12 @@ class BubbleService : Service() {
             }
         }
 
+        watchRecording(recorder)
+    }
+
+    // watchRecording draws the waveform and the timer, and stops on silence, for a recording the
+    // bubble started or carried.
+    private fun watchRecording(recorder: AudioRecorder) {
         levels.value = emptyList()
         levelJob = scope.launch {
             recorder.audioLevel.collect { level ->
@@ -478,7 +587,8 @@ class BubbleService : Service() {
                     durationMs = durationMs,
                     appContext = recordingAppContext?.await(),
                     profile = recordingProfile?.await(),
-                    onPostProcessing = ::showPostProcessing
+                    onPostProcessing = ::showPostProcessing,
+                    incognito = recordingIncognito
                 )
                 when (outcome) {
                     ProcessedRecording.Empty -> updateState(ServiceState.Idle)
@@ -541,7 +651,7 @@ class BubbleService : Service() {
             try {
                 recording.job?.join()
             } finally {
-                withContext(Dispatchers.IO) { recording.pcm?.delete() }
+                withContext(NonCancellable + Dispatchers.IO) { recording.pcm?.delete() }
                 release(recording)
             }
         }
@@ -651,7 +761,12 @@ class BubbleService : Service() {
     private fun updateState(newState: ServiceState) {
         state = newState
         uiState.update { it.copy(phase = newState.toPhase()) }
-        if (newState is ServiceState.Idle && !TextInjectorService.isKeyboardVisible) overlay?.hide()
+        if (newState !is ServiceState.Idle) return
+        if (DictationHandover.carrying) DictationHandover.carryEnded()
+        DictationHandover.carrying = false
+        DictationHandover.release = null
+        if (carryOnly) return stopSelf()
+        if (!TextInjectorService.isKeyboardVisible) overlay?.hide()
     }
 
     private fun requestRecordingAudioFocus() {
