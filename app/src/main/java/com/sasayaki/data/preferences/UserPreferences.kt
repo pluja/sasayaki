@@ -2,6 +2,7 @@ package com.sasayaki.data.preferences
 
 data class UserPreferences(
     val autoClipboard: Boolean = true,
+    val returnToKeyboardAfterTyping: Boolean = false,
     val vibrateOnRecord: Boolean = true,
     val pauseOtherAudio: Boolean = false,
     val silenceThresholdMs: Long = 2000,

@@ -60,6 +60,8 @@ class SettingsViewModel @Inject constructor(
 
     fun setAutoClipboard(enabled: Boolean) = persist { preferencesDataStore.setAutoClipboard(enabled) }
 
+    fun setReturnToKeyboardAfterTyping(enabled: Boolean) = persist { preferencesDataStore.setReturnToKeyboardAfterTyping(enabled) }
+
     fun setStartOnBoot(enabled: Boolean) = persist { preferencesDataStore.setStartOnBoot(enabled) }
 
     fun setHistoryEnabled(enabled: Boolean) = persist { preferencesDataStore.setHistoryEnabled(enabled) }

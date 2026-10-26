@@ -42,6 +42,7 @@ class PreferencesDataStore @Inject constructor(
         val LLM_MODEL = stringPreferencesKey("llm_model")
         val LLM_ENABLED = booleanPreferencesKey("llm_enabled")
         val AUTO_CLIPBOARD = booleanPreferencesKey("auto_clipboard")
+        val RETURN_TO_KEYBOARD_AFTER_TYPING = booleanPreferencesKey("return_to_keyboard_after_typing")
         val VIBRATE_ON_RECORD = booleanPreferencesKey("vibrate_on_record")
         val PAUSE_OTHER_AUDIO = booleanPreferencesKey("pause_other_audio")
         val SILENCE_THRESHOLD_MS = longPreferencesKey("silence_threshold_ms")
@@ -77,6 +78,7 @@ class PreferencesDataStore @Inject constructor(
         .map { prefs ->
             UserPreferences(
                 autoClipboard = prefs[Keys.AUTO_CLIPBOARD] ?: true,
+                returnToKeyboardAfterTyping = prefs[Keys.RETURN_TO_KEYBOARD_AFTER_TYPING] ?: false,
                 vibrateOnRecord = prefs[Keys.VIBRATE_ON_RECORD] ?: true,
                 pauseOtherAudio = prefs[Keys.PAUSE_OTHER_AUDIO] ?: false,
                 silenceThresholdMs = prefs[Keys.SILENCE_THRESHOLD_MS] ?: 2000L,
@@ -129,6 +131,8 @@ class PreferencesDataStore @Inject constructor(
     }
 
     suspend fun setAutoClipboard(enabled: Boolean) = set(Keys.AUTO_CLIPBOARD, enabled)
+
+    suspend fun setReturnToKeyboardAfterTyping(enabled: Boolean) = set(Keys.RETURN_TO_KEYBOARD_AFTER_TYPING, enabled)
 
     suspend fun setVibrateOnRecord(enabled: Boolean) = set(Keys.VIBRATE_ON_RECORD, enabled)
 

@@ -151,9 +151,12 @@ class VoiceInputService : InputMethodService() {
         val connection = currentInputConnection ?: return false
         val before = connection.getTextBeforeCursor(CURSOR_CONTEXT_CHARS, 0)?.toString()
         if (!connection.commitText(fitToCursor(before, text), 1)) return false
-        // The panel stays open so another dictation can follow; the buzz says this one landed.
+        // The panel stays open so another dictation can follow, unless the setting hands back to the
+        // keyboard; the buzz says this one landed.
         scope.launch {
-            if (preferencesDataStore.preferences.first().vibrateOnRecord) hapticFeedback?.complete()
+            val prefs = preferencesDataStore.preferences.first()
+            if (prefs.vibrateOnRecord) hapticFeedback?.complete()
+            if (prefs.returnToKeyboardAfterTyping) switchBack()
         }
         return true
     }

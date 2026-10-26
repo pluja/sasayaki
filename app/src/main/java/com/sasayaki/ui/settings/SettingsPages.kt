@@ -102,6 +102,16 @@ fun RecordingSettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = hi
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
+                            headline = "Back to your keyboard after typing",
+                            supporting = "The keyboard mic panel closes once the text lands, instead of staying open for more",
+                            icon = SasayakiIcons.Keyboard,
+                            checked = prefs.returnToKeyboardAfterTyping,
+                            onCheckedChange = viewModel::setReturnToKeyboardAfterTyping
+                        )
+                    },
+                    { shapes ->
+                        SwitchItem(
+                            shapes = shapes,
                             headline = "Start on boot",
                             supporting = "Turn the bubble back on after a restart",
                             icon = SasayakiIcons.PowerSettings,
