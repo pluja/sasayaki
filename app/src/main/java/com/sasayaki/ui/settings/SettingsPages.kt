@@ -75,6 +75,16 @@ fun RecordingSettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = hi
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
+                            headline = "Keep listening when the keyboard hides",
+                            supporting = "Hide the keyboard or switch apps while you speak, and the text lands where you stop",
+                            icon = SasayakiIcons.Keyboard,
+                            checked = prefs.keepListeningWhenKeyboardHides,
+                            onCheckedChange = viewModel::setKeepListeningWhenKeyboardHides
+                        )
+                    },
+                    { shapes ->
+                        SwitchItem(
+                            shapes = shapes,
                             headline = "Haptic feedback",
                             supporting = "A short buzz when recording starts and stops",
                             icon = SasayakiIcons.Vibration,

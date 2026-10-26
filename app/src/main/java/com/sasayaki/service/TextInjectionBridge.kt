@@ -77,7 +77,7 @@ class TextInjectionBridge @Inject constructor(
             return AppContext(label = appLabel, packageName = packageName)
         }
 
-    private fun copyToClipboard(text: String) {
+    fun copyToClipboard(text: String) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("dictation", text))
         mainHandler.post {

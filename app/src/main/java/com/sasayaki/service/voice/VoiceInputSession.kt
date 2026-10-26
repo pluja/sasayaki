@@ -57,6 +57,10 @@ class VoiceInputSession(
     val levels: StateFlow<List<Float>> = _levels.asStateFlow()
 
     private var target: VoiceInputTarget? = null
+
+    // recordingTarget is the field a dictation started in. Its app shapes the cleanup even after
+    // focus moves to another app, as the bubble's does.
+    private var recordingTarget: VoiceInputTarget? = null
     private var recorder: AudioRecorder? = null
     private var pcm: File? = null
     private var recordingJob: Job? = null
@@ -69,6 +73,9 @@ class VoiceInputSession(
     private var retryEntryId: Long? = null
 
     private val phase: BubblePhase get() = _state.value.phase
+
+    /** busy is true while a dictation is recording or being turned into text. */
+    val busy: Boolean get() = phase is BubblePhase.Recording || phase is BubblePhase.Processing
 
     fun start(target: VoiceInputTarget) {
         if (prepare(target)) record(target)
@@ -90,6 +97,11 @@ class VoiceInputSession(
         return false
     }
 
+    /** retarget points the next dictation at a new field, and leaves the one in progress alone. */
+    fun retarget(target: VoiceInputTarget) {
+        this.target = target
+    }
+
     fun stop() {
         if (phase !is BubblePhase.Recording) return
         val durationMs = recordedMs()
@@ -103,10 +115,10 @@ class VoiceInputSession(
                 val outcome = processor.process(
                     pcm = recordedPcm,
                     durationMs = durationMs,
-                    appContext = target?.appContext,
+                    appContext = recordingTarget?.appContext,
                     profile = profile?.await(),
                     onPostProcessing = ::showCleaningUp,
-                    incognito = target?.incognito == true
+                    incognito = recordingTarget?.incognito == true
                 )
                 when (outcome) {
                     ProcessedRecording.Empty -> setPhase(BubblePhase.Idle)
@@ -181,6 +193,7 @@ class VoiceInputSession(
         val newRecorder = newRecorder()
         val file = File(cacheDir, "voice_input_${now()}.pcm")
         recorder = newRecorder
+        recordingTarget = target
         pcm = file
         retryEntryId = null
         startedAt = now()

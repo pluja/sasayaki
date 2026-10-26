@@ -4,6 +4,7 @@ data class UserPreferences(
     val autoClipboard: Boolean = true,
     val vibrateOnRecord: Boolean = true,
     val pauseOtherAudio: Boolean = false,
+    val keepListeningWhenKeyboardHides: Boolean = true,
     val silenceThresholdMs: Long = 2000,
     val preferredLanguages: List<String> = emptyList(),
     val activeLanguage: String? = null,
