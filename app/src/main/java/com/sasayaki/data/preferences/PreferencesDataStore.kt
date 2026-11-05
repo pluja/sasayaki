@@ -44,6 +44,7 @@ class PreferencesDataStore @Inject constructor(
         val AUTO_CLIPBOARD = booleanPreferencesKey("auto_clipboard")
         val VIBRATE_ON_RECORD = booleanPreferencesKey("vibrate_on_record")
         val PAUSE_OTHER_AUDIO = booleanPreferencesKey("pause_other_audio")
+        val SHOW_BUBBLE = booleanPreferencesKey("show_bubble")
         val SILENCE_THRESHOLD_MS = longPreferencesKey("silence_threshold_ms")
         val LANGUAGE = stringPreferencesKey("language")
         val PREFERRED_LANGUAGES = stringPreferencesKey("preferred_languages")
@@ -79,6 +80,7 @@ class PreferencesDataStore @Inject constructor(
                 autoClipboard = prefs[Keys.AUTO_CLIPBOARD] ?: true,
                 vibrateOnRecord = prefs[Keys.VIBRATE_ON_RECORD] ?: true,
                 pauseOtherAudio = prefs[Keys.PAUSE_OTHER_AUDIO] ?: false,
+                showBubble = prefs[Keys.SHOW_BUBBLE] ?: true,
                 silenceThresholdMs = prefs[Keys.SILENCE_THRESHOLD_MS] ?: 2000L,
                 preferredLanguages = parsePreferredLanguages(prefs),
                 activeLanguage = resolveActiveLanguage(prefs),
@@ -133,6 +135,8 @@ class PreferencesDataStore @Inject constructor(
     suspend fun setVibrateOnRecord(enabled: Boolean) = set(Keys.VIBRATE_ON_RECORD, enabled)
 
     suspend fun setPauseOtherAudio(enabled: Boolean) = set(Keys.PAUSE_OTHER_AUDIO, enabled)
+
+    suspend fun setShowBubble(enabled: Boolean) = set(Keys.SHOW_BUBBLE, enabled)
 
     suspend fun setSilenceThresholdMs(value: Long) = set(Keys.SILENCE_THRESHOLD_MS, value)
 

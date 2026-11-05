@@ -13,8 +13,13 @@ import android.service.quicksettings.TileService
 import android.util.Log
 import com.sasayaki.MainActivity
 import com.sasayaki.R
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class BubbleTileService : TileService() {
+    @Inject lateinit var bubbleServiceController: BubbleServiceController
+
     override fun onStartListening() {
         super.onStartListening()
         refresh()
@@ -23,12 +28,12 @@ class BubbleTileService : TileService() {
     override fun onClick() {
         super.onClick()
         when {
-            BubbleService.isRunning -> BubbleService.stop(this)
+            BubbleService.isRunning -> bubbleServiceController.stop()
 
             !canRunBubble() -> openApp()
 
             else -> try {
-                BubbleService.start(this)
+                bubbleServiceController.start()
             } catch (e: IllegalStateException) {
                 // Android may refuse a foreground start from a tile; Home has the same switch.
                 Log.w(TAG, "Could not start the bubble from the tile", e)

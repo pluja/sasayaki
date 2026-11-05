@@ -4,6 +4,9 @@ data class UserPreferences(
     val autoClipboard: Boolean = true,
     val vibrateOnRecord: Boolean = true,
     val pauseOtherAudio: Boolean = false,
+    // showBubble remembers whether the person wants the bubble, so a boot or an update brings it
+    // back only when it was on.
+    val showBubble: Boolean = true,
     val silenceThresholdMs: Long = 2000,
     val preferredLanguages: List<String> = emptyList(),
     val activeLanguage: String? = null,

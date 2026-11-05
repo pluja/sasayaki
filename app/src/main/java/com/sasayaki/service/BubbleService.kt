@@ -158,7 +158,7 @@ class BubbleService : Service() {
 
     private val stopReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            stopSelf()
+            turnOff()
         }
     }
 
@@ -269,8 +269,15 @@ class BubbleService : Service() {
                 // The pill shows the pick at once, so it applies to the dictation in progress.
                 if (state is ServiceState.Recording) recordingProfile = selection
             },
-            onRemove = ::stopSelf
+            onRemove = ::turnOff
         ).also { it.create() }
+    }
+
+    // turnOff stops the bubble at the person's request and remembers it, so a boot or an update
+    // leaves it off.
+    private fun turnOff() {
+        CoroutineScope(Dispatchers.IO).launch { preferencesDataStore.setShowBubble(false) }
+        stopSelf()
     }
 
     private fun onBubbleTap() {
