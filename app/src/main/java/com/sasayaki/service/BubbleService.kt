@@ -243,6 +243,9 @@ class BubbleService : Service() {
             scope = scope,
             uiState = uiState,
             levels = levels,
+            keepScreenOnWhileRecording = preferencesDataStore.preferences
+                .map { it.keepScreenOnWhileRecording }
+                .stateIn(scope, SharingStarted.Eagerly, true),
             profiles = profileRepository.profiles.stateIn(scope, SharingStarted.Eagerly, emptyList()),
             appearance = preferencesDataStore.preferences
                 .map { BubbleAppearance(it.wallpaperColors, it.bubbleTranslucent, it.bubbleMonochrome) }

@@ -38,6 +38,7 @@ import com.sasayaki.service.bubble.BubbleTheme
 import com.sasayaki.service.bubble.BubbleUiState
 import com.sasayaki.service.bubble.Waveform
 import com.sasayaki.service.bubble.formatElapsed
+import com.sasayaki.service.keepScreenOnWhileRecording
 import com.sasayaki.ui.theme.SasayakiIcons
 import com.sasayaki.ui.theme.SasayakiMark
 import com.sasayaki.ui.theme.Spacing
@@ -58,10 +59,14 @@ fun VoiceInputPanel(
     actions: BubbleActions,
     appearance: BubbleAppearance,
     onSelectProfile: (Long) -> Unit,
-    onSwitchKeyboard: () -> Unit
+    onSwitchKeyboard: () -> Unit,
+    keepScreenOnWhileRecording: Boolean = true
 ) {
     BubbleTheme(appearance) {
-        Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+        Surface(
+            modifier = Modifier.keepScreenOnWhileRecording(state.phase, keepScreenOnWhileRecording),
+            color = MaterialTheme.colorScheme.surfaceContainer
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

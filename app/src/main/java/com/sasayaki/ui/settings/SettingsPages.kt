@@ -54,14 +54,38 @@ private val retentionOptions = listOf(50, 100, 500, 1000, 5000)
 @Composable
 fun RecordingSettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val prefs = state.preferences
+    RecordingSettingsScreen(
+        loaded = state.loaded,
+        prefs = state.preferences,
+        onSilenceThreshold = viewModel::setSilenceThreshold,
+        onPauseOtherAudio = viewModel::setPauseOtherAudio,
+        onKeepScreenOnWhileRecording = viewModel::setKeepScreenOnWhileRecording,
+        onVibrateOnRecord = viewModel::setVibrateOnRecord,
+        onAutoClipboard = viewModel::setAutoClipboard,
+        onStartOnBoot = viewModel::setStartOnBoot,
+        onBack = onBack
+    )
+}
+
+@Composable
+fun RecordingSettingsScreen(
+    loaded: Boolean,
+    prefs: UserPreferences,
+    onSilenceThreshold: (Long) -> Unit,
+    onPauseOtherAudio: (Boolean) -> Unit,
+    onKeepScreenOnWhileRecording: (Boolean) -> Unit,
+    onVibrateOnRecord: (Boolean) -> Unit,
+    onAutoClipboard: (Boolean) -> Unit,
+    onStartOnBoot: (Boolean) -> Unit,
+    onBack: () -> Unit
+) {
     SettingsPage(title = "Recording", onBack = onBack) {
-        if (!state.loaded) return@SettingsPage
+        if (!loaded) return@SettingsPage
         item(key = "listening") {
             SegmentedGroup(
                 title = "Listening",
                 items = listOf(
-                    { shapes -> SilenceItem(shapes, prefs.silenceThresholdMs, viewModel::setSilenceThreshold) },
+                    { shapes -> SilenceItem(shapes, prefs.silenceThresholdMs, onSilenceThreshold) },
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
@@ -69,7 +93,17 @@ fun RecordingSettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = hi
                             supporting = "Music and videos pause while you speak",
                             icon = SasayakiIcons.MusicOff,
                             checked = prefs.pauseOtherAudio,
-                            onCheckedChange = viewModel::setPauseOtherAudio
+                            onCheckedChange = onPauseOtherAudio
+                        )
+                    },
+                    { shapes ->
+                        SwitchItem(
+                            shapes = shapes,
+                            headline = "Keep screen on while recording",
+                            supporting = "Prevents screen timeout while the keyboard or bubble records, but not while paused",
+                            icon = SasayakiIcons.Visibility,
+                            checked = prefs.keepScreenOnWhileRecording,
+                            onCheckedChange = onKeepScreenOnWhileRecording
                         )
                     },
                     { shapes ->
@@ -79,7 +113,7 @@ fun RecordingSettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = hi
                             supporting = "A short buzz when recording starts and stops",
                             icon = SasayakiIcons.Vibration,
                             checked = prefs.vibrateOnRecord,
-                            onCheckedChange = viewModel::setVibrateOnRecord
+                            onCheckedChange = onVibrateOnRecord
                         )
                     }
                 )
@@ -96,7 +130,7 @@ fun RecordingSettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = hi
                             supporting = "If the text can't be typed into the field, it is copied instead",
                             icon = SasayakiIcons.ContentPaste,
                             checked = prefs.autoClipboard,
-                            onCheckedChange = viewModel::setAutoClipboard
+                            onCheckedChange = onAutoClipboard
                         )
                     },
                     { shapes ->
@@ -106,7 +140,7 @@ fun RecordingSettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = hi
                             supporting = "Turn the bubble back on after a restart",
                             icon = SasayakiIcons.PowerSettings,
                             checked = prefs.startOnBoot,
-                            onCheckedChange = viewModel::setStartOnBoot
+                            onCheckedChange = onStartOnBoot
                         )
                     }
                 )

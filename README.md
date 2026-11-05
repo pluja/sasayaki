@@ -20,6 +20,7 @@ Sasayaki does the same job as [WisprFlow](https://wisprflow.ai), except it costs
   - It refuses to record into password fields and apps it recognises as banking or payment apps, so nothing meant for them reaches a provider or your history.
   - Make the bubble as small as you like and its recording controls larger, or make it see-through or monochrome, from Appearance.
 - **Keyboard mic key**: turn on Sasayaki voice input in Settings, and the mic key of keyboards like HeliBoard and FlorisBoard opens Sasayaki in the keyboard area, with your profiles one tap away. It types what you said and stays open for more; the keyboard key takes you back. No accessibility access needed, and the bubble can stay off.
+- **Keep screen on while recording**: enabled by default for the keyboard panel and bubble. Pausing or finishing releases it; manual locking still works. Turn it off in Settings → Recording.
 - **Providers**: add any number of OpenAI-compatible servers, each with a default speech and cleanup model picked from its own model list. Keys are optional for self-hosted servers.
 - **Profiles** bundle a language, a speech model, an optional cleanup model and a writing style. Switch the active one from the bubble, and Sasayaki remembers your pick for each app.
 - **Post-processing**: a small model turns what you said into a clean written message.

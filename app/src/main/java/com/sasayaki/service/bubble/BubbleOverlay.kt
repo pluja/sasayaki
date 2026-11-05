@@ -54,6 +54,7 @@ class BubbleOverlay(
     private val profiles: StateFlow<List<Profile>>,
     private val appearance: StateFlow<BubbleAppearance>,
     private val scales: StateFlow<BubbleScales>,
+    private val keepScreenOnWhileRecording: StateFlow<Boolean>,
     private val actions: BubbleActions,
     private val onSelectProfile: (Long) -> Unit,
     private val onRemove: () -> Unit
@@ -103,13 +104,15 @@ class BubbleOverlay(
             val state by uiState.collectAsStateWithLifecycle()
             val levelState = levels.collectAsStateWithLifecycle()
             val bubbleScales by scales.collectAsStateWithLifecycle()
+            val keepScreenOn by keepScreenOnWhileRecording.collectAsStateWithLifecycle()
             BubbleContent(
                 state = state,
                 levels = { levelState.value },
                 actions = bubbleActions,
                 onShowProfiles = ::showProfileMenu,
                 alignment = if (side == Side.END) Alignment.CenterEnd else Alignment.CenterStart,
-                scales = bubbleScales
+                scales = bubbleScales,
+                keepScreenOnWhileRecording = keepScreenOn
             )
         }
         bubbleRoot = DraggableOverlayLayout(context, ::onDragStart, ::onDrag, ::onDragEnd).apply {

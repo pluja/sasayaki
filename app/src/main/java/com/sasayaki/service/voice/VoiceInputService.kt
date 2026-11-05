@@ -106,7 +106,8 @@ class VoiceInputService : InputMethodService() {
                     ),
                     appearance = BubbleAppearance(prefs.wallpaperColors, prefs.bubbleTranslucent, prefs.bubbleMonochrome),
                     onSelectProfile = session::selectProfile,
-                    onSwitchKeyboard = ::cancelAndSwitchBack
+                    onSwitchKeyboard = ::cancelAndSwitchBack,
+                    keepScreenOnWhileRecording = prefs.keepScreenOnWhileRecording
                 )
             }
         }

@@ -56,6 +56,8 @@ class SettingsViewModel @Inject constructor(
 
     fun setPauseOtherAudio(enabled: Boolean) = persist { preferencesDataStore.setPauseOtherAudio(enabled) }
 
+    fun setKeepScreenOnWhileRecording(enabled: Boolean) = persist { preferencesDataStore.setKeepScreenOnWhileRecording(enabled) }
+
     fun setVibrateOnRecord(enabled: Boolean) = persist { preferencesDataStore.setVibrateOnRecord(enabled) }
 
     fun setAutoClipboard(enabled: Boolean) = persist { preferencesDataStore.setAutoClipboard(enabled) }

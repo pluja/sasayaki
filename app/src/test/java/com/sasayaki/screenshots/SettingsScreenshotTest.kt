@@ -21,6 +21,7 @@ import com.sasayaki.ui.settings.ProviderEditorScreen
 import com.sasayaki.ui.settings.ProviderEditorUiState
 import com.sasayaki.ui.settings.ProviderForm
 import com.sasayaki.ui.settings.ProvidersScreen
+import com.sasayaki.ui.settings.RecordingSettingsScreen
 import com.sasayaki.ui.settings.ReplacementRulesScreen
 import com.sasayaki.ui.settings.SettingsDestinations
 import com.sasayaki.ui.settings.SettingsScreen
@@ -84,6 +85,16 @@ class SettingsScreenshotTest {
             onSkipAiChatsChange = {},
             onBack = {}
         )
+    }
+
+    @Test
+    fun recording() = compose.screenshot("settings_recording_light") {
+        RecordingSettingsScreen(true, UserPreferences(), {}, {}, {}, {}, {}, {}, {})
+    }
+
+    @Test
+    fun recordingDark() = compose.screenshot("settings_recording_dark", dark = true) {
+        RecordingSettingsScreen(true, UserPreferences(keepScreenOnWhileRecording = false), {}, {}, {}, {}, {}, {}, {})
     }
 
     @Test

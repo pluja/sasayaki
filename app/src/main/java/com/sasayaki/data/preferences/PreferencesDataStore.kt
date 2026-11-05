@@ -44,6 +44,7 @@ class PreferencesDataStore @Inject constructor(
         val AUTO_CLIPBOARD = booleanPreferencesKey("auto_clipboard")
         val VIBRATE_ON_RECORD = booleanPreferencesKey("vibrate_on_record")
         val PAUSE_OTHER_AUDIO = booleanPreferencesKey("pause_other_audio")
+        val KEEP_SCREEN_ON_WHILE_RECORDING = booleanPreferencesKey("keep_screen_on_while_recording")
         val SHOW_BUBBLE = booleanPreferencesKey("show_bubble")
         val SILENCE_THRESHOLD_MS = longPreferencesKey("silence_threshold_ms")
         val LANGUAGE = stringPreferencesKey("language")
@@ -80,6 +81,7 @@ class PreferencesDataStore @Inject constructor(
                 autoClipboard = prefs[Keys.AUTO_CLIPBOARD] ?: true,
                 vibrateOnRecord = prefs[Keys.VIBRATE_ON_RECORD] ?: true,
                 pauseOtherAudio = prefs[Keys.PAUSE_OTHER_AUDIO] ?: false,
+                keepScreenOnWhileRecording = prefs[Keys.KEEP_SCREEN_ON_WHILE_RECORDING] ?: true,
                 showBubble = prefs[Keys.SHOW_BUBBLE] ?: true,
                 silenceThresholdMs = prefs[Keys.SILENCE_THRESHOLD_MS] ?: 2000L,
                 preferredLanguages = parsePreferredLanguages(prefs),
@@ -135,6 +137,8 @@ class PreferencesDataStore @Inject constructor(
     suspend fun setVibrateOnRecord(enabled: Boolean) = set(Keys.VIBRATE_ON_RECORD, enabled)
 
     suspend fun setPauseOtherAudio(enabled: Boolean) = set(Keys.PAUSE_OTHER_AUDIO, enabled)
+
+    suspend fun setKeepScreenOnWhileRecording(enabled: Boolean) = set(Keys.KEEP_SCREEN_ON_WHILE_RECORDING, enabled)
 
     suspend fun setShowBubble(enabled: Boolean) = set(Keys.SHOW_BUBBLE, enabled)
 

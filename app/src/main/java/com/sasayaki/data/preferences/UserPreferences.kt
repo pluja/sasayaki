@@ -4,6 +4,7 @@ data class UserPreferences(
     val autoClipboard: Boolean = true,
     val vibrateOnRecord: Boolean = true,
     val pauseOtherAudio: Boolean = false,
+    val keepScreenOnWhileRecording: Boolean = true,
     // showBubble remembers whether the person wants the bubble, so a boot or an update brings it
     // back only when it was on.
     val showBubble: Boolean = true,

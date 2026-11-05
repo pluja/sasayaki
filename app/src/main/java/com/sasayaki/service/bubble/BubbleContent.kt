@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.sasayaki.domain.model.Profile
+import com.sasayaki.service.keepScreenOnWhileRecording
 import com.sasayaki.ui.theme.SasayakiIcons
 import com.sasayaki.ui.theme.SasayakiMark
 import com.sasayaki.ui.theme.Spacing
@@ -112,12 +113,16 @@ fun BubbleContent(
     actions: BubbleActions,
     onShowProfiles: () -> Unit,
     alignment: Alignment = Alignment.CenterEnd,
-    scales: BubbleScales = BubbleScales()
+    scales: BubbleScales = BubbleScales(),
+    keepScreenOnWhileRecording: Boolean = true
 ) {
     val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
     val fade = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
     val density = LocalDensity.current
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = alignment) {
+    Box(
+        modifier = Modifier.fillMaxSize().keepScreenOnWhileRecording(state.phase, keepScreenOnWhileRecording),
+        contentAlignment = alignment
+    ) {
         // Keyed by mode but rendering the state it was given, so an outgoing pill fades out
         // showing what it showed rather than the next state's values.
         AnimatedContent(
