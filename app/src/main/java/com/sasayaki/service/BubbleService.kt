@@ -97,6 +97,8 @@ class BubbleService : Service() {
 
     @Inject lateinit var profileRepository: ProfileRepository
 
+    @Inject lateinit var bubbleServiceController: BubbleServiceController
+
     // scope reports a failure that escapes a dictation instead of crashing the app.
     private val scope = CoroutineScope(
         SupervisorJob() + Dispatchers.Main + CoroutineExceptionHandler { _, error ->
@@ -273,11 +275,8 @@ class BubbleService : Service() {
         ).also { it.create() }
     }
 
-    // turnOff stops the bubble at the person's request and remembers it, so a boot or an update
-    // leaves it off.
     private fun turnOff() {
-        CoroutineScope(Dispatchers.IO).launch { preferencesDataStore.setShowBubble(false) }
-        stopSelf()
+        bubbleServiceController.stop()
     }
 
     private fun onBubbleTap() {

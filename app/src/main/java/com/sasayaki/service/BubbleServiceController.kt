@@ -9,26 +9,26 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 
-// BubbleServiceController starts and stops the bubble for the app's screens and the tile, and
-// remembers the choice so a boot or an update restores it.
 @Singleton
 class BubbleServiceController @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val preferencesDataStore: PreferencesDataStore
+    preferencesDataStore: PreferencesDataStore
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val choices = BubbleChoiceWriter(
+        CoroutineScope(SupervisorJob() + Dispatchers.IO),
+        preferencesDataStore::setShowBubble
+    )
 
     val running: StateFlow<Boolean> = BubbleService.runningState
 
     fun start() {
         BubbleService.start(context)
-        scope.launch { preferencesDataStore.setShowBubble(true) }
+        choices.remember(true)
     }
 
     fun stop() {
         BubbleService.stop(context)
-        scope.launch { preferencesDataStore.setShowBubble(false) }
+        choices.remember(false)
     }
 }
