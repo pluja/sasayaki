@@ -9,8 +9,8 @@
     <string name="dictation_transcribing">Transcribing</string>
     <string name="dictation_cleaning_up">Cleaning up</string>
     <string name="dictation_error_sensitive_field">Dictation is off in password and banking fields.</string>
-    <string name="dictation_toast_blocked_sensitive_field">Dictation blocked in sensitive field</string>
-    <string name="dictation_toast_injection_failed">Could not inject text (clipboard fallback disabled)</string>
+    <string name="dictation_toast_blocked_sensitive_field">Dictation is off in password and banking fields.</string>
+    <string name="dictation_toast_injection_failed">Couldn\'t type into this field. Turn on Copy when typing fails to keep the text.</string>
     <string name="bubble_start_dictation">Start dictation</string>
     <string name="bubble_switch_profile">Switch profile</string>
     <string name="bubble_paused_profile">Paused · %1$s</string>
@@ -18,7 +18,7 @@
     <string name="bubble_no_speech">Didn\'t catch anything</string>
     <string name="bubble_profile_menu_title">Profile</string>
     <string name="bubble_turn_off">Turn off bubble</string>
-    <string name="bubble_toast_overlay_permission_required">Overlay permission required.</string>
+    <string name="bubble_toast_overlay_permission_required">Allow Sasayaki to display over other apps first.</string>
     <string name="bubble_error_microphone_unavailable">Microphone unavailable. Reopen Sasayaki and try again.</string>
     <string name="voice_no_speech">Didn\'t catch anything. Tap the mic to try again.</string>
     <string name="voice_typed">Typed. Tap the mic to add more.</string>
