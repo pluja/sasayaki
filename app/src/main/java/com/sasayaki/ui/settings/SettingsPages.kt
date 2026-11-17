@@ -96,7 +96,7 @@ fun RecordingSettingsScreen(
                         SwitchItem(
                             shapes = shapes,
                             headline = "Keep screen on while recording",
-                            supporting = "Prevents screen timeout while the keyboard or bubble records, but not while paused",
+                            supporting = "The screen stays on while you dictate, and can turn off again when you pause",
                             icon = SasayakiIcons.Visibility,
                             checked = prefs.keepScreenOnWhileRecording,
                             onCheckedChange = onKeepScreenOnWhileRecording

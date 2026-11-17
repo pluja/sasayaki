@@ -90,7 +90,7 @@ fun ReplacementRulesScreen(
         ) {
             item(key = "intro") {
                 Text(
-                    text = "Rules run on every dictation before cleanup. Choose which ones apply in each profile.",
+                    text = "Rules fix words before cleanup runs. Choose which ones each profile uses.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = Spacing.xs, end = Spacing.xs, bottom = Spacing.l)
