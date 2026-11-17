@@ -1,6 +1,7 @@
 package com.sasayaki.service.voice
 
 import android.util.Log
+import com.sasayaki.R
 import com.sasayaki.data.preferences.UserPreferences
 import com.sasayaki.domain.model.AppContext
 import com.sasayaki.domain.model.Profile
@@ -46,6 +47,7 @@ class VoiceInputSession(
     private val onRecordingChanged: (recording: Boolean) -> Unit,
     // onText reports whether the text reached the field.
     private val onText: (String) -> Boolean,
+    private val getString: (resId: Int) -> String,
     private val waveformBars: Int = WAVEFORM_BARS,
     private val newRecorder: () -> AudioRecorder = ::AudioRecorder,
     private val now: () -> Long = System::currentTimeMillis
@@ -78,9 +80,9 @@ class VoiceInputSession(
     fun prepare(target: VoiceInputTarget): Boolean {
         this.target = target
         when {
-            target.sensitive -> fail("Dictation is off in password and banking fields.")
+            target.sensitive -> fail(getString(R.string.dictation_error_sensitive_field))
 
-            !target.micAllowed -> fail("Allow microphone access in Sasayaki first.")
+            !target.micAllowed -> fail(getString(R.string.voice_error_microphone_permission))
 
             else -> {
                 setPhase(BubblePhase.Idle)
@@ -252,7 +254,7 @@ class VoiceInputSession(
             when {
                 text.isBlank() -> setPhase(BubblePhase.Idle)
                 onText(text) -> _state.update { it.copy(phase = BubblePhase.Idle, justInserted = true) }
-                else -> fail("The text field closed before the text arrived.")
+                else -> fail(getString(R.string.voice_error_field_closed))
             }
         }.onFailure { error ->
             val failure = error as? DictationFailure

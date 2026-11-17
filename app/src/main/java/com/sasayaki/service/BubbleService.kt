@@ -19,6 +19,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import com.sasayaki.R
 import com.sasayaki.data.preferences.PreferencesDataStore
 import com.sasayaki.data.repository.ProfileRepository
 import com.sasayaki.domain.model.AppContext
@@ -205,7 +206,7 @@ class BubbleService : Service() {
         )
 
         if (!Settings.canDrawOverlays(this)) {
-            Toast.makeText(this, "Overlay permission required.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, R.string.bubble_toast_overlay_permission_required, Toast.LENGTH_LONG).show()
             stopSelf()
             return START_NOT_STICKY
         }
@@ -318,7 +319,7 @@ class BubbleService : Service() {
             true
         } catch (e: Exception) {
             Log.e(TAG, "Could not switch to microphone foreground service", e)
-            showError("Microphone unavailable. Reopen Sasayaki and try again.", null)
+            showError(getString(R.string.bubble_error_microphone_unavailable), null)
             false
         }
     }
@@ -351,7 +352,7 @@ class BubbleService : Service() {
             val sensitive = textInjectionBridge.isFocusedFieldSensitive()
             if (state !is ServiceState.Idle && state !is ServiceState.NoSpeech) return@launch
             if (sensitive) {
-                showError("Dictation is off in password and banking fields.", null)
+                showError(getString(R.string.dictation_error_sensitive_field), null)
             } else {
                 startRecording()
             }

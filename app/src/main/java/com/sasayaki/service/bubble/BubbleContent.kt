@@ -48,6 +48,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -58,6 +59,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.sasayaki.R
 import com.sasayaki.domain.model.Profile
 import com.sasayaki.service.keepScreenOnWhileRecording
 import com.sasayaki.ui.theme.SasayakiIcons
@@ -181,18 +183,19 @@ private fun PillSurface(
 @Composable
 private fun IdleBubble(showDone: Boolean, onStart: () -> Unit, onShowProfiles: () -> Unit) {
     val scale by animateFloatAsState(if (showDone) 1.08f else 1f, MaterialTheme.motionScheme.fastSpatialSpec(), label = "done")
+    val dictateLabel = stringResource(R.string.dictation_dictate)
     PillSurface(color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer) {
         Box(
             modifier = Modifier
                 .size(BubbleSize)
                 .scale(scale)
                 .combinedClickable(
-                    onClickLabel = "Start dictation",
-                    onLongClickLabel = "Switch profile",
+                    onClickLabel = stringResource(R.string.bubble_start_dictation),
+                    onLongClickLabel = stringResource(R.string.bubble_switch_profile),
                     onClick = onStart,
                     onLongClick = onShowProfiles
                 )
-                .semantics { contentDescription = "Dictate" },
+                .semantics { contentDescription = dictateLabel },
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -215,18 +218,22 @@ private fun RecordingPill(state: BubbleUiState, levels: () -> List<Float>, actio
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = actions.onCancel) {
-                Icon(SasayakiIcons.Close, contentDescription = "Discard recording")
+                Icon(SasayakiIcons.Close, contentDescription = stringResource(R.string.dictation_discard))
             }
             Column(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .clickable(onClickLabel = "Switch profile", onClick = onShowProfiles)
+                    .clickable(onClickLabel = stringResource(R.string.bubble_switch_profile), onClick = onShowProfiles)
                     .padding(horizontal = Spacing.s, vertical = Spacing.xs),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Waveform(levels = levels, paused = paused)
                 Text(
-                    text = if (paused) "Paused · ${state.profileName}" else "${formatElapsed(state.elapsedSeconds)} · ${state.profileName}",
+                    text = if (paused) {
+                        stringResource(R.string.bubble_paused_profile, state.profileName)
+                    } else {
+                        "${formatElapsed(state.elapsedSeconds)} · ${state.profileName}"
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -237,7 +244,7 @@ private fun RecordingPill(state: BubbleUiState, levels: () -> List<Float>, actio
             IconButton(onClick = actions.onTogglePause) {
                 Icon(
                     imageVector = if (paused) SasayakiIcons.PlayArrow else SasayakiIcons.Pause,
-                    contentDescription = if (paused) "Resume" else "Pause"
+                    contentDescription = stringResource(if (paused) R.string.dictation_resume else R.string.dictation_pause)
                 )
             }
             FilledIconButton(
@@ -247,7 +254,7 @@ private fun RecordingPill(state: BubbleUiState, levels: () -> List<Float>, actio
                     contentColor = MaterialTheme.colorScheme.onTertiary
                 )
             ) {
-                Icon(SasayakiIcons.Stop, contentDescription = "Finish and insert")
+                Icon(SasayakiIcons.Stop, contentDescription = stringResource(R.string.dictation_finish_and_insert))
             }
         }
     }
@@ -298,14 +305,14 @@ private fun ProcessingPill(cleaningUp: Boolean, actions: BubbleActions) {
                 color = if (cleaningUp) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
             )
             Text(
-                text = if (cleaningUp) "Cleaning up" else "Transcribing",
+                text = stringResource(if (cleaningUp) R.string.dictation_cleaning_up else R.string.dictation_transcribing),
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier
                     .padding(horizontal = Spacing.xs)
                     .semantics { liveRegion = LiveRegionMode.Polite }
             )
             IconButton(onClick = actions.onCancelProcessing) {
-                Icon(SasayakiIcons.Close, contentDescription = "Cancel")
+                Icon(SasayakiIcons.Close, contentDescription = stringResource(R.string.action_cancel))
             }
         }
     }
@@ -333,11 +340,11 @@ private fun FailedPill(phase: BubblePhase.Failed, actions: BubbleActions) {
             )
             if (phase.canRetry) {
                 IconButton(onClick = actions.onRetry) {
-                    Icon(SasayakiIcons.Refresh, contentDescription = "Try again")
+                    Icon(SasayakiIcons.Refresh, contentDescription = stringResource(R.string.action_try_again))
                 }
             }
             IconButton(onClick = actions.onDismissError) {
-                Icon(SasayakiIcons.Close, contentDescription = "Dismiss")
+                Icon(SasayakiIcons.Close, contentDescription = stringResource(R.string.action_dismiss))
             }
         }
     }
@@ -349,7 +356,7 @@ private fun NoSpeechPill(onTryAgain: () -> Unit) {
         Row(
             modifier = Modifier
                 .height(PillHeight)
-                .clickable(onClickLabel = "Dictate again", onClick = onTryAgain)
+                .clickable(onClickLabel = stringResource(R.string.bubble_dictate_again), onClick = onTryAgain)
                 .padding(horizontal = Spacing.l),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.s)
@@ -361,7 +368,7 @@ private fun NoSpeechPill(onTryAgain: () -> Unit) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                "Didn't catch anything",
+                stringResource(R.string.bubble_no_speech),
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
             )
@@ -384,7 +391,7 @@ fun ProfileMenu(profiles: List<Profile>, onSelect: (Long) -> Unit) {
                     .padding(vertical = Spacing.s)
             ) {
                 Text(
-                    "Profile",
+                    stringResource(R.string.bubble_profile_menu_title),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = Spacing.l, vertical = Spacing.s)
@@ -425,7 +432,7 @@ fun DismissTarget(armed: Boolean) {
         ) {
             Icon(
                 SasayakiIcons.Close,
-                contentDescription = "Turn off bubble",
+                contentDescription = stringResource(R.string.bubble_turn_off),
                 tint = if (armed) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onSurface
             )
         }

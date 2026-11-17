@@ -40,7 +40,7 @@ class TextInjectionBridge @Inject constructor(
             if (injectionResult is InjectionResult.BlockedSensitive) {
                 Log.d(TAG, "Injection blocked: sensitive field")
                 mainHandler.post {
-                    Toast.makeText(context, "Dictation blocked in sensitive field", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, R.string.dictation_toast_blocked_sensitive_field, Toast.LENGTH_SHORT).show()
                 }
                 return false
             }
@@ -51,7 +51,7 @@ class TextInjectionBridge @Inject constructor(
             copyToClipboard(text)
         } else {
             mainHandler.post {
-                Toast.makeText(context, "Could not inject text (clipboard fallback disabled)", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, R.string.dictation_toast_injection_failed, Toast.LENGTH_SHORT).show()
             }
         }
         return false

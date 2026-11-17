@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dictation_dictate">Dictate</string>
+    <string name="dictation_discard">Discard recording</string>
+    <string name="dictation_pause">Pause</string>
+    <string name="dictation_resume">Resume</string>
+    <string name="dictation_finish_and_insert">Finish and insert</string>
+    <string name="dictation_paused">Paused</string>
+    <string name="dictation_transcribing">Transcribing</string>
+    <string name="dictation_cleaning_up">Cleaning up</string>
+    <string name="dictation_error_sensitive_field">Dictation is off in password and banking fields.</string>
+    <string name="dictation_toast_blocked_sensitive_field">Dictation blocked in sensitive field</string>
+    <string name="dictation_toast_injection_failed">Could not inject text (clipboard fallback disabled)</string>
+    <string name="bubble_start_dictation">Start dictation</string>
+    <string name="bubble_switch_profile">Switch profile</string>
+    <string name="bubble_paused_profile">Paused · %1$s</string>
+    <string name="bubble_dictate_again">Dictate again</string>
+    <string name="bubble_no_speech">Didn\'t catch anything</string>
+    <string name="bubble_profile_menu_title">Profile</string>
+    <string name="bubble_turn_off">Turn off bubble</string>
+    <string name="bubble_toast_overlay_permission_required">Overlay permission required.</string>
+    <string name="bubble_error_microphone_unavailable">Microphone unavailable. Reopen Sasayaki and try again.</string>
+    <string name="voice_no_speech">Didn\'t catch anything. Tap the mic to try again.</string>
+    <string name="voice_typed">Typed. Tap the mic to add more.</string>
+    <string name="voice_tap_to_dictate">Tap the mic to dictate</string>
+    <string name="voice_back_to_keyboard">Back to keyboard</string>
+    <string name="voice_error_microphone_permission">Allow microphone access in Sasayaki first.</string>
+    <string name="voice_error_field_closed">The text field closed before the text arrived.</string>
+</resources>

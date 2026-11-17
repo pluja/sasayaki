@@ -78,7 +78,8 @@ class VoiceInputService : InputMethodService() {
             waveformBars = KEYBOARD_WAVEFORM_BARS,
             cacheDir = cacheDir,
             onRecordingChanged = ::buzz,
-            onText = ::insert
+            onText = ::insert,
+            getString = { resId -> getString(resId) }
         )
     }
 

@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sasayaki.R
 import com.sasayaki.domain.model.Profile
 import com.sasayaki.service.bubble.BubbleActions
 import com.sasayaki.service.bubble.BubbleAppearance
@@ -141,7 +143,11 @@ private fun Status(state: BubbleUiState, levels: () -> List<Float>, modifier: Mo
                     bars = KEYBOARD_WAVEFORM_BARS,
                     barWidth = 4.dp
                 )
-                if (phase.paused) StatusText("Paused") else ElapsedText(formatElapsed(state.elapsedSeconds))
+                if (phase.paused) {
+                    StatusText(stringResource(R.string.dictation_paused))
+                } else {
+                    ElapsedText(formatElapsed(state.elapsedSeconds))
+                }
             }
 
             is BubblePhase.Processing -> Row(
@@ -152,20 +158,20 @@ private fun Status(state: BubbleUiState, levels: () -> List<Float>, modifier: Mo
                     modifier = Modifier.size(40.dp),
                     color = if (phase.cleaningUp) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
                 )
-                StatusText(if (phase.cleaningUp) "Cleaning up" else "Transcribing")
+                StatusText(stringResource(if (phase.cleaningUp) R.string.dictation_cleaning_up else R.string.dictation_transcribing))
             }
 
             is BubblePhase.Failed -> StatusText(phase.message, color = MaterialTheme.colorScheme.error)
 
-            BubblePhase.NoSpeech -> StatusText("Didn't catch anything. Tap the mic to try again.")
+            BubblePhase.NoSpeech -> StatusText(stringResource(R.string.voice_no_speech))
 
             BubblePhase.Idle -> if (state.justInserted) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
                     Icon(SasayakiIcons.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    StatusText("Typed. Tap the mic to add more.")
+                    StatusText(stringResource(R.string.voice_typed))
                 }
             } else {
-                StatusText("Tap the mic to dictate")
+                StatusText(stringResource(R.string.voice_tap_to_dictate))
             }
         }
     }
@@ -210,17 +216,17 @@ private fun Controls(phase: BubblePhase, actions: BubbleActions, onSwitchKeyboar
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        SideButton(SasayakiIcons.Keyboard, "Back to keyboard", onSwitchKeyboard)
+        SideButton(SasayakiIcons.Keyboard, stringResource(R.string.voice_back_to_keyboard), onSwitchKeyboard)
         when (phase) {
-            is BubblePhase.Recording -> SideButton(SasayakiIcons.Close, "Discard recording", actions.onCancel)
-            is BubblePhase.Processing -> SideButton(SasayakiIcons.Close, "Cancel", actions.onCancelProcessing)
+            is BubblePhase.Recording -> SideButton(SasayakiIcons.Close, stringResource(R.string.dictation_discard), actions.onCancel)
+            is BubblePhase.Processing -> SideButton(SasayakiIcons.Close, stringResource(R.string.action_cancel), actions.onCancelProcessing)
             else -> Spacer(Modifier.size(SideButtonSize))
         }
         MainButton(phase, actions)
         if (phase is BubblePhase.Recording) {
             SideButton(
                 icon = if (phase.paused) SasayakiIcons.PlayArrow else SasayakiIcons.Pause,
-                description = if (phase.paused) "Resume" else "Pause",
+                description = stringResource(if (phase.paused) R.string.dictation_resume else R.string.dictation_pause),
                 onClick = actions.onTogglePause
             )
         } else {
@@ -235,17 +241,17 @@ private class MainAction(val icon: ImageVector, val description: String, val onC
 @Composable
 private fun MainButton(phase: BubblePhase, actions: BubbleActions) {
     val action = when (phase) {
-        is BubblePhase.Recording -> MainAction(SasayakiIcons.Stop, "Finish and insert", actions.onStop)
+        is BubblePhase.Recording -> MainAction(SasayakiIcons.Stop, stringResource(R.string.dictation_finish_and_insert), actions.onStop)
 
         is BubblePhase.Processing -> null
 
         is BubblePhase.Failed -> if (phase.canRetry) {
-            MainAction(SasayakiIcons.Refresh, "Try again", actions.onRetry)
+            MainAction(SasayakiIcons.Refresh, stringResource(R.string.action_try_again), actions.onRetry)
         } else {
-            MainAction(SasayakiIcons.Mic, "Dictate", actions.onStart)
+            MainAction(SasayakiIcons.Mic, stringResource(R.string.dictation_dictate), actions.onStart)
         }
 
-        BubblePhase.NoSpeech, BubblePhase.Idle -> MainAction(SasayakiIcons.Mic, "Dictate", actions.onStart)
+        BubblePhase.NoSpeech, BubblePhase.Idle -> MainAction(SasayakiIcons.Mic, stringResource(R.string.dictation_dictate), actions.onStart)
     }
     if (action == null) {
         Spacer(Modifier.size(MainButtonSize))

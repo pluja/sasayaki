@@ -1,5 +1,6 @@
 package com.sasayaki.service.voice
 
+import com.sasayaki.R
 import com.sasayaki.data.preferences.UserPreferences
 import com.sasayaki.domain.model.AppContext
 import com.sasayaki.domain.model.Profile
@@ -50,7 +51,8 @@ class VoiceInputSessionTest {
         onText = {
             typed += it
             true
-        }
+        },
+        getString = { resId -> "string $resId" }
     )
 
     @Test
@@ -60,7 +62,7 @@ class VoiceInputSessionTest {
         session.start(VoiceInputTarget(appContext = null, sensitive = true, micAllowed = true, incognito = false))
 
         val phase = session.state.value.phase as BubblePhase.Failed
-        assertEquals("Dictation is off in password and banking fields.", phase.message)
+        assertEquals("string ${R.string.dictation_error_sensitive_field}", phase.message)
         assertEquals(false, phase.canRetry)
     }
 
@@ -70,7 +72,7 @@ class VoiceInputSessionTest {
 
         session.start(VoiceInputTarget(appContext = null, sensitive = false, micAllowed = false, incognito = false))
 
-        assertEquals("Allow microphone access in Sasayaki first.", (session.state.value.phase as BubblePhase.Failed).message)
+        assertEquals("string ${R.string.voice_error_microphone_permission}", (session.state.value.phase as BubblePhase.Failed).message)
     }
 
     @Test
