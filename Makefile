@@ -82,7 +82,8 @@ hooks:
 screenshots: docker-image
 	$(call gradle,testDebugUnitTest -Pscreenshots)
 
-# Renders the store scenes and frames them with captions into the fastlane listing.
+# Frames the device screenshots in fastlane/raw-screenshots with captions, and renders the
+# listing icon and feature graphic from the logo.
 store-images: docker-image
 	$(call gradle,testDebugUnitTest -Pscreenshots --tests '*StoreScreenshotTest')
 	scripts/store-images.sh

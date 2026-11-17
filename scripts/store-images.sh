@@ -1,12 +1,13 @@
 #!/bin/sh
-# store-images.sh frames the scenes StoreScreenshotTest renders (make store-images) with a
-# caption on the brand background, and writes them, the icon and the feature graphic into the
-# fastlane listing that F-Droid reads.
+# store-images.sh frames the device screenshots in fastlane/raw-screenshots (1.png to 6.png)
+# with a caption on the brand background, and writes them, the icon and the feature graphic
+# (from the logo StoreScreenshotTest renders) into the fastlane listing that F-Droid reads.
 #
 # Needs ImageMagick 7 with Pango, and the Noto Serif and Noto Sans fonts.
 set -eu
 
 scenes=app/build/screenshots
+raw=fastlane/raw-screenshots
 images=fastlane/metadata/android/en-US/images
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -16,7 +17,7 @@ magick -list format | grep -q PANGO || { echo "ImageMagick needs Pango support" 
 for family in "Noto Serif" "Noto Sans"; do
     fc-list | grep -q "$family" || { echo "The $family font is required" >&2; exit 1; }
 done
-[ -f "$scenes/store_1_bubble.png" ] || { echo "Render the scenes first: make store-images" >&2; exit 1; }
+[ -f "$scenes/store_icon.png" ] || { echo "Render the logo first: make store-images" >&2; exit 1; }
 
 pine="#00382E"
 cream="#F3F0E6"
@@ -38,15 +39,12 @@ caption() {
     magick "$work/title.png" -size "${caption_box}x22" xc:none "$work/subtitle.png" -background none -append "$7"
 }
 
-# frame writes one listing screenshot: caption on top, the scene with rounded corners below.
-# An optional crop offset picks a phone-sized window out of a tall scene.
+# frame writes one listing screenshot: caption on top, the device screenshot with rounded
+# corners below.
 frame() {
-    scene=$1 output=$2 title=$3 subtitle=$4 offset=${5:-}
-    source="$scenes/$scene.png"
-    if [ -n "$offset" ]; then
-        magick "$source" -crop "1233x2673+0+$offset" +repage "$work/cropped.png"
-        source="$work/cropped.png"
-    fi
+    output=$1 title=$2 subtitle=$3
+    source="$raw/$output.png"
+    [ -f "$source" ] || { echo "Missing $source" >&2; exit 1; }
     magick "$source" -resize "${shot_width}x" "$work/shot.png"
     shot_height=$(magick identify -format '%h' "$work/shot.png")
     magick "$work/shot.png" \
@@ -65,12 +63,12 @@ frame() {
 mkdir -p "$images/phoneScreenshots"
 rm -f "$images"/phoneScreenshots/*.png
 
-frame store_1_bubble 1 "Dictate into any app" "Tap the bubble that waits by your keyboard"
-frame store_2_keyboard 2 "Or use your keyboard" "Its mic key opens Sasayaki. Works with HeliBoard, FlorisBoard and more"
-frame store_3_home 3 "Speak, don't type" "See how much time dictation saves you"
-frame store_4_style 4 "Clean text, your way" "Optional cleanup with a chat model, styled per profile" 2860
-frame store_5_provider 5 "Your own servers" "Any OpenAI-compatible server you trust"
-frame store_6_history 6 "Kept on your phone" "Search, copy or retry past dictations. No tracking, no cloud."
+frame 1 "Dictate into any app" "Tap the bubble that waits by your keyboard"
+frame 2 "Or use your keyboard" "Its mic key opens Sasayaki. Works with HeliBoard, FlorisBoard and more"
+frame 3 "Your own servers" "Audio goes only to the servers you add"
+frame 4 "Speak, don't type" "See how much time dictation saves you"
+frame 5 "Clean text, your way" "Optional cleanup with a chat model, styled per profile"
+frame 6 "A profile for every app" "Language, models and style, remembered per app"
 
 # The scene renders the round logo on a white window; the circle mask keeps only the logo.
 magick "$scenes/store_icon.png" -alpha set \

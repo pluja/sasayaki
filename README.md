@@ -39,7 +39,7 @@ Sasayaki does the same job as [WisprFlow](https://wisprflow.ai), except it costs
 <p align="center">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="260">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="260">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="260">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.png" width="260">
 </p>
 
 ## Install
@@ -114,7 +114,7 @@ There is no emulator in the build container, so screens are checked with screens
 make screenshots
 ```
 
-The store listing lives in `fastlane/metadata/android/`, where F-Droid reads it. Its screenshots are rendered from code, so regenerate them after UI changes (needs ImageMagick with Pango and the Noto fonts):
+The store listing lives in `fastlane/metadata/android/`, where F-Droid reads it. To refresh its screenshots, put device screenshots in `fastlane/raw-screenshots/` (1.png to 6.png, in the order of the captions in `scripts/store-images.sh`) and frame them (needs ImageMagick with Pango and the Noto fonts):
 
 ```sh
 make store-images
