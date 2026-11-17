@@ -208,6 +208,35 @@ class PreferencesDataStore @Inject constructor(
         context.dataStore.edit { prefs -> prefs.remove(Keys.APP_PROFILES) }
     }
 
+    /** restore replaces the settings a settings file carries, with its vocabulary and per-app profiles. */
+    suspend fun restore(preferences: UserPreferences) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.AUTO_CLIPBOARD] = preferences.autoClipboard
+            prefs[Keys.VIBRATE_ON_RECORD] = preferences.vibrateOnRecord
+            prefs[Keys.PAUSE_OTHER_AUDIO] = preferences.pauseOtherAudio
+            prefs[Keys.KEEP_SCREEN_ON_WHILE_RECORDING] = preferences.keepScreenOnWhileRecording
+            prefs[Keys.SILENCE_THRESHOLD_MS] = preferences.silenceThresholdMs
+            prefs[Keys.HISTORY_ENABLED] = preferences.historyEnabled
+            prefs[Keys.KEEP_STATS_WITHOUT_HISTORY] = preferences.keepStatsWithoutHistory
+            prefs[Keys.HISTORY_RETENTION_LIMIT] = preferences.historyRetentionLimit.coerceIn(1, 5000)
+            prefs[Keys.START_ON_BOOT] = preferences.startOnBoot
+            prefs[Keys.THEME_MODE] = preferences.themeMode.name
+            prefs[Keys.WALLPAPER_COLORS] = preferences.wallpaperColors
+            prefs[Keys.BUBBLE_SIZE] = preferences.bubbleSize.name
+            prefs[Keys.CONTROLS_SIZE] = preferences.controlsSize.name
+            prefs[Keys.BUBBLE_TRANSLUCENT] = preferences.bubbleTranslucent
+            prefs[Keys.BUBBLE_MONOCHROME] = preferences.bubbleMonochrome
+            prefs[Keys.REMEMBER_PROFILE_PER_APP] = preferences.rememberProfilePerApp
+            prefs[Keys.SKIP_CLEANUP_IN_AI_CHATS] = preferences.skipCleanupInAiChats
+            prefs[Keys.VOCABULARY] = preferences.vocabulary.toSet()
+            if (preferences.rememberProfilePerApp && preferences.appProfiles.isNotEmpty()) {
+                prefs[Keys.APP_PROFILES] = encodeAppProfiles(preferences.appProfiles)
+            } else {
+                prefs.remove(Keys.APP_PROFILES)
+            }
+        }
+    }
+
     private suspend fun <T> set(key: Preferences.Key<T>, value: T) {
         context.dataStore.edit { prefs -> prefs[key] = value }
     }

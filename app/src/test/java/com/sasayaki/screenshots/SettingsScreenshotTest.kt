@@ -1,6 +1,7 @@
 package com.sasayaki.screenshots
 
 import android.app.Application
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.sasayaki.data.preferences.BubbleSize
@@ -15,6 +16,7 @@ import com.sasayaki.ui.components.SettingsPage
 import com.sasayaki.ui.components.SetupGroup
 import com.sasayaki.ui.settings.AppearanceSettingsScreen
 import com.sasayaki.ui.settings.AppsSettingsScreen
+import com.sasayaki.ui.settings.BackupScreen
 import com.sasayaki.ui.settings.BubbleSettingsActions
 import com.sasayaki.ui.settings.BubbleSettingsScreen
 import com.sasayaki.ui.settings.LicensesScreen
@@ -51,7 +53,7 @@ class SettingsScreenshotTest {
         Provider(3, "OpenAI", "https://api.openai.com", apiKey = "sk", speechModel = "whisper-1", cleanupModel = "gpt-4o-mini")
     )
 
-    private val noDestinations = SettingsDestinations({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+    private val noDestinations = SettingsDestinations({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
 
     private val editorActions = ProviderEditorActions({}, {}, {}, {}, {}, {}, {}, {}, {})
 
@@ -124,6 +126,11 @@ class SettingsScreenshotTest {
             actions = BubbleSettingsActions({}, {}, {}, {}, {}, {}, {}),
             onBack = {}
         )
+    }
+
+    @Test
+    fun backup() = compose.screenshot("settings_backup_light") {
+        BackupScreen(working = false, snackbarHostState = SnackbarHostState(), onExport = {}, onImport = {}, onBack = {})
     }
 
     @Test

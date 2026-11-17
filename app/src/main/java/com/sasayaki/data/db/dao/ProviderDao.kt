@@ -31,6 +31,9 @@ interface ProviderDao {
     @Query("DELETE FROM providers WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    @Query("DELETE FROM providers")
+    suspend fun deleteAll()
+
     @Query("UPDATE profiles SET speechProviderId = NULL, asrModel = '' WHERE speechProviderId = :id")
     suspend fun detachSpeechProfiles(id: Long)
 

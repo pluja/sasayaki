@@ -22,6 +22,7 @@
 -keepattributes Signature
 -keepattributes *Annotation*
 -keep class com.sasayaki.data.api.model.** { *; }
+-keep class com.sasayaki.data.backup.Backup* { *; }
 -keep class com.sasayaki.data.db.entity.** { *; }
 
 # Room

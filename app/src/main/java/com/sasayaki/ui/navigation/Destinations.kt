@@ -42,6 +42,9 @@ data object AppsSettingsDestination
 data object HistorySettingsDestination
 
 @Serializable
+data object BackupSettingsDestination
+
+@Serializable
 data object AppearanceSettingsDestination
 
 @Serializable

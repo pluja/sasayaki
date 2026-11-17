@@ -28,6 +28,7 @@ import com.sasayaki.ui.profiles.ProfileEditorRoute
 import com.sasayaki.ui.profiles.ProfilesRoute
 import com.sasayaki.ui.settings.AppearanceSettingsRoute
 import com.sasayaki.ui.settings.AppsSettingsRoute
+import com.sasayaki.ui.settings.BackupSettingsRoute
 import com.sasayaki.ui.settings.BubbleSettingsRoute
 import com.sasayaki.ui.settings.HistorySettingsRoute
 import com.sasayaki.ui.settings.LicensesRoute
@@ -139,6 +140,7 @@ fun SasayakiNavGraph(startDestination: Any) {
                         onPrompts = { navController.navigate(PromptsDestination) },
                         onPermissions = { navController.navigate(PermissionsDestination) },
                         onHistory = { navController.navigate(HistorySettingsDestination) },
+                        onBackup = { navController.navigate(BackupSettingsDestination) },
                         onAppearance = { navController.navigate(AppearanceSettingsDestination) },
                         onLicenses = { navController.navigate(LicensesDestination) }
                     )
@@ -155,6 +157,9 @@ fun SasayakiNavGraph(startDestination: Any) {
             }
             composable<BubbleSettingsDestination> {
                 BubbleSettingsRoute(onBack = dropUnlessResumed { navController.popBackStack() })
+            }
+            composable<BackupSettingsDestination> {
+                BackupSettingsRoute(onBack = dropUnlessResumed { navController.popBackStack() })
             }
             composable<LicensesDestination> {
                 LicensesRoute(onBack = dropUnlessResumed { navController.popBackStack() })

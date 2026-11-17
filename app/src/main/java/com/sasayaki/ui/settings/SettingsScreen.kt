@@ -39,6 +39,7 @@ class SettingsDestinations(
     val onPrompts: () -> Unit,
     val onPermissions: () -> Unit,
     val onHistory: () -> Unit,
+    val onBackup: () -> Unit,
     val onAppearance: () -> Unit,
     val onLicenses: () -> Unit
 )
@@ -214,6 +215,15 @@ fun SettingsScreen(
                             },
                             icon = SasayakiIcons.History,
                             onClick = destinations.onHistory
+                        )
+                    },
+                    { shapes ->
+                        NavigationItem(
+                            shapes = shapes,
+                            headline = "Backup",
+                            supporting = "Move your settings to another phone",
+                            icon = SasayakiIcons.SettingsBackupRestore,
+                            onClick = destinations.onBackup
                         )
                     },
                     { shapes ->

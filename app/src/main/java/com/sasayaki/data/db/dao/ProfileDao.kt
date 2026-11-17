@@ -55,4 +55,7 @@ interface ProfileDao {
 
     @Query("DELETE FROM profiles WHERE id = :id AND (SELECT COUNT(*) FROM profiles) > 1")
     suspend fun deleteIfNotLast(id: Long)
+
+    @Query("DELETE FROM profiles")
+    suspend fun deleteAll()
 }

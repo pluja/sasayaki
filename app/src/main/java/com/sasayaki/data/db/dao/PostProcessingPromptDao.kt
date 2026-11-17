@@ -31,6 +31,9 @@ interface PostProcessingPromptDao {
     @Query("DELETE FROM post_processing_prompts WHERE id = :id AND builtIn = 0")
     suspend fun deleteCustomById(id: Long)
 
+    @Query("DELETE FROM post_processing_prompts WHERE builtIn = 0")
+    suspend fun deleteAllCustom()
+
     @Query("DELETE FROM post_processing_prompts WHERE id = :id AND builtIn = 1")
     suspend fun deleteBuiltInById(id: Long)
 }
