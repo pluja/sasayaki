@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -118,6 +119,13 @@ fun HistoryScreen(
     loadRawText: suspend (Long) -> String?
 ) {
     var confirmClear by rememberSaveable { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    var focusHandled by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.loaded, state.focusId) {
+        if (focusHandled || !state.loaded || state.focusId == 0L) return@LaunchedEffect
+        state.listIndexOf(state.focusId)?.let { listState.scrollToItem(it) }
+        focusHandled = true
+    }
 
     SasayakiScaffold(
         snackbarHostState = snackbarHostState,
@@ -137,6 +145,7 @@ fun HistoryScreen(
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
+            state = listState,
             contentPadding = PaddingValues(
                 start = Spacing.screenHorizontal,
                 end = Spacing.screenHorizontal,
@@ -191,6 +200,19 @@ fun HistoryScreen(
     }
 }
 
+// listIndexOf mirrors the items HistoryScreen emits: the off banner, the search field, then a
+// header and the rows of each day.
+internal fun HistoryUiState.listIndexOf(id: Long): Int? {
+    var index = (if (loaded && !historyEnabled) 1 else 0) + (if (hasHistory) 1 else 0)
+    groups.forEach { group ->
+        index += 1
+        val position = group.dictations.indexOfFirst { it.id == id }
+        if (position >= 0) return index + position
+        index += group.dictations.size
+    }
+    return null
+}
+
 private fun LazyListScope.dayGroups(
     state: HistoryUiState,
     onCopy: (DictationSummary) -> Unit,
@@ -207,6 +229,7 @@ private fun LazyListScope.dayGroups(
                 dictation = dictation,
                 shapes = ListItemDefaults.segmentedShapes(index, group.dictations.size),
                 retrying = dictation.id in state.retryingIds,
+                initiallyExpanded = dictation.id == state.focusId,
                 onCopy = { onCopy(dictation) },
                 onRetry = { onRetry(dictation.id) },
                 onDelete = { onDelete(dictation.id) },
@@ -298,13 +321,14 @@ private fun HistoryItem(
     dictation: DictationSummary,
     shapes: ListItemShapes,
     retrying: Boolean,
+    initiallyExpanded: Boolean,
     onCopy: () -> Unit,
     onRetry: () -> Unit,
     onDelete: () -> Unit,
     loadRawText: suspend () -> String?,
     modifier: Modifier = Modifier
 ) {
-    var expanded by rememberSaveable(dictation.id) { mutableStateOf(false) }
+    var expanded by rememberSaveable(dictation.id) { mutableStateOf(initiallyExpanded) }
     var rawText by remember(dictation.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(expanded) {
         if (expanded && rawText == null) rawText = loadRawText()

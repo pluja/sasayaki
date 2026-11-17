@@ -1,12 +1,15 @@
 package com.sasayaki.ui.history
 
 import androidx.compose.runtime.Immutable
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
 import com.sasayaki.data.preferences.PreferencesDataStore
 import com.sasayaki.data.repository.HistoryRepository
 import com.sasayaki.di.ApplicationScope
 import com.sasayaki.domain.transcription.TranscriptionManager
+import com.sasayaki.ui.navigation.HistoryDestination
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.ZoneId
@@ -27,7 +30,8 @@ data class HistoryUiState(
     val hasHistory: Boolean = false,
     val query: String = "",
     val groups: List<DayGroup> = emptyList(),
-    val retryingIds: Set<Long> = emptySet()
+    val retryingIds: Set<Long> = emptySet(),
+    val focusId: Long = 0
 )
 
 @HiltViewModel
@@ -35,8 +39,10 @@ class HistoryViewModel @Inject constructor(
     private val historyRepository: HistoryRepository,
     private val transcriptionManager: TranscriptionManager,
     private val preferencesDataStore: PreferencesDataStore,
-    @ApplicationScope private val applicationScope: CoroutineScope
+    @ApplicationScope private val applicationScope: CoroutineScope,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+    private val focusId = savedStateHandle.toRoute<HistoryDestination>().focusId
     private val zone = ZoneId.systemDefault()
     private val query = MutableStateFlow("")
     private val pendingDeletion = MutableStateFlow<Set<Long>>(emptySet())
@@ -55,7 +61,8 @@ class HistoryViewModel @Inject constructor(
             hasHistory = dictations.any { it.id !in pending },
             query = query,
             groups = groupByDay(dictations, zone, LocalDate.now(zone), query, pending),
-            retryingIds = retrying
+            retryingIds = retrying,
+            focusId = focusId
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HistoryUiState())
 

@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
@@ -65,6 +64,7 @@ import com.sasayaki.data.db.entity.DictationStats
 import com.sasayaki.data.db.entity.DictationSummary
 import com.sasayaki.domain.model.DictationStatus
 import com.sasayaki.domain.model.Profile
+import com.sasayaki.domain.model.languageName
 import com.sasayaki.ui.common.BUBBLE_KEYS
 import com.sasayaki.ui.common.SetupItem
 import com.sasayaki.ui.common.copyText
@@ -93,6 +93,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeRoute(
     onOpenHistory: () -> Unit,
+    onOpenDictation: (Long) -> Unit,
     onOpenProfiles: () -> Unit,
     onOpenProviders: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
@@ -127,6 +128,7 @@ fun HomeRoute(
         onSelectProfile = viewModel::activateProfile,
         onOpenProfiles = onOpenProfiles,
         onOpenHistory = onOpenHistory,
+        onOpenDictation = onOpenDictation,
         onCopy = { dictation ->
             if (context.copyText(dictation.text)) {
                 scope.launch { snackbarHostState.showSnackbar("Copied") }
@@ -147,6 +149,7 @@ fun HomeScreen(
     onSelectProfile: (Long) -> Unit,
     onOpenProfiles: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenDictation: (Long) -> Unit,
     onCopy: (DictationSummary) -> Unit
 ) {
     var showProfiles by rememberSaveable { mutableStateOf(false) }
@@ -201,6 +204,7 @@ fun HomeScreen(
                     recent = state.recent,
                     historyEnabled = state.historyEnabled,
                     onOpenHistory = onOpenHistory,
+                    onOpenDictation = onOpenDictation,
                     onCopy = onCopy
                 )
             }
@@ -321,7 +325,7 @@ private fun StatusHero(
                     HeroMode.SETUP -> {
                         val required = setupSteps.filter(SetupItem::required)
                         val done = required.count(SetupItem::done)
-                        HeroText("Almost there", "Finish these steps and you can dictate anywhere.")
+                        HeroText("Almost there", "Finish the steps below and you can dictate anywhere.")
                         Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                             LinearWavyProgressIndicator(
                                 progress = { done / required.size.toFloat() },
@@ -332,16 +336,6 @@ private fun StatusHero(
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        }
-                        required.firstOrNull { !it.done }?.let { next ->
-                            Button(onClick = next.onAction) {
-                                Text("Continue setup")
-                                Icon(
-                                    SasayakiIcons.ChevronRight,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(start = Spacing.xs).size(18.dp)
-                                )
-                            }
                         }
                     }
                 }
@@ -416,7 +410,7 @@ private fun TodaySection(today: DictationStats, lifetime: DictationStats) {
             )
             StatTile(
                 value = "${minutesSaved(today.wordCount, today.durationMs)} min",
-                label = "saved",
+                label = "saved vs typing",
                 modifier = Modifier.weight(1f)
             )
             StatTile(
@@ -465,6 +459,7 @@ private fun RecentSection(
     recent: List<DictationSummary>,
     historyEnabled: Boolean,
     onOpenHistory: () -> Unit,
+    onOpenDictation: (Long) -> Unit,
     onCopy: (DictationSummary) -> Unit
 ) {
     Column {
@@ -491,7 +486,11 @@ private fun RecentSection(
                 )
             }
         } else {
-            SegmentedGroup(items = recent.map { dictation -> { shapes -> RecentItem(dictation, shapes, onOpenHistory, onCopy) } })
+            SegmentedGroup(
+                items = recent.map { dictation ->
+                    { shapes -> RecentItem(dictation, shapes, { onOpenDictation(dictation.id) }, onCopy) }
+                }
+            )
         }
     }
 }
@@ -566,7 +565,7 @@ private fun ProfileSwitcherSheet(profiles: List<Profile>, onSelect: (Long) -> Un
 }
 
 private fun profileSummary(profile: Profile): String = listOfNotNull(
-    profile.language?.uppercase() ?: "Any language",
+    profile.language?.let { languageName(it) } ?: "Any language",
     "Cleanup".takeIf { profile.llmEnabled }
 ).joinToString(" · ")
 
@@ -607,6 +606,7 @@ private fun HomeScreenPreview() {
             onSelectProfile = {},
             onOpenProfiles = {},
             onOpenHistory = {},
+            onOpenDictation = {},
             onCopy = {}
         )
     }

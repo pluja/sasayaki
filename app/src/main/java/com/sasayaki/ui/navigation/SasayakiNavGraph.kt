@@ -101,6 +101,7 @@ fun SasayakiNavGraph(startDestination: Any) {
             composable<HomeDestination> {
                 HomeRoute(
                     onOpenHistory = { navController.navigateToTopLevel(TopLevelDestination.HISTORY) },
+                    onOpenDictation = { id -> navController.navigateToDictation(id) },
                     onOpenProfiles = { navController.navigateToTopLevel(TopLevelDestination.PROFILES) },
                     onOpenProviders = { navController.navigate(ProvidersDestination) }
                 )

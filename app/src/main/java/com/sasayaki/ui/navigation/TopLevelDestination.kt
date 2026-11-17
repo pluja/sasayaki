@@ -10,7 +10,7 @@ import kotlin.reflect.KClass
 
 enum class TopLevelDestination(val route: Any, val label: String, val icon: ImageVector, val selectedIcon: ImageVector) {
     HOME(HomeDestination, "Home", SasayakiIcons.Home, SasayakiIcons.HomeFilled),
-    HISTORY(HistoryDestination, "History", SasayakiIcons.History, SasayakiIcons.HistoryFilled),
+    HISTORY(HistoryDestination(), "History", SasayakiIcons.History, SasayakiIcons.HistoryFilled),
     PROFILES(ProfilesDestination, "Profiles", SasayakiIcons.Tune, SasayakiIcons.TuneFilled),
     SETTINGS(SettingsDestination, "Settings", SasayakiIcons.Settings, SasayakiIcons.SettingsFilled);
 
@@ -30,5 +30,14 @@ fun NavController.navigateToTopLevel(destination: TopLevelDestination) {
         popUpTo<HomeDestination> { saveState = true }
         launchSingleTop = true
         restoreState = true
+    }
+}
+
+// A focused dictation needs a fresh History entry: restoring the saved one would bring back
+// its old arguments.
+fun NavController.navigateToDictation(id: Long) {
+    navigate(HistoryDestination(focusId = id)) {
+        popUpTo<HomeDestination> { saveState = true }
+        launchSingleTop = true
     }
 }

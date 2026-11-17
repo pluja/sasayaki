@@ -68,6 +68,7 @@ class HomeScreenshotTest {
         onSelectProfile = {},
         onOpenProfiles = {},
         onOpenHistory = {},
+        onOpenDictation = {},
         onCopy = {}
     )
 

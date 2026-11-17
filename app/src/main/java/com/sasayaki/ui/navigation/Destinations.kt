@@ -8,8 +8,9 @@ data object OnboardingDestination
 @Serializable
 data object HomeDestination
 
+/** HistoryDestination with a [focusId] other than 0 opens history scrolled to that dictation. */
 @Serializable
-data object HistoryDestination
+data class HistoryDestination(val focusId: Long = 0)
 
 @Serializable
 data object ProfilesDestination
