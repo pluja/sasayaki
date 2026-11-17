@@ -20,8 +20,8 @@ android {
         // Releases are tagged v<date>[.<patch>]: v20261105 is 2026110500, v20261105.2 is
         // 2026110502. F-Droid rebuilds from the tag and reads these literals, so they are
         // never computed at build time; scripts/bump-version.sh (make bump) rewrites them.
-        versionCode = 2026110500
-        versionName = "v20261105"
+        versionCode = 2026111700
+        versionName = "v20261117"
     }
 
     signingConfigs {

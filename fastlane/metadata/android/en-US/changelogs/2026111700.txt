@@ -1,0 +1,8 @@
+- Dictate from the bubble or your keyboard's mic key, chosen during setup
+- Self-hosted servers on your network work over http
+- Export and import settings
+- Settings regrouped, with a page for the bubble
+- Clearer profiles, onboarding and history
+- Screen reader support for dictation status
+- Ready for translation
+- Fixes: permission buttons that did nothing, deletes without confirmation, cut-off labels
