@@ -36,7 +36,7 @@ class ProfilesViewModel @Inject constructor(private val profileRepository: Profi
         viewModelScope.launch { profileRepository.activate(id) }
     }
 
-    fun create(onCreated: (Long) -> Unit) {
-        viewModelScope.launch { onCreated(profileRepository.save(Profile(name = "New profile"))) }
+    fun create(name: String, onCreated: (Long) -> Unit) {
+        viewModelScope.launch { onCreated(profileRepository.save(Profile(name = name))) }
     }
 }

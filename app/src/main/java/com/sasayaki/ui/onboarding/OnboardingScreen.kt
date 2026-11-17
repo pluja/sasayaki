@@ -1,6 +1,7 @@
 package com.sasayaki.ui.onboarding
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -58,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -66,6 +68,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.R
 import com.sasayaki.ui.common.MICROPHONE_KEY
 import com.sasayaki.ui.common.SetupItem
 import com.sasayaki.ui.common.rememberPermissionItems
@@ -162,6 +165,7 @@ fun OnboardingScreen(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             if (step != OnboardingStep.WELCOME) {
+                val stepDescription = stringResource(R.string.onboarding_step_progress, step.ordinal + 1, OnboardingStep.entries.size)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -169,13 +173,13 @@ fun OnboardingScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = { previous?.let(actions.onStep) }) {
-                        Icon(SasayakiIcons.ArrowBack, contentDescription = "Back")
+                        Icon(SasayakiIcons.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                     LinearWavyProgressIndicator(
                         progress = { progress },
                         modifier = Modifier
                             .weight(1f)
-                            .semantics { contentDescription = "Step ${step.ordinal + 1} of ${OnboardingStep.entries.size}" }
+                            .semantics { contentDescription = stepDescription }
                     )
                 }
             }
@@ -228,27 +232,29 @@ private fun OnboardingBottomBar(step: OnboardingStep, providerForm: ProviderForm
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         when (step) {
-            OnboardingStep.WELCOME -> PrimaryButton("Get started") { actions.onStep(OnboardingStep.PROVIDER) }
+            OnboardingStep.WELCOME -> PrimaryButton(stringResource(R.string.onboarding_get_started)) {
+                actions.onStep(OnboardingStep.PROVIDER)
+            }
 
             OnboardingStep.PROVIDER -> {
                 val blocker = when {
-                    providerForm.url.isBlank() -> "Enter your server address to continue."
-                    providerForm.speechModel == null -> "Test the connection or pick a speech to text model to continue."
+                    providerForm.url.isBlank() -> R.string.onboarding_provider_needs_url
+                    providerForm.speechModel == null -> R.string.onboarding_provider_needs_model
                     else -> null
                 }
-                blocker?.let { BlockerText(it) }
-                PrimaryButton("Continue", enabled = blocker == null, onClick = actions.onSaveProvider)
-                TextButton(onClick = { actions.onStep(OnboardingStep.METHOD) }) { Text("Set up later") }
+                blocker?.let { BlockerText(stringResource(it)) }
+                PrimaryButton(stringResource(R.string.action_continue), enabled = blocker == null, onClick = actions.onSaveProvider)
+                TextButton(onClick = { actions.onStep(OnboardingStep.METHOD) }) { Text(stringResource(R.string.onboarding_set_up_later)) }
             }
 
-            OnboardingStep.METHOD -> PrimaryButton("Continue") { actions.onStep(OnboardingStep.PERMISSIONS) }
+            OnboardingStep.METHOD -> PrimaryButton(stringResource(R.string.action_continue)) { actions.onStep(OnboardingStep.PERMISSIONS) }
 
             OnboardingStep.PERMISSIONS -> {
-                PrimaryButton("Continue", enabled = setup.ready) { actions.onStep(OnboardingStep.TRY) }
-                TextButton(onClick = { actions.onStep(OnboardingStep.TRY) }) { Text("Skip for now") }
+                PrimaryButton(stringResource(R.string.action_continue), enabled = setup.ready) { actions.onStep(OnboardingStep.TRY) }
+                TextButton(onClick = { actions.onStep(OnboardingStep.TRY) }) { Text(stringResource(R.string.onboarding_skip_for_now)) }
             }
 
-            OnboardingStep.TRY -> PrimaryButton("Done", onClick = actions.onFinish)
+            OnboardingStep.TRY -> PrimaryButton(stringResource(R.string.onboarding_done), onClick = actions.onFinish)
         }
     }
 }
@@ -278,11 +284,11 @@ private fun PrimaryButton(text: String, enabled: Boolean = true, onClick: () -> 
     }
 }
 
-private fun LazyListScope.stepHeader(title: String, body: String) {
+private fun LazyListScope.stepHeader(@StringRes title: Int, @StringRes body: Int) {
     item(key = "header") {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.s), modifier = Modifier.padding(horizontal = Spacing.xs)) {
-            Text(title, style = MaterialTheme.typography.headlineMedium)
-            Text(body, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(title), style = MaterialTheme.typography.headlineMedium)
+            Text(stringResource(body), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -298,12 +304,12 @@ private fun LazyListScope.welcome() {
         ) {
             WelcomeMark()
             Text(
-                "Speak, and it's typed.",
+                stringResource(R.string.onboarding_welcome_title),
                 style = MaterialTheme.typography.displaySmall,
                 textAlign = TextAlign.Center
             )
             Text(
-                "Sasayaki turns your voice into text in any app, using speech models on servers you choose.",
+                stringResource(R.string.onboarding_welcome_body),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -314,12 +320,20 @@ private fun LazyListScope.welcome() {
     item(key = "points") {
         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceBright) {
             Column(modifier = Modifier.padding(Spacing.xl), verticalArrangement = Arrangement.spacedBy(Spacing.l)) {
-                WelcomePoint(SasayakiIcons.Keyboard, "Works in every app", "Dictate from a floating bubble or your keyboard's mic key.")
-                WelcomePoint(SasayakiIcons.Shield, "Your servers, your words", "Recordings go only to the servers you add.")
+                WelcomePoint(
+                    SasayakiIcons.Keyboard,
+                    stringResource(R.string.onboarding_point_apps_title),
+                    stringResource(R.string.onboarding_point_apps_body)
+                )
+                WelcomePoint(
+                    SasayakiIcons.Shield,
+                    stringResource(R.string.onboarding_point_servers_title),
+                    stringResource(R.string.onboarding_point_servers_body)
+                )
                 WelcomePoint(
                     SasayakiIcons.AutoAwesome,
-                    "Optional cleanup",
-                    "Add a chat model and Sasayaki drops filler words and applies your self-corrections."
+                    stringResource(R.string.onboarding_point_cleanup_title),
+                    stringResource(R.string.onboarding_point_cleanup_body)
                 )
             }
         }
@@ -359,10 +373,7 @@ private fun WelcomePoint(icon: ImageVector, title: String, body: String) {
 }
 
 private fun LazyListScope.provider(form: ProviderForm, state: ProviderEditorUiState, actions: ProviderEditorActions) {
-    stepHeader(
-        "Connect speech to text",
-        "Add the server that turns your voice into text. Any OpenAI-compatible API works: your own or a hosted one."
-    )
+    stepHeader(R.string.onboarding_provider_title, R.string.onboarding_provider_body)
     item(key = "form") { ProviderConnectionForm(form, state, actions) }
     item(key = "test") {
         Button(
@@ -373,7 +384,7 @@ private fun LazyListScope.provider(form: ProviderForm, state: ProviderEditorUiSt
             if (state.testing) {
                 LoadingIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
             } else {
-                Text("Test connection")
+                Text(stringResource(R.string.onboarding_test_connection))
             }
         }
     }
@@ -388,12 +399,7 @@ private fun CleanupNote(cleanupChosen: Boolean) {
         Row(modifier = Modifier.padding(Spacing.l), horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
             Icon(SasayakiIcons.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             Text(
-                text = if (cleanupChosen) {
-                    "Cleanup is on: a chat model will tidy each dictation before it is typed."
-                } else {
-                    "Cleanup is optional. It needs a chat model (an LLM) to remove filler words and fix " +
-                        "self-corrections. Pick one under Cleanup above, or add it later in Settings."
-                },
+                text = stringResource(if (cleanupChosen) R.string.onboarding_cleanup_on else R.string.onboarding_cleanup_optional),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -402,22 +408,22 @@ private fun CleanupNote(cleanupChosen: Boolean) {
 }
 
 private fun LazyListScope.methodStep(selected: DictationMethod, onSelect: (DictationMethod) -> Unit) {
-    stepHeader("How do you want to dictate?", "Pick one to start with. You can turn on the other later in Settings.")
+    stepHeader(R.string.onboarding_method_title, R.string.onboarding_method_body)
     item(key = "methods") {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.s), modifier = Modifier.selectableGroup()) {
             MethodCard(
                 icon = SasayakiIcons.ChatBubble,
-                title = "Floating bubble",
-                body = "Appears whenever a keyboard opens, in any app. Tap it to dictate into the field you are in.",
-                needs = "Needs: display over other apps, and accessibility access to type the text.",
+                title = stringResource(R.string.onboarding_method_bubble_title),
+                body = stringResource(R.string.onboarding_method_bubble_body),
+                needs = stringResource(R.string.onboarding_method_bubble_needs),
                 selected = selected == DictationMethod.BUBBLE,
                 onClick = { onSelect(DictationMethod.BUBBLE) }
             )
             MethodCard(
                 icon = SasayakiIcons.Keyboard,
-                title = "Keyboard mic key",
-                body = "Keyboards like HeliBoard and FlorisBoard open Sasayaki from their mic key, right in the keyboard area.",
-                needs = "Needs: only the microphone.",
+                title = stringResource(R.string.onboarding_method_keyboard_title),
+                body = stringResource(R.string.onboarding_method_keyboard_body),
+                needs = stringResource(R.string.onboarding_method_keyboard_needs),
                 selected = selected == DictationMethod.KEYBOARD,
                 onClick = { onSelect(DictationMethod.KEYBOARD) }
             )
@@ -450,14 +456,11 @@ private fun MethodCard(icon: ImageVector, title: String, body: String, needs: St
 
 private fun LazyListScope.permissionsStep(setup: OnboardingSetup) {
     when (setup.method) {
-        DictationMethod.BUBBLE -> stepHeader(
-            "Let Sasayaki listen and type",
-            "These let the bubble record when you tap it and type the result where you are."
-        )
+        DictationMethod.BUBBLE -> stepHeader(R.string.onboarding_permissions_bubble_title, R.string.onboarding_permissions_bubble_body)
 
         DictationMethod.KEYBOARD -> stepHeader(
-            "Connect your keyboard",
-            "Allow the microphone, then turn on Sasayaki voice input so your keyboard's mic key can open it."
+            R.string.onboarding_permissions_keyboard_title,
+            R.string.onboarding_permissions_keyboard_body
         )
     }
     item(key = "permissions") { SetupGroup(items = setup.items, restrictedSettingsLikely = setup.restrictedSettingsLikely) }
@@ -465,17 +468,21 @@ private fun LazyListScope.permissionsStep(setup: OnboardingSetup) {
 
 private fun LazyListScope.tryIt(setup: OnboardingSetup) {
     stepHeader(
-        "Try it",
+        R.string.onboarding_try_title,
         when {
-            !setup.ready -> "Finish the previous step to start dictating. You can also do it later from Home."
-            setup.method == DictationMethod.KEYBOARD -> "Tap the field below, then the mic key on your keyboard and say something."
-            else -> "Tap the field below, then tap the bubble that appears and say something."
+            !setup.ready -> R.string.onboarding_try_not_ready
+            setup.method == DictationMethod.KEYBOARD -> R.string.onboarding_try_keyboard
+            else -> R.string.onboarding_try_bubble
         }
     )
     item(key = "field") { TryField(enabled = setup.ready) }
     if (setup.method == DictationMethod.BUBBLE && setup.ready && !setup.bubbleRunning) {
         item(key = "starting") {
-            Text("Starting the bubble…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                stringResource(R.string.onboarding_starting_bubble),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -491,7 +498,7 @@ private fun TryField(enabled: Boolean) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(Spacing.l),
-            placeholder = { Text("Your words appear here") },
+            placeholder = { Text(stringResource(R.string.onboarding_try_placeholder)) },
             minLines = 5
         )
     }

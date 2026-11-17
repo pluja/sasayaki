@@ -1,5 +1,6 @@
 package com.sasayaki.ui.profiles
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,9 +28,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.R
 import com.sasayaki.domain.model.OutputStyle
 import com.sasayaki.domain.model.Profile
 import com.sasayaki.domain.model.RewriteMode
@@ -99,7 +103,7 @@ fun ProfileEditorScreen(
     val cleanup = resolvedChoice(state.providers, Purpose.CLEANUP, profile.cleanupProviderId, profile.llmModel)
 
     SettingsPage(
-        title = profile.name.ifBlank { "Profile" },
+        title = profile.name.ifBlank { stringResource(R.string.profile_title_unnamed) },
         onBack = navigation.onBack,
         actions = {
             ProfileMenu(canDelete = state.profileCount > 1, onDuplicate = onDuplicate, onDelete = { confirmDelete = true })
@@ -109,13 +113,13 @@ fun ProfileEditorScreen(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
                 if (state.active) {
                     Pill(
-                        text = "Active profile",
+                        text = stringResource(R.string.profile_active_profile),
                         icon = SasayakiIcons.Check,
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 } else {
-                    FilledTonalButton(onClick = onActivate) { Text("Use this profile") }
+                    FilledTonalButton(onClick = onActivate) { Text(stringResource(R.string.profile_use_this)) }
                 }
             }
         }
@@ -127,7 +131,7 @@ fun ProfileEditorScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(Spacing.l),
-                    label = { Text("Name") },
+                    label = { Text(stringResource(R.string.profile_name)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
                 )
@@ -135,13 +139,13 @@ fun ProfileEditorScreen(
         }
         item(key = "speech") {
             SegmentedGroup(
-                title = "Speech to text",
+                title = stringResource(R.string.profile_speech_to_text),
                 items = listOf(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Language",
-                            supporting = profile.language?.let { languageName(it) } ?: "Detect automatically",
+                            headline = stringResource(R.string.profile_language),
+                            supporting = profile.language?.let { languageName(it) } ?: stringResource(R.string.profile_language_detect),
                             icon = SasayakiIcons.Translate,
                             onClick = { sheet = ProfileSheet.LANGUAGE }
                         )
@@ -149,7 +153,7 @@ fun ProfileEditorScreen(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Provider",
+                            headline = stringResource(R.string.profile_provider),
                             supporting = speech.providerLabel,
                             needsAttention = speech.provider == null,
                             icon = SasayakiIcons.Dns,
@@ -159,7 +163,7 @@ fun ProfileEditorScreen(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Model",
+                            headline = stringResource(R.string.profile_model),
                             supporting = speech.modelLabel,
                             needsAttention = speech.provider != null && speech.model == null,
                             icon = SasayakiIcons.Mic,
@@ -175,16 +179,16 @@ fun ProfileEditorScreen(
         }
         item(key = "corrections") {
             SegmentedGroup(
-                title = "Corrections",
+                title = stringResource(R.string.profile_corrections),
                 items = listOf(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Replacement rules",
+                            headline = stringResource(R.string.profile_replacement_rules),
                             supporting = if (state.rules.isEmpty()) {
-                                "None yet"
+                                stringResource(R.string.profile_none_yet)
                             } else {
-                                "${state.rules.count { it.id in profile.selectedRuleIds }} of ${state.rules.size} on"
+                                enabledCount(state.rules.count { it.id in profile.selectedRuleIds }, state.rules.size)
                             },
                             icon = SasayakiIcons.FindReplace,
                             onClick = { sheet = ProfileSheet.RULES }
@@ -198,8 +202,8 @@ fun ProfileEditorScreen(
                 add { shapes ->
                     SwitchItem(
                         shapes = shapes,
-                        headline = "Clean up text",
-                        supporting = "A chat model removes filler words, fixes punctuation and applies your self-corrections",
+                        headline = stringResource(R.string.profile_clean_up_text),
+                        supporting = stringResource(R.string.profile_clean_up_text_description),
                         icon = SasayakiIcons.AutoAwesome,
                         checked = profile.llmEnabled,
                         onCheckedChange = { enabled -> onUpdate { it.copy(llmEnabled = enabled) } }
@@ -209,7 +213,7 @@ fun ProfileEditorScreen(
                     add { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Provider",
+                            headline = stringResource(R.string.profile_provider),
                             supporting = cleanup.providerLabel,
                             needsAttention = cleanup.provider == null,
                             icon = SasayakiIcons.Dns,
@@ -219,7 +223,7 @@ fun ProfileEditorScreen(
                     add { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Model",
+                            headline = stringResource(R.string.profile_model),
                             supporting = cleanup.modelLabel,
                             needsAttention = cleanup.provider != null && cleanup.model == null,
                             icon = SasayakiIcons.AutoAwesome,
@@ -232,12 +236,12 @@ fun ProfileEditorScreen(
                     }
                 }
             }
-            SegmentedGroup(title = "Cleanup", items = items)
+            SegmentedGroup(title = stringResource(R.string.profile_cleanup), items = items)
         }
         if (profile.llmEnabled) {
             item(key = "style") {
                 SegmentedGroup(
-                    title = "Writing style",
+                    title = stringResource(R.string.profile_writing_style),
                     items = listOf(
                         { shapes ->
                             StylePreview(shapes, profile.outputStyle, profile.rewriteMode, profile.summarizeMode, profile.emojiAllowed)
@@ -246,7 +250,7 @@ fun ProfileEditorScreen(
                             StyleItem(
                                 shapes,
                                 SasayakiIcons.FormatQuote,
-                                "Punctuation",
+                                R.string.profile_punctuation,
                                 OutputStyle.entries,
                                 profile.outputStyle,
                                 ::styleLabel,
@@ -259,7 +263,7 @@ fun ProfileEditorScreen(
                             StyleItem(
                                 shapes,
                                 SasayakiIcons.AutoFixHigh,
-                                "Rewriting",
+                                R.string.profile_rewriting,
                                 listOf(RewriteMode.NONE, RewriteMode.FIX, RewriteMode.POLISH),
                                 profile.rewriteMode,
                                 ::rewriteLabel,
@@ -270,7 +274,7 @@ fun ProfileEditorScreen(
                             StyleItem(
                                 shapes,
                                 SasayakiIcons.Compress,
-                                "Shorten",
+                                R.string.profile_shorten,
                                 SummarizeMode.entries,
                                 profile.summarizeMode,
                                 ::summarizeLabel,
@@ -282,8 +286,8 @@ fun ProfileEditorScreen(
                         { shapes ->
                             SwitchItem(
                                 shapes = shapes,
-                                headline = "Emoji",
-                                supporting = "Allow emoji where they fit the message",
+                                headline = stringResource(R.string.profile_emoji),
+                                supporting = stringResource(R.string.profile_emoji_description),
                                 icon = SasayakiIcons.Mood,
                                 checked = profile.emojiAllowed,
                                 onCheckedChange = { allowed -> onUpdate { it.copy(emojiAllowed = allowed) } }
@@ -295,7 +299,7 @@ fun ProfileEditorScreen(
             item(key = "instructions") {
                 val activeInstructions = state.customPrompts.count { it.id in profile.selectedPromptIds }
                 SegmentedGroup(
-                    title = "Instructions",
+                    title = stringResource(R.string.profile_instructions),
                     items = listOf(
                         { shapes ->
                             Surface(shape = shapes.shape, color = MaterialTheme.colorScheme.surfaceBright) {
@@ -305,8 +309,8 @@ fun ProfileEditorScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(Spacing.l),
-                                    label = { Text("Instructions for this profile") },
-                                    placeholder = { Text("I'm a nurse; keep medical terms exactly as said.") },
+                                    label = { Text(stringResource(R.string.profile_instructions_label)) },
+                                    placeholder = { Text(stringResource(R.string.profile_instructions_placeholder)) },
                                     minLines = 3,
                                     maxLines = 8,
                                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
@@ -316,11 +320,11 @@ fun ProfileEditorScreen(
                         { shapes ->
                             NavigationItem(
                                 shapes = shapes,
-                                headline = "Cleanup instructions",
+                                headline = stringResource(R.string.profile_cleanup_instructions),
                                 supporting = if (state.customPrompts.isEmpty()) {
-                                    "None of your own yet"
+                                    stringResource(R.string.profile_instructions_none_own)
                                 } else {
-                                    "$activeInstructions of ${state.customPrompts.size} on"
+                                    enabledCount(activeInstructions, state.customPrompts.size)
                                 },
                                 icon = SasayakiIcons.Notes,
                                 onClick = { sheet = ProfileSheet.PROMPTS }
@@ -346,9 +350,13 @@ fun ProfileEditorScreen(
     if (confirmDelete) {
         DestructiveDialog(
             icon = SasayakiIcons.Delete,
-            title = "Delete ${profile.name.ifBlank { "this profile" }}?",
-            text = "Its settings are removed. Your dictation history stays.",
-            confirmLabel = "Delete",
+            title = if (profile.name.isBlank()) {
+                stringResource(R.string.profile_delete_title_unnamed)
+            } else {
+                stringResource(R.string.profile_delete_title, profile.name)
+            },
+            text = stringResource(R.string.profile_delete_text),
+            confirmLabel = stringResource(R.string.action_delete),
             onConfirm = onDelete,
             onDismiss = { confirmDelete = false }
         )
@@ -384,7 +392,9 @@ private fun ProfileSheets(
                 purpose = purpose,
                 providers = state.providers,
                 selectedId = if (purpose == Purpose.SPEECH) profile.speechProviderId else profile.cleanupProviderId,
-                automaticLabel = automaticProvider(state.providers, purpose)?.let { "Uses ${it.name}" } ?: "No provider offers this yet",
+                automaticLabel =
+                    automaticProvider(state.providers, purpose)?.let { stringResource(R.string.profile_provider_automatic_uses, it.name) }
+                        ?: stringResource(R.string.profile_provider_none_offers),
                 onSelect = { id ->
                     onUpdate {
                         // A model override belongs to its provider, so switching resets it.
@@ -410,14 +420,15 @@ private fun ProfileSheets(
             val provider = choice.provider ?: return
             val models = state.models[provider.id].orEmpty()
             val default = provider.defaultModel(purpose)
+            val title = if (purpose == Purpose.SPEECH) R.string.profile_speech_model_title else R.string.profile_cleanup_model_title
             ModelPickerSheet(
-                title = if (purpose == Purpose.SPEECH) "Speech to text model" else "Cleanup model",
+                title = stringResource(title),
                 models = models.suitableFor(purpose),
                 selected = choice.override,
-                noneLabel = default?.let { "Provider default · $it" },
+                noneLabel = default?.let { stringResource(R.string.profile_model_provider_default, it) },
                 loading = provider.id in state.loadingModels && models.isEmpty(),
                 note = if (models.isEmpty() && provider.id !in state.loadingModels) {
-                    "${provider.name} didn't list its models. Type one below."
+                    stringResource(R.string.profile_models_not_listed, provider.name)
                 } else {
                     null
                 },
@@ -431,14 +442,14 @@ private fun ProfileSheets(
         }
 
         ProfileSheet.RULES -> ChecklistSheet(
-            title = "Replacement rules",
-            description = "Rules run on this profile's text before cleanup.",
+            title = stringResource(R.string.profile_replacement_rules),
+            description = stringResource(R.string.profile_rules_description),
             entries = state.rules.map {
                 ChecklistEntry(it.id, "${it.pattern} → ${it.replacement.ifEmpty { "∅" }}", it.name.ifBlank { null })
             },
             selected = profile.selectedRuleIds,
-            emptyText = "You haven't written any rules yet.",
-            manageLabel = "Manage rules",
+            emptyText = stringResource(R.string.profile_rules_empty),
+            manageLabel = stringResource(R.string.profile_manage_rules),
             onToggle = { id -> onUpdate { it.copy(selectedRuleIds = it.selectedRuleIds.toggle(id)) } },
             onManage = {
                 onDismiss()
@@ -448,12 +459,14 @@ private fun ProfileSheets(
         )
 
         ProfileSheet.PROMPTS -> ChecklistSheet(
-            title = "Cleanup instructions",
-            description = "Built-in instructions always apply. Pick which of yours this profile adds.",
-            entries = state.customPrompts.map { ChecklistEntry(it.id, it.title.ifBlank { "Untitled" }, it.prompt) },
+            title = stringResource(R.string.profile_cleanup_instructions),
+            description = stringResource(R.string.profile_instructions_description),
+            entries = state.customPrompts.map {
+                ChecklistEntry(it.id, it.title.ifBlank { stringResource(R.string.profile_instructions_untitled) }, it.prompt)
+            },
             selected = profile.selectedPromptIds,
-            emptyText = "You haven't written any instructions yet.",
-            manageLabel = "Manage instructions",
+            emptyText = stringResource(R.string.profile_instructions_empty),
+            manageLabel = stringResource(R.string.profile_manage_instructions),
             onToggle = { id -> onUpdate { it.copy(selectedPromptIds = it.selectedPromptIds.toggle(id)) } },
             onManage = {
                 onDismiss()
@@ -469,11 +482,11 @@ private fun ProfileMenu(canDelete: Boolean, onDuplicate: () -> Unit, onDelete: (
     var expanded by rememberSaveable { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
-            Icon(SasayakiIcons.MoreVert, contentDescription = "More options")
+            Icon(SasayakiIcons.MoreVert, contentDescription = stringResource(R.string.action_more_options))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text("Duplicate") },
+                text = { Text(stringResource(R.string.profile_duplicate)) },
                 leadingIcon = { Icon(SasayakiIcons.ContentCopy, contentDescription = null) },
                 onClick = {
                     expanded = false
@@ -483,8 +496,8 @@ private fun ProfileMenu(canDelete: Boolean, onDuplicate: () -> Unit, onDelete: (
             DropdownMenuItem(
                 text = {
                     Column {
-                        Text("Delete")
-                        if (!canDelete) Text("You need at least one profile", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.action_delete))
+                        if (!canDelete) Text(stringResource(R.string.profile_delete_needs_one), style = MaterialTheme.typography.bodySmall)
                     }
                 },
                 enabled = canDelete,
@@ -502,25 +515,26 @@ private fun ProfileMenu(canDelete: Boolean, onDuplicate: () -> Unit, onDelete: (
 private fun <T> StyleItem(
     shapes: ListItemShapes,
     icon: ImageVector,
-    title: String,
+    @StringRes title: Int,
     options: List<T>,
     selected: T,
-    label: (T) -> String,
-    description: (T) -> String,
+    label: (T) -> Int,
+    description: (T) -> Int,
     onSelect: (T) -> Unit
 ) {
+    val labels = options.associateWith { stringResource(label(it)) }
     SegmentedListItem(
         shapes = shapes,
         colors = segmentedItemColors(),
         leadingContent = { ItemIcon(icon) },
         supportingContent = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.s), modifier = Modifier.padding(top = Spacing.s)) {
-                ConnectedChoice(options = options, selected = selected, onSelect = onSelect, label = label)
-                Text(description(selected))
+                ConnectedChoice(options = options, selected = selected, onSelect = onSelect, label = labels::getValue)
+                Text(stringResource(description(selected)))
             }
         }
     ) {
-        Text(title)
+        Text(stringResource(title))
     }
 }
 
@@ -532,6 +546,7 @@ data class ResolvedChoice(
     val modelLabel: String
 )
 
+@Composable
 private fun resolvedChoice(providers: List<Provider>, purpose: Purpose, chosenId: Long?, override: String): ResolvedChoice {
     val chosen = chosenId?.let { id -> providers.firstOrNull { it.id == id } }
     val provider = chosen ?: automaticProvider(providers, purpose)
@@ -542,15 +557,15 @@ private fun resolvedChoice(providers: List<Provider>, purpose: Purpose, chosenId
         override = overrideModel,
         model = overrideModel ?: default,
         providerLabel = when {
-            provider == null -> "Add a provider first"
-            chosen == null -> "Automatic · ${provider.name}"
+            provider == null -> stringResource(R.string.profile_provider_add_first)
+            chosen == null -> stringResource(R.string.profile_provider_automatic_named, provider.name)
             else -> provider.name
         },
         modelLabel = when {
             overrideModel != null -> overrideModel
-            default != null -> "Default · $default"
-            provider == null -> "Not available"
-            else -> "Choose a model"
+            default != null -> stringResource(R.string.profile_model_default, default)
+            provider == null -> stringResource(R.string.profile_model_not_available)
+            else -> stringResource(R.string.profile_model_choose)
         }
     )
 }
@@ -560,38 +575,47 @@ private fun automaticProvider(providers: List<Provider>, purpose: Purpose): Prov
 
 private fun Set<Long>.toggle(id: Long): Set<Long> = if (id in this) this - id else this + id
 
+@Composable
+private fun enabledCount(enabled: Int, total: Int) = pluralStringResource(R.plurals.profile_enabled_count, enabled, enabled, total)
+
+@StringRes
 private fun styleLabel(style: OutputStyle) = when (style) {
-    OutputStyle.STANDARD -> "Full"
-    OutputStyle.RELAXED -> "Light"
-    OutputStyle.MINIMAL -> "Minimal"
+    OutputStyle.STANDARD -> R.string.profile_punctuation_full
+    OutputStyle.RELAXED -> R.string.profile_punctuation_light
+    OutputStyle.MINIMAL -> R.string.profile_punctuation_minimal
 }
 
+@StringRes
 private fun styleDescription(style: OutputStyle) = when (style) {
-    OutputStyle.STANDARD -> "Capital letters and complete punctuation."
-    OutputStyle.RELAXED -> "Capital letters, lighter punctuation, like a chat."
-    OutputStyle.MINIMAL -> "Lowercase with almost no punctuation."
+    OutputStyle.STANDARD -> R.string.profile_punctuation_full_description
+    OutputStyle.RELAXED -> R.string.profile_punctuation_light_description
+    OutputStyle.MINIMAL -> R.string.profile_punctuation_minimal_description
 }
 
+@StringRes
 private fun rewriteLabel(mode: RewriteMode) = when (mode) {
-    RewriteMode.NONE -> "Keep"
-    RewriteMode.FIX -> "Fix"
-    RewriteMode.POLISH -> "Polish"
+    RewriteMode.NONE -> R.string.profile_rewrite_keep
+    RewriteMode.FIX -> R.string.profile_rewrite_fix
+    RewriteMode.POLISH -> R.string.profile_rewrite_polish
 }
 
+@StringRes
 private fun rewriteDescription(mode: RewriteMode) = when (mode) {
-    RewriteMode.NONE -> "Your exact words; only rules and instructions apply."
-    RewriteMode.FIX -> "Keeps your wording and repairs the rough edges."
-    RewriteMode.POLISH -> "Rewrites into clear, more formal prose."
+    RewriteMode.NONE -> R.string.profile_rewrite_keep_description
+    RewriteMode.FIX -> R.string.profile_rewrite_fix_description
+    RewriteMode.POLISH -> R.string.profile_rewrite_polish_description
 }
 
+@StringRes
 private fun summarizeLabel(mode: SummarizeMode) = when (mode) {
-    SummarizeMode.NONE -> "Off"
-    SummarizeMode.LIGHT -> "Light"
-    SummarizeMode.HARD -> "Strong"
+    SummarizeMode.NONE -> R.string.profile_shorten_off
+    SummarizeMode.LIGHT -> R.string.profile_shorten_light
+    SummarizeMode.HARD -> R.string.profile_shorten_strong
 }
 
+@StringRes
 private fun summarizeDescription(mode: SummarizeMode) = when (mode) {
-    SummarizeMode.NONE -> "Everything you said is kept."
-    SummarizeMode.LIGHT -> "Trims rambling and repetition."
-    SummarizeMode.HARD -> "Boils it down to a short summary."
+    SummarizeMode.NONE -> R.string.profile_shorten_off_description
+    SummarizeMode.LIGHT -> R.string.profile_shorten_light_description
+    SummarizeMode.HARD -> R.string.profile_shorten_strong_description
 }

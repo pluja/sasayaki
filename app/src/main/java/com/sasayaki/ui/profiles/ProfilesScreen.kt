@@ -9,9 +9,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.R
 import com.sasayaki.domain.model.Profile
 import com.sasayaki.domain.model.languageName
 import com.sasayaki.domain.provider.Provider
@@ -29,29 +31,31 @@ import com.sasayaki.ui.theme.Spacing
 @Composable
 fun ProfilesRoute(onOpenProfile: (Long) -> Unit, viewModel: ProfilesViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val newProfileName = stringResource(R.string.profile_new_default_name)
     ProfilesScreen(
         state = state,
         onActivate = viewModel::activate,
         onOpenProfile = onOpenProfile,
-        onCreate = { viewModel.create(onOpenProfile) }
+        onCreate = { viewModel.create(newProfileName, onOpenProfile) }
     )
 }
 
 @Composable
 fun ProfilesScreen(state: ProfilesUiState, onActivate: (Long) -> Unit, onOpenProfile: (Long) -> Unit, onCreate: () -> Unit) {
+    val intro = stringResource(R.string.profile_list_intro)
     SettingsPage(
-        title = "Profiles",
+        title = stringResource(R.string.profile_list_title),
         onBack = null,
         bottomInset = Spacing.xxxl * 2,
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onCreate,
                 icon = { Icon(SasayakiIcons.Add, contentDescription = null) },
-                text = { Text("New profile") }
+                text = { Text(stringResource(R.string.profile_new)) }
             )
         }
     ) {
-        pageIntro("Each profile sets a language, models and how your words are cleaned up. Switch between them from the bubble.")
+        pageIntro(intro)
         if (state.loaded) {
             item(key = "profiles") {
                 SegmentedGroup(
@@ -75,12 +79,12 @@ fun ProfilesScreen(state: ProfilesUiState, onActivate: (Long) -> Unit, onOpenPro
                                 trailingContent = {
                                     if (profile.isActive) {
                                         Text(
-                                            "Active",
+                                            stringResource(R.string.profile_active),
                                             style = MaterialTheme.typography.labelLarge,
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     } else {
-                                        TextButton(onClick = { onActivate(profile.id) }) { Text("Use") }
+                                        TextButton(onClick = { onActivate(profile.id) }) { Text(stringResource(R.string.profile_use)) }
                                     }
                                 },
                                 supportingContent = {
@@ -101,12 +105,13 @@ fun ProfilesScreen(state: ProfilesUiState, onActivate: (Long) -> Unit, onOpenPro
     }
 }
 
+@Composable
 fun profileSummary(profile: Profile, providers: List<Provider>): List<String> {
-    val language = profile.language?.let { languageName(it) } ?: "Any language"
-    val cleanup = if (profile.llmEnabled) "Cleanup on" else "No cleanup"
+    val language = profile.language?.let { languageName(it) } ?: stringResource(R.string.profile_any_language)
+    val cleanup = stringResource(if (profile.llmEnabled) R.string.profile_cleanup_on else R.string.profile_no_cleanup)
     val speech = when (val resolution = resolveEndpoint(providers, Purpose.SPEECH, profile.speechProviderId, profile.asrModel)) {
         is Resolution.Ready -> resolution.endpoint.model.substringAfterLast('/')
-        else -> "No speech model yet"
+        else -> stringResource(R.string.profile_no_speech_model)
     }
-    return listOf("$language · $cleanup", speech)
+    return listOf(stringResource(R.string.profile_summary_line, language, cleanup), speech)
 }

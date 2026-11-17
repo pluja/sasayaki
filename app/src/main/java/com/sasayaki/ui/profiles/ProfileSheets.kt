@@ -32,10 +32,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
+import com.sasayaki.R
 import com.sasayaki.domain.model.SpeechLanguage
 import com.sasayaki.domain.model.speechLanguages
 import com.sasayaki.domain.provider.Provider
@@ -102,9 +104,9 @@ fun LanguageSheet(selected: String?, onSelect: (String?) -> Unit, onDismiss: () 
         }
     }
 
-    PickerSheet(title = "Language", onDismiss = onDismiss) {
+    PickerSheet(title = stringResource(R.string.profile_language), onDismiss = onDismiss) {
         Text(
-            "Setting the language you speak makes transcription faster and more accurate.",
+            stringResource(R.string.profile_language_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -112,7 +114,7 @@ fun LanguageSheet(selected: String?, onSelect: (String?) -> Unit, onDismiss: () 
             value = query,
             onValueChange = { query = it },
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Search languages") },
+            placeholder = { Text(stringResource(R.string.profile_language_search)) },
             leadingIcon = { Icon(SasayakiIcons.Search, contentDescription = null) },
             singleLine = true,
             shape = CircleShape,
@@ -121,12 +123,20 @@ fun LanguageSheet(selected: String?, onSelect: (String?) -> Unit, onDismiss: () 
         LazyColumn(modifier = Modifier.heightIn(max = 460.dp)) {
             if (query.isBlank()) {
                 item(key = "auto") {
-                    RadioRow("Detect automatically", "Slower, and can guess wrong on short phrases", selected == null) { onSelect(null) }
+                    RadioRow(
+                        stringResource(R.string.profile_language_detect),
+                        stringResource(R.string.profile_language_detect_description),
+                        selected == null
+                    ) { onSelect(null) }
                 }
                 if (suggested.isNotEmpty()) {
-                    item(key = "suggested-label") { SectionLabel("On this device", Modifier.padding(top = Spacing.m)) }
+                    item(key = "suggested-label") {
+                        SectionLabel(stringResource(R.string.profile_language_on_device), Modifier.padding(top = Spacing.m))
+                    }
                     items(suggested, key = { "s-${it.code}" }) { language -> LanguageRow(language, selected, onSelect) }
-                    item(key = "all-label") { SectionLabel("All languages", Modifier.padding(top = Spacing.m)) }
+                    item(key = "all-label") {
+                        SectionLabel(stringResource(R.string.profile_language_all), Modifier.padding(top = Spacing.m))
+                    }
                 }
             }
             items(matches, key = { it.code }) { language -> LanguageRow(language, selected, onSelect) }
@@ -149,19 +159,21 @@ fun ProviderSheet(
     onManage: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    PickerSheet(title = if (purpose == Purpose.SPEECH) "Speech to text provider" else "Cleanup provider", onDismiss = onDismiss) {
+    val title = if (purpose == Purpose.SPEECH) R.string.profile_speech_provider_title else R.string.profile_cleanup_provider_title
+    PickerSheet(title = stringResource(title), onDismiss = onDismiss) {
         Column {
-            RadioRow("Automatic", automaticLabel, selectedId == null) { onSelect(null) }
+            RadioRow(stringResource(R.string.profile_provider_automatic), automaticLabel, selectedId == null) { onSelect(null) }
             providers.forEach { provider ->
                 val default = provider.defaultModel(purpose)
                 RadioRow(
                     label = provider.name,
-                    supporting = default?.let { "Default model · $it" } ?: "No default model",
+                    supporting = default?.let { stringResource(R.string.profile_provider_default_model, it) }
+                        ?: stringResource(R.string.profile_provider_no_default_model),
                     selected = provider.id == selectedId
                 ) { onSelect(provider.id) }
             }
         }
-        TextButton(onClick = onManage, modifier = Modifier.align(Alignment.End)) { Text("Manage providers") }
+        TextButton(onClick = onManage, modifier = Modifier.align(Alignment.End)) { Text(stringResource(R.string.profile_manage_providers)) }
     }
 }
 
