@@ -1,10 +1,35 @@
 <p align="center"><a href="https://keepandroidopen.org/"><b>ANDROID WILL BECOME A LOCKED-DOWN PLATFORM</b></a></p>
 
-# ささやき　（sasayaki）
+<p align="center">
+  <img src="fastlane/metadata/android/en-US/images/icon.png" alt="Sasayaki logo" width="128">
+</p>
 
-<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/{%22id%22:%22com.sasayaki%22,%22url%22:%22https://github.com/pluja/sasayaki%22,%22author%22:%22pluja%22,%22name%22:%22Sasayaki%22,%22additionalSettings%22:%22{\%22about\%22:\%22A%20tiny%20dictation%20app.%20Connect%20any%20OpenAI-compatible%20backend%20and%20type%20by%20speaking.\%22}%22}"><img src="/assets/badge_obtainium.png" alt="Get it on Obtainium" height="60"></a>
+<h1 align="center">Sasayaki</h1>
 
-A tiny (2MB) Android dictation app. Point it at any OpenAI-compatible backend and type by speaking.
+<p align="center"><b>ささやき</b> · <i>whisper</i></p>
+
+<p align="center">
+  Voice dictation for any Android app, using speech servers you choose.
+</p>
+
+<p align="center">
+  <a href="https://github.com/pluja/sasayaki/releases/latest"><img src="https://img.shields.io/github/v/release/pluja/sasayaki?label=release&color=006B5A" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-006B5A" alt="License: GPL-3.0"></a>
+  <img src="https://img.shields.io/badge/Android-9%2B-006B5A" alt="Android 9 or later">
+</p>
+
+<p align="center">
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/{%22id%22:%22com.sasayaki%22,%22url%22:%22https://github.com/pluja/sasayaki%22,%22author%22:%22pluja%22,%22name%22:%22Sasayaki%22,%22additionalSettings%22:%22{\%22about\%22:\%22A%20tiny%20dictation%20app.%20Connect%20any%20OpenAI-compatible%20backend%20and%20type%20by%20speaking.\%22}%22}"><img src="/assets/badge_obtainium.png" alt="Get it on Obtainium" height="56"></a>
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#install">Install</a> ·
+  <a href="#backends">Backends</a> ·
+  <a href="#development">Development</a>
+</p>
+
+A small (under 5 MB) Android dictation app. Point it at any OpenAI-compatible backend and type by speaking.
 
 Sasayaki does the same job as [WisprFlow](https://wisprflow.ai), except it costs nothing and is more private, connecting to your own models.
 
