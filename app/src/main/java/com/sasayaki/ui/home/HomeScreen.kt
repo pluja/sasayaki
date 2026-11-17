@@ -1,5 +1,6 @@
 package com.sasayaki.ui.home
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -54,12 +55,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.R
 import com.sasayaki.data.db.entity.DictationStats
 import com.sasayaki.data.db.entity.DictationSummary
 import com.sasayaki.domain.model.DictationStatus
@@ -102,12 +106,12 @@ fun HomeRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val providerItem = SetupItem(
         key = "provider",
-        title = "Speech to text",
-        description = "Add the server that turns your voice into text.",
+        title = stringResource(R.string.home_setup_provider_title),
+        description = stringResource(R.string.home_setup_provider_description),
         icon = SasayakiIcons.Dns,
         done = state.speechProviderConfigured,
         required = true,
-        actionLabel = "Add",
+        actionLabel = stringResource(R.string.action_add),
         onAction = onOpenProviders
     )
     val voiceInputEnabled = rememberVoiceInputEnabled()
@@ -116,6 +120,7 @@ fun HomeRoute(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val copiedMessage = stringResource(R.string.copied)
 
     HomeScreen(
         state = state,
@@ -131,7 +136,7 @@ fun HomeRoute(
         onOpenDictation = onOpenDictation,
         onCopy = { dictation ->
             if (context.copyText(dictation.text)) {
-                scope.launch { snackbarHostState.showSnackbar("Copied") }
+                scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
             }
         }
     )
@@ -191,7 +196,11 @@ fun HomeScreen(
             }
             if (state.loaded && pendingSteps.isNotEmpty()) {
                 item(key = "setup") {
-                    SetupGroup(items = pendingSteps, restrictedSettingsLikely = restrictedSettingsLikely, title = "Setup")
+                    SetupGroup(
+                        items = pendingSteps,
+                        restrictedSettingsLikely = restrictedSettingsLikely,
+                        title = stringResource(R.string.home_setup_title)
+                    )
                 }
             }
             if (state.lifetime.count > 0 || state.today.count > 0) {
@@ -235,7 +244,7 @@ private fun HomeHeader(activeProfile: Profile?, onOpenProfiles: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            text = "Sasayaki",
+            text = stringResource(R.string.home_wordmark),
             style = MaterialTheme.typography.headlineMediumEmphasized,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(start = Spacing.xs)
@@ -246,7 +255,11 @@ private fun HomeHeader(activeProfile: Profile?, onOpenProfiles: () -> Unit) {
                 label = { Text(activeProfile.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 leadingIcon = { Icon(SasayakiIcons.Tune, contentDescription = null, Modifier.size(AssistChipDefaults.IconSize)) },
                 trailingIcon = {
-                    Icon(SasayakiIcons.ExpandMore, contentDescription = "Switch profile", Modifier.size(AssistChipDefaults.IconSize))
+                    Icon(
+                        SasayakiIcons.ExpandMore,
+                        contentDescription = stringResource(R.string.home_switch_profile),
+                        Modifier.size(AssistChipDefaults.IconSize)
+                    )
                 },
                 shape = MaterialTheme.shapes.extraLarge
             )
@@ -321,28 +334,25 @@ private fun StatusHero(
                     }
                 }
                 when (heroMode) {
-                    HeroMode.LOADING -> HeroText("Sasayaki", "Getting things ready…")
+                    HeroMode.LOADING -> HeroText(R.string.home_wordmark, R.string.home_hero_loading_body)
 
-                    HeroMode.ON -> HeroText("Speak, don’t type", "Tap the bubble in any text field.")
+                    HeroMode.ON -> HeroText(R.string.home_hero_on_title, R.string.home_hero_on_body)
 
-                    HeroMode.OFF -> HeroText("The bubble is off", "Turn it on to dictate into any app.")
+                    HeroMode.OFF -> HeroText(R.string.home_hero_off_title, R.string.home_hero_off_body)
 
-                    HeroMode.KEYBOARD -> HeroText(
-                        "Ready in your keyboard",
-                        "Tap your keyboard's mic key to dictate. Turn on the bubble if you want it too."
-                    )
+                    HeroMode.KEYBOARD -> HeroText(R.string.home_hero_keyboard_title, R.string.home_hero_keyboard_body)
 
                     HeroMode.SETUP -> {
                         val required = setupSteps.filter(SetupItem::required)
                         val done = required.count(SetupItem::done)
-                        HeroText("Almost there", "Finish the steps below and you can dictate anywhere.")
+                        HeroText(R.string.home_hero_setup_title, R.string.home_hero_setup_body)
                         Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
                             LinearWavyProgressIndicator(
                                 progress = { done / required.size.toFloat() },
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Text(
-                                text = "$done of ${required.size} done",
+                                text = pluralStringResource(R.plurals.home_setup_progress, done, done, required.size),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -355,10 +365,10 @@ private fun StatusHero(
 }
 
 @Composable
-private fun HeroText(title: String, body: String) {
+private fun HeroText(@StringRes title: Int, @StringRes body: Int) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-        Text(title, style = MaterialTheme.typography.headlineSmall)
-        Text(body, style = MaterialTheme.typography.bodyMedium, color = LocalContentColor.current.copy(alpha = 0.78f))
+        Text(stringResource(title), style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(body), style = MaterialTheme.typography.bodyMedium, color = LocalContentColor.current.copy(alpha = 0.78f))
     }
 }
 
@@ -410,27 +420,34 @@ private fun BubbleOrb(active: Boolean) {
 @Composable
 private fun TodaySection(today: DictationStats, lifetime: DictationStats) {
     Column {
-        SectionLabel("Today")
+        SectionLabel(stringResource(R.string.home_today))
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
             StatTile(
                 value = formatCompactNumber(today.wordCount),
-                label = "words",
+                label = stringResource(R.string.home_stat_words),
                 modifier = Modifier.weight(1f)
             )
             StatTile(
-                value = "${minutesSaved(today.wordCount, today.durationMs)} min",
-                label = "saved vs typing",
+                value = minutesSaved(today.wordCount, today.durationMs).let { minutes ->
+                    pluralStringResource(R.plurals.home_stat_minutes_saved, minutes, minutes)
+                },
+                label = stringResource(R.string.home_stat_saved_label),
                 modifier = Modifier.weight(1f)
             )
             StatTile(
                 value = wordsPerMinute(today.wordCount, today.durationMs)?.toString() ?: "–",
-                label = "words / min",
+                label = stringResource(R.string.home_stat_pace_label),
                 modifier = Modifier.weight(1f)
             )
         }
         if (lifetime.count > 0) {
             Text(
-                text = "All time · ${formatCompactNumber(lifetime.wordCount)} words · ${formatDuration(lifetime.durationMs)} spoken",
+                text = pluralStringResource(
+                    R.plurals.home_all_time_summary,
+                    lifetime.wordCount,
+                    formatCompactNumber(lifetime.wordCount),
+                    formatDuration(lifetime.durationMs)
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = Spacing.l, top = Spacing.s)
@@ -477,21 +494,17 @@ private fun RecentSection(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            SectionLabel("Recent", modifier = Modifier.padding(top = Spacing.s))
+            SectionLabel(stringResource(R.string.home_recent), modifier = Modifier.padding(top = Spacing.s))
             if (recent.isNotEmpty()) {
-                TextButton(onClick = onOpenHistory) { Text("See all") }
+                TextButton(onClick = onOpenHistory) { Text(stringResource(R.string.home_see_all)) }
             }
         }
         if (recent.isEmpty()) {
             Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceBright) {
                 EmptyState(
                     icon = if (historyEnabled) SasayakiIcons.GraphicEq else SasayakiIcons.Lock,
-                    title = if (historyEnabled) "Nothing yet" else "History is off",
-                    body = if (historyEnabled) {
-                        "Your dictations will show up here, ready to copy again."
-                    } else {
-                        "Dictations are not kept on this device. Turn history on in Settings."
-                    }
+                    title = stringResource(if (historyEnabled) R.string.home_recent_empty_title else R.string.home_history_off_title),
+                    body = stringResource(if (historyEnabled) R.string.home_recent_empty_body else R.string.home_history_off_body)
                 )
             }
         } else {
@@ -520,7 +533,7 @@ private fun RecentItem(dictation: DictationSummary, shapes: ListItemShapes, onOp
         colors = segmentedItemColors(),
         supportingContent = {
             Text(
-                text = if (failed) "Failed · $meta" else meta,
+                text = if (failed) stringResource(R.string.home_recent_failed_meta, meta) else meta,
                 color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
@@ -529,13 +542,13 @@ private fun RecentItem(dictation: DictationSummary, shapes: ListItemShapes, onOp
         } else {
             {
                 IconButton(onClick = { onCopy(dictation) }) {
-                    Icon(SasayakiIcons.ContentCopy, contentDescription = "Copy")
+                    Icon(SasayakiIcons.ContentCopy, contentDescription = stringResource(R.string.action_copy))
                 }
             }
         }
     ) {
         Text(
-            text = if (failed) dictation.errorMessage ?: "Transcription failed" else dictation.text,
+            text = if (failed) dictation.errorMessage ?: stringResource(R.string.history_transcription_failed) else dictation.text,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
@@ -549,7 +562,11 @@ private fun ProfileSwitcherSheet(profiles: List<Profile>, onSelect: (Long) -> Un
             modifier = Modifier.padding(start = Spacing.l, end = Spacing.l, bottom = Spacing.xl),
             verticalArrangement = Arrangement.spacedBy(Spacing.m)
         ) {
-            Text("Active profile", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = Spacing.s))
+            Text(
+                stringResource(R.string.home_active_profile),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(start = Spacing.s)
+            )
             SegmentedGroup(
                 items = profiles.map { profile ->
                     { shapes ->
@@ -567,15 +584,16 @@ private fun ProfileSwitcherSheet(profiles: List<Profile>, onSelect: (Long) -> Un
                 }
             )
             TextButton(onClick = onManage, modifier = Modifier.align(Alignment.End)) {
-                Text("Manage profiles")
+                Text(stringResource(R.string.home_manage_profiles))
             }
         }
     }
 }
 
+@Composable
 private fun profileSummary(profile: Profile): String = listOfNotNull(
-    profile.language?.let { languageName(it) } ?: "Any language",
-    "Cleanup".takeIf { profile.llmEnabled }
+    profile.language?.let { languageName(it) } ?: stringResource(R.string.home_profile_any_language),
+    stringResource(R.string.home_profile_cleanup).takeIf { profile.llmEnabled }
 ).joinToString(" · ")
 
 @Preview

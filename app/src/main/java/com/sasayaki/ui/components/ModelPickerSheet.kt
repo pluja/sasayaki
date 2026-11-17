@@ -34,10 +34,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sasayaki.R
 import com.sasayaki.ui.theme.SasayakiIcons
 import com.sasayaki.ui.theme.Spacing
 
@@ -83,7 +86,7 @@ fun ModelPickerSheet(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search ${models.size} models") },
+                    placeholder = { Text(pluralStringResource(R.plurals.component_model_search, models.size, models.size)) },
                     leadingIcon = { Icon(SasayakiIcons.Search, contentDescription = null) },
                     singleLine = true,
                     shape = CircleShape,
@@ -112,13 +115,13 @@ fun ModelPickerSheet(
                     value = custom,
                     onValueChange = { custom = it },
                     modifier = Modifier.weight(1f),
-                    label = { Text("Or type a model name") },
+                    label = { Text(stringResource(R.string.component_model_custom_label)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, autoCorrectEnabled = false),
                     keyboardActions = KeyboardActions(onDone = { if (custom.isNotBlank()) onSelect(custom.trim()) })
                 )
                 FilledTonalButton(onClick = { onSelect(custom.trim()) }, enabled = custom.isNotBlank()) {
-                    Text("Use")
+                    Text(stringResource(R.string.component_model_use))
                 }
             }
         }

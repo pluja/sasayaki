@@ -8,6 +8,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import com.sasayaki.R
 
 /** DestructiveDialog confirms an action that cannot be undone; the confirm button is red. */
 @Composable
@@ -18,7 +20,7 @@ fun DestructiveDialog(
     confirmLabel: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
-    dismissLabel: String = "Cancel"
+    dismissLabel: String = stringResource(R.string.action_cancel)
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,

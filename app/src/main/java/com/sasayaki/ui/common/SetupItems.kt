@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.sasayaki.R
 import com.sasayaki.ui.theme.SasayakiIcons
 
 const val ACCESSIBILITY_KEY = "accessibility"
@@ -44,12 +46,12 @@ fun rememberVoiceInputItem(): SetupItem {
     val context = LocalContext.current
     return SetupItem(
         key = "voice_input",
-        title = "Sasayaki voice input",
-        description = "Lets your keyboard's mic key open Sasayaki. Turn it on in the list of keyboards.",
+        title = stringResource(R.string.setup_voice_input_title),
+        description = stringResource(R.string.setup_voice_input_description),
         icon = SasayakiIcons.Keyboard,
         done = rememberVoiceInputEnabled(),
         required = true,
-        actionLabel = "Turn on",
+        actionLabel = stringResource(R.string.action_turn_on),
         onAction = { openKeyboardSettings(context) }
     )
 }

@@ -19,11 +19,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.core.app.ActivityCompat
 import androidx.core.content.edit
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.sasayaki.R
 import com.sasayaki.service.TextInjectorService
 
 data class PermissionStatus(
@@ -106,10 +108,10 @@ fun rememberOverlayPermissionState(): PermissionStatus {
     val granted = rememberCheckedOnResume { checkOverlayPermission(it) }
 
     return PermissionStatus(
-        name = "Display over other apps",
-        description = "Lets the bubble float above your keyboard.",
+        name = stringResource(R.string.permission_overlay_name),
+        description = stringResource(R.string.permission_overlay_description),
         granted = granted,
-        actionLabel = "Allow",
+        actionLabel = stringResource(R.string.action_allow),
         onRequest = { requestOverlayPermission(context) }
     )
 }
@@ -121,10 +123,10 @@ fun rememberAccessibilityPermissionState(): PermissionStatus {
     val granted = rememberCheckedOnResume { checkAccessibilityPermission(it) }
 
     return PermissionStatus(
-        name = "Text insertion",
-        description = "Types the result into the field you are using. Turn on Sasayaki under Accessibility.",
+        name = stringResource(R.string.permission_accessibility_name),
+        description = stringResource(R.string.permission_accessibility_description),
         granted = granted,
-        actionLabel = "Allow",
+        actionLabel = stringResource(R.string.action_allow),
         onRequest = { requestAccessibilityPermission(context) }
     )
 }
@@ -132,20 +134,19 @@ fun rememberAccessibilityPermissionState(): PermissionStatus {
 @Composable
 fun rememberMicrophonePermissionState(): PermissionStatus = rememberRuntimePermissionState(
     permission = Manifest.permission.RECORD_AUDIO,
-    name = "Microphone",
-    description = "Records your voice while you dictate."
+    name = stringResource(R.string.permission_microphone_name),
+    description = stringResource(R.string.permission_microphone_description)
 )
 
 @Composable
 fun rememberNotificationPermissionState(): PermissionStatus {
+    val name = stringResource(R.string.permission_notifications_name)
+    val description = stringResource(R.string.permission_notifications_description)
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-        return PermissionStatus(NOTIFICATIONS_NAME, NOTIFICATIONS_DESCRIPTION, granted = true, actionLabel = "", onRequest = {})
+        return PermissionStatus(name, description, granted = true, actionLabel = "", onRequest = {})
     }
-    return rememberRuntimePermissionState(Manifest.permission.POST_NOTIFICATIONS, NOTIFICATIONS_NAME, NOTIFICATIONS_DESCRIPTION)
+    return rememberRuntimePermissionState(Manifest.permission.POST_NOTIFICATIONS, name, description)
 }
-
-private const val NOTIFICATIONS_NAME = "Notifications"
-private const val NOTIFICATIONS_DESCRIPTION = "Shows that the bubble is on, with a button to turn it off."
 
 /**
  * rememberRuntimePermissionState sends the person to App info once Android has stopped
@@ -173,9 +174,9 @@ private fun rememberRuntimePermissionState(permission: String, name: String, des
 
     return PermissionStatus(
         name = name,
-        description = if (blocked) "Android no longer asks. Allow it under Permissions in App info." else description,
+        description = if (blocked) stringResource(R.string.permission_blocked_description) else description,
         granted = granted,
-        actionLabel = if (blocked) "Open settings" else "Allow",
+        actionLabel = stringResource(if (blocked) R.string.action_open_settings else R.string.action_allow),
         onRequest = {
             if (blocked) {
                 openAppInfo(context)

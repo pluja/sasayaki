@@ -38,7 +38,7 @@ class HistoryGroupingTest {
             today
         )
 
-        assertEquals(listOf("Today", "Yesterday"), groups.take(2).map { it.label })
+        assertEquals(listOf(DayLabel.Today, DayLabel.Yesterday), groups.take(2).map { it.label })
         assertEquals(listOf(4L, 2L), groups.first().dictations.map { it.id })
         assertEquals(10, groups.first().totalWords)
         assertEquals(3, groups.size)
@@ -66,6 +66,6 @@ class HistoryGroupingTest {
             hiddenIds = setOf(2L)
         )
 
-        assertEquals(listOf("Today"), groups.map { it.label })
+        assertEquals(listOf(DayLabel.Today), groups.map { it.label })
     }
 }

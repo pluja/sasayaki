@@ -45,12 +45,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.R
 import com.sasayaki.data.db.entity.DictationSummary
 import com.sasayaki.domain.model.DictationStatus
 import com.sasayaki.ui.common.copyText
@@ -74,6 +77,9 @@ fun HistoryRoute(viewModel: HistoryViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val copiedMessage = stringResource(R.string.copied)
+    val deletedMessage = stringResource(R.string.history_deleted)
+    val undoLabel = stringResource(R.string.action_undo)
 
     HistoryScreen(
         state = state,
@@ -81,7 +87,7 @@ fun HistoryRoute(viewModel: HistoryViewModel = hiltViewModel()) {
         onQueryChange = viewModel::onQueryChange,
         onCopy = { dictation ->
             if (context.copyText(dictation.text)) {
-                scope.launch { snackbarHostState.showSnackbar("Copied") }
+                scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
             }
         },
         onRetry = viewModel::retry,
@@ -92,8 +98,8 @@ fun HistoryRoute(viewModel: HistoryViewModel = hiltViewModel()) {
                 var undone = false
                 try {
                     undone = snackbarHostState.showSnackbar(
-                        message = "Dictation deleted",
-                        actionLabel = "Undo",
+                        message = deletedMessage,
+                        actionLabel = undoLabel,
                         duration = SnackbarDuration.Short
                     ) == SnackbarResult.ActionPerformed
                 } finally {
@@ -133,12 +139,12 @@ fun HistoryScreen(
         snackbarHostState = snackbarHostState,
         topBar = { scrollBehavior ->
             LargeTitleBar(
-                title = "History",
+                title = stringResource(R.string.history_title),
                 scrollBehavior = scrollBehavior,
                 actions = {
                     if (state.hasHistory) {
                         IconButton(onClick = { confirmClear = true }) {
-                            Icon(SasayakiIcons.DeleteSweep, contentDescription = "Clear history")
+                            Icon(SasayakiIcons.DeleteSweep, contentDescription = stringResource(R.string.history_clear))
                         }
                     }
                 }
@@ -168,20 +174,16 @@ fun HistoryScreen(
                 !state.hasHistory -> item(key = "empty") {
                     EmptyState(
                         icon = SasayakiIcons.History,
-                        title = "No dictations yet",
-                        body = if (state.historyEnabled) {
-                            "Everything you dictate lands here, ready to copy or retry."
-                        } else {
-                            "Turn history on to keep your dictations on this device."
-                        }
+                        title = stringResource(R.string.history_empty_title),
+                        body = stringResource(if (state.historyEnabled) R.string.history_empty_body else R.string.history_empty_off_body)
                     )
                 }
 
                 state.groups.isEmpty() -> item(key = "no-match") {
                     EmptyState(
                         icon = SasayakiIcons.Search,
-                        title = "No matches",
-                        body = "Nothing you dictated contains “${state.query.trim()}”."
+                        title = stringResource(R.string.history_no_matches_title),
+                        body = stringResource(R.string.history_no_matches_body, state.query.trim())
                     )
                 }
 
@@ -193,9 +195,9 @@ fun HistoryScreen(
     if (confirmClear) {
         DestructiveDialog(
             icon = SasayakiIcons.DeleteSweep,
-            title = "Clear all history?",
-            text = "Saved text and retry audio are erased from this device. Your word counts are kept.",
-            confirmLabel = "Clear",
+            title = stringResource(R.string.history_clear_title),
+            text = stringResource(R.string.history_clear_body),
+            confirmLabel = stringResource(R.string.history_clear_confirm),
             onConfirm = onClearAll,
             onDismiss = { confirmClear = false }
         )
@@ -253,13 +255,17 @@ private fun DayHeader(group: DayGroup) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            group.label,
+            when (val label = group.label) {
+                DayLabel.Today -> stringResource(R.string.history_today)
+                DayLabel.Yesterday -> stringResource(R.string.history_yesterday)
+                is DayLabel.Date -> label.formatted
+            },
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.semantics { heading() }
         )
         Text(
-            "${group.totalWords} words",
+            pluralStringResource(R.plurals.word_count, group.totalWords, group.totalWords),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -274,12 +280,12 @@ private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = Spacing.xs),
-        placeholder = { Text("Search dictations") },
+        placeholder = { Text(stringResource(R.string.history_search_placeholder)) },
         leadingIcon = { Icon(SasayakiIcons.Search, contentDescription = null) },
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = { onQueryChange("") }) {
-                    Icon(SasayakiIcons.Close, contentDescription = "Clear search")
+                    Icon(SasayakiIcons.Close, contentDescription = stringResource(R.string.history_clear_search))
                 }
             }
         },
@@ -311,11 +317,11 @@ private fun HistoryOffBanner(onEnable: () -> Unit) {
         ) {
             Icon(SasayakiIcons.Lock, contentDescription = null)
             Text(
-                "History is off. New dictations are not saved.",
+                stringResource(R.string.history_off_banner),
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodyMedium
             )
-            TextButton(onClick = onEnable) { Text("Turn on") }
+            TextButton(onClick = onEnable) { Text(stringResource(R.string.action_turn_on)) }
         }
     }
 }
@@ -348,9 +354,10 @@ private fun HistoryItem(
     val meta = listOfNotNull(
         time,
         displaySourceApp(dictation.sourceApp, dictation.sourceAppPackage),
-        if (failed) null else "${dictation.wordCount} words"
+        if (failed) null else pluralStringResource(R.plurals.word_count, dictation.wordCount, dictation.wordCount)
     ).joinToString(" · ")
     val original = rawText?.takeIf { !failed && it.isNotBlank() && it != dictation.text }
+    val expandLabel = stringResource(if (expanded) R.string.history_show_less else R.string.history_show_more)
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -359,12 +366,12 @@ private fun HistoryItem(
     ) {
         Column(
             modifier = Modifier
-                .clickable(onClickLabel = if (expanded) "Show less" else "Show more") { expanded = !expanded }
+                .clickable(onClickLabel = expandLabel) { expanded = !expanded }
                 .animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())
                 .padding(start = Spacing.l, top = Spacing.m, end = Spacing.xs, bottom = Spacing.xs)
         ) {
             Text(
-                text = if (failed) dictation.errorMessage ?: "Transcription failed" else dictation.text,
+                text = if (failed) dictation.errorMessage ?: stringResource(R.string.history_transcription_failed) else dictation.text,
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                 maxLines = if (expanded) Int.MAX_VALUE else COLLAPSED_LINES,
@@ -381,14 +388,18 @@ private fun HistoryItem(
                         .padding(Spacing.m),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs)
                 ) {
-                    Text("What you said", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        stringResource(R.string.history_original_label),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                     Text(original, style = MaterialTheme.typography.bodyMedium)
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (failed) {
                     Pill(
-                        text = "Failed",
+                        text = stringResource(R.string.history_failed),
                         containerColor = MaterialTheme.colorScheme.errorContainer,
                         contentColor = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(end = Spacing.s)
@@ -428,7 +439,7 @@ private fun HistoryActions(
 ) {
     if (canCopy) {
         IconButton(onClick = onCopy) {
-            Icon(SasayakiIcons.ContentCopy, contentDescription = "Copy", modifier = Modifier.size(20.dp))
+            Icon(SasayakiIcons.ContentCopy, contentDescription = stringResource(R.string.action_copy), modifier = Modifier.size(20.dp))
         }
     }
     when {
@@ -437,14 +448,14 @@ private fun HistoryActions(
         }
 
         canRetry && emphasizeRetry -> FilledTonalIconButton(onClick = onRetry) {
-            Icon(SasayakiIcons.Refresh, contentDescription = "Retry", modifier = Modifier.size(20.dp))
+            Icon(SasayakiIcons.Refresh, contentDescription = stringResource(R.string.action_retry), modifier = Modifier.size(20.dp))
         }
 
         canRetry -> IconButton(onClick = onRetry) {
-            Icon(SasayakiIcons.Refresh, contentDescription = "Retry", modifier = Modifier.size(20.dp))
+            Icon(SasayakiIcons.Refresh, contentDescription = stringResource(R.string.action_retry), modifier = Modifier.size(20.dp))
         }
     }
     IconButton(onClick = onDelete) {
-        Icon(SasayakiIcons.Delete, contentDescription = "Delete", modifier = Modifier.size(20.dp))
+        Icon(SasayakiIcons.Delete, contentDescription = stringResource(R.string.action_delete), modifier = Modifier.size(20.dp))
     }
 }

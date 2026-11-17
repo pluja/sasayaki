@@ -18,7 +18,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import com.sasayaki.R
 import com.sasayaki.ui.theme.SasayakiIcons
 
 @Composable
@@ -61,7 +63,7 @@ fun LargeTitleBar(
 @Composable
 private fun BackButton(onBack: () -> Unit) {
     IconButton(onClick = onBack) {
-        Icon(SasayakiIcons.ArrowBack, contentDescription = "Back")
+        Icon(SasayakiIcons.ArrowBack, contentDescription = stringResource(R.string.action_back))
     }
 }
 

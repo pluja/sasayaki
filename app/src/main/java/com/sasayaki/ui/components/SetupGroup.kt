@@ -19,6 +19,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.sasayaki.R
 import com.sasayaki.ui.common.ACCESSIBILITY_KEY
 import com.sasayaki.ui.common.SetupItem
 import com.sasayaki.ui.common.openAppInfo
@@ -82,7 +84,11 @@ private fun SetupRow(item: SetupItem, shapes: ListItemShapes) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.s)) {
             Text(item.title)
             if (!item.required) {
-                Text("Optional", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.setup_optional),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -106,17 +112,15 @@ private fun RestrictedSettingsRow(shapes: ListItemShapes, onOpenAppInfo: () -> U
         },
         supportingContent = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
-                Text("Android blocks this for apps installed from a file until you allow it. If the switch is greyed out:")
-                Text(
-                    "1. Open App info\n2. Tap ⋮ in the top corner\n3. Tap Allow restricted settings and confirm\n4. Come back and allow Text insertion"
-                )
+                Text(stringResource(R.string.setup_restricted_intro))
+                Text(stringResource(R.string.setup_restricted_steps))
                 Button(onClick = onOpenAppInfo, contentPadding = PaddingValues(horizontal = Spacing.l)) {
-                    Text("Open App info")
+                    Text(stringResource(R.string.setup_open_app_info))
                 }
             }
         }
     ) {
-        Text("Restricted setting")
+        Text(stringResource(R.string.setup_restricted_title))
     }
 }
 
@@ -126,10 +130,10 @@ private fun RestrictedSettingsHint(shapes: ListItemShapes, onOpenAppInfo: () -> 
         shapes = shapes,
         colors = segmentedItemColors(),
         supportingContent = {
-            Text("If Android says it's a restricted setting, open App info, tap ⋮ and allow restricted settings.")
+            Text(stringResource(R.string.setup_restricted_hint))
         },
-        trailingContent = { TextButton(onClick = onOpenAppInfo) { Text("App info") } }
+        trailingContent = { TextButton(onClick = onOpenAppInfo) { Text(stringResource(R.string.setup_app_info)) } }
     ) {
-        Text("Greyed out?", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.setup_greyed_out), style = MaterialTheme.typography.bodyMedium)
     }
 }

@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -70,7 +71,7 @@ fun SasayakiNavGraph(startDestination: Any) {
                                     contentDescription = null
                                 )
                             },
-                            label = { Text(destination.label) }
+                            label = { Text(stringResource(destination.labelRes)) }
                         )
                     }
                 }

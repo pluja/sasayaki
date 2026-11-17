@@ -10,7 +10,15 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 @Immutable
-data class DayGroup(val key: String, val label: String, val totalWords: Int, val dictations: List<DictationSummary>)
+data class DayGroup(val key: String, val label: DayLabel, val totalWords: Int, val dictations: List<DictationSummary>)
+
+sealed interface DayLabel {
+    data object Today : DayLabel
+
+    data object Yesterday : DayLabel
+
+    data class Date(val formatted: String) : DayLabel
+}
 
 private val dayFormatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
 
@@ -42,8 +50,8 @@ fun groupByDay(
 private fun DictationSummary.matches(needle: String): Boolean = text.contains(needle, ignoreCase = true) ||
     displaySourceApp(sourceApp, sourceAppPackage)?.contains(needle, ignoreCase = true) == true
 
-private fun dayLabel(date: LocalDate, today: LocalDate): String = when (date) {
-    today -> "Today"
-    today.minusDays(1) -> "Yesterday"
-    else -> dayFormatter.format(date)
+private fun dayLabel(date: LocalDate, today: LocalDate): DayLabel = when (date) {
+    today -> DayLabel.Today
+    today.minusDays(1) -> DayLabel.Yesterday
+    else -> DayLabel.Date(dayFormatter.format(date))
 }

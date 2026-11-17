@@ -21,8 +21,8 @@ class HistoryFocusTest {
     )
 
     private val groups = listOf(
-        DayGroup("today", "Today", 4, listOf(dictation(1), dictation(2))),
-        DayGroup("yesterday", "Yesterday", 2, listOf(dictation(3)))
+        DayGroup("today", DayLabel.Today, 4, listOf(dictation(1), dictation(2))),
+        DayGroup("yesterday", DayLabel.Yesterday, 2, listOf(dictation(3)))
     )
 
     @Test
