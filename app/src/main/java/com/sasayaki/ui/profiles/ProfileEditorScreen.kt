@@ -173,13 +173,33 @@ fun ProfileEditorScreen(
                 )
             )
         }
+        item(key = "corrections") {
+            SegmentedGroup(
+                title = "Corrections",
+                items = listOf(
+                    { shapes ->
+                        NavigationItem(
+                            shapes = shapes,
+                            headline = "Replacement rules",
+                            supporting = if (state.rules.isEmpty()) {
+                                "None yet"
+                            } else {
+                                "${state.rules.count { it.id in profile.selectedRuleIds }} of ${state.rules.size} on"
+                            },
+                            icon = SasayakiIcons.FindReplace,
+                            onClick = { sheet = ProfileSheet.RULES }
+                        )
+                    }
+                )
+            )
+        }
         item(key = "cleanup") {
             val items = buildList<SegmentedItem> {
                 add { shapes ->
                     SwitchItem(
                         shapes = shapes,
                         headline = "Clean up text",
-                        supporting = "Removes filler words, fixes punctuation and applies your corrections",
+                        supporting = "A chat model removes filler words, fixes punctuation and applies your self-corrections",
                         icon = SasayakiIcons.AutoAwesome,
                         checked = profile.llmEnabled,
                         onCheckedChange = { enabled -> onUpdate { it.copy(llmEnabled = enabled) } }
@@ -273,54 +293,42 @@ fun ProfileEditorScreen(
                 )
             }
             item(key = "instructions") {
-                Column {
-                    Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceBright) {
-                        OutlinedTextField(
-                            value = profile.profilePrompt,
-                            onValueChange = { value -> onUpdate { it.copy(profilePrompt = value) } },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(Spacing.l),
-                            label = { Text("Extra instructions") },
-                            placeholder = { Text("I'm a nurse; keep medical terms exactly as said.") },
-                            minLines = 3,
-                            maxLines = 8,
-                            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
-                        )
-                    }
-                }
-            }
-        }
-        item(key = "text") {
-            val activePrompts = state.customPrompts.count { it.id in profile.selectedPromptIds }
-            val activeRules = state.rules.count { it.id in profile.selectedRuleIds }
-            val items = buildList<SegmentedItem> {
-                add { shapes ->
-                    NavigationItem(
-                        shapes = shapes,
-                        headline = "Replacement rules",
-                        supporting = if (state.rules.isEmpty()) "None yet" else "$activeRules of ${state.rules.size} on",
-                        icon = SasayakiIcons.FindReplace,
-                        onClick = { sheet = ProfileSheet.RULES }
+                val activeInstructions = state.customPrompts.count { it.id in profile.selectedPromptIds }
+                SegmentedGroup(
+                    title = "Instructions",
+                    items = listOf(
+                        { shapes ->
+                            Surface(shape = shapes.shape, color = MaterialTheme.colorScheme.surfaceBright) {
+                                OutlinedTextField(
+                                    value = profile.profilePrompt,
+                                    onValueChange = { value -> onUpdate { it.copy(profilePrompt = value) } },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(Spacing.l),
+                                    label = { Text("Instructions for this profile") },
+                                    placeholder = { Text("I'm a nurse; keep medical terms exactly as said.") },
+                                    minLines = 3,
+                                    maxLines = 8,
+                                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences)
+                                )
+                            }
+                        },
+                        { shapes ->
+                            NavigationItem(
+                                shapes = shapes,
+                                headline = "Cleanup instructions",
+                                supporting = if (state.customPrompts.isEmpty()) {
+                                    "None of your own yet"
+                                } else {
+                                    "$activeInstructions of ${state.customPrompts.size} on"
+                                },
+                                icon = SasayakiIcons.Notes,
+                                onClick = { sheet = ProfileSheet.PROMPTS }
+                            )
+                        }
                     )
-                }
-                if (profile.llmEnabled) {
-                    add { shapes ->
-                        NavigationItem(
-                            shapes = shapes,
-                            headline = "Your prompts",
-                            supporting = if (state.customPrompts.isEmpty()) {
-                                "None yet"
-                            } else {
-                                "$activePrompts of ${state.customPrompts.size} on"
-                            },
-                            icon = SasayakiIcons.Notes,
-                            onClick = { sheet = ProfileSheet.PROMPTS }
-                        )
-                    }
-                }
+                )
             }
-            SegmentedGroup(title = "Text", items = items)
         }
     }
 
@@ -440,12 +448,12 @@ private fun ProfileSheets(
         )
 
         ProfileSheet.PROMPTS -> ChecklistSheet(
-            title = "Your prompts",
-            description = "Built-in prompts always apply. Pick which of yours this profile adds.",
+            title = "Cleanup instructions",
+            description = "Built-in instructions always apply. Pick which of yours this profile adds.",
             entries = state.customPrompts.map { ChecklistEntry(it.id, it.title.ifBlank { "Untitled" }, it.prompt) },
             selected = profile.selectedPromptIds,
-            emptyText = "You haven't written any prompts yet.",
-            manageLabel = "Manage prompts",
+            emptyText = "You haven't written any instructions yet.",
+            manageLabel = "Manage instructions",
             onToggle = { id -> onUpdate { it.copy(selectedPromptIds = it.selectedPromptIds.toggle(id)) } },
             onManage = {
                 onDismiss()
@@ -473,7 +481,12 @@ private fun ProfileMenu(canDelete: Boolean, onDuplicate: () -> Unit, onDelete: (
                 }
             )
             DropdownMenuItem(
-                text = { Text("Delete") },
+                text = {
+                    Column {
+                        Text("Delete")
+                        if (!canDelete) Text("You need at least one profile", style = MaterialTheme.typography.bodySmall)
+                    }
+                },
                 enabled = canDelete,
                 leadingIcon = { Icon(SasayakiIcons.Delete, contentDescription = null) },
                 onClick = {
@@ -566,7 +579,7 @@ private fun rewriteLabel(mode: RewriteMode) = when (mode) {
 }
 
 private fun rewriteDescription(mode: RewriteMode) = when (mode) {
-    RewriteMode.NONE -> "Your exact words; only rules and prompts apply."
+    RewriteMode.NONE -> "Your exact words; only rules and instructions apply."
     RewriteMode.FIX -> "Keeps your wording and repairs the rough edges."
     RewriteMode.POLISH -> "Rewrites into clear, more formal prose."
 }

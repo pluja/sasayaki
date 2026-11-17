@@ -3,9 +3,10 @@ package com.sasayaki.ui.profiles
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.RadioButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.text.style.TextOverflow
@@ -17,6 +18,7 @@ import com.sasayaki.domain.provider.Provider
 import com.sasayaki.domain.provider.Purpose
 import com.sasayaki.domain.provider.Resolution
 import com.sasayaki.domain.provider.resolveEndpoint
+import com.sasayaki.ui.components.ItemIcon
 import com.sasayaki.ui.components.SegmentedGroup
 import com.sasayaki.ui.components.SettingsPage
 import com.sasayaki.ui.components.pageIntro
@@ -60,9 +62,27 @@ fun ProfilesScreen(state: ProfilesUiState, onActivate: (Long) -> Unit, onOpenPro
                                 shapes = shapes,
                                 colors = segmentedItemColors(),
                                 leadingContent = {
-                                    RadioButton(selected = profile.isActive, onClick = { onActivate(profile.id) })
+                                    if (profile.isActive) {
+                                        ItemIcon(
+                                            SasayakiIcons.Check,
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    } else {
+                                        ItemIcon(SasayakiIcons.Tune)
+                                    }
                                 },
-                                trailingContent = { Icon(SasayakiIcons.ChevronRight, contentDescription = null) },
+                                trailingContent = {
+                                    if (profile.isActive) {
+                                        Text(
+                                            "Active",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    } else {
+                                        TextButton(onClick = { onActivate(profile.id) }) { Text("Use") }
+                                    }
+                                },
                                 supportingContent = {
                                     Column {
                                         profileSummary(profile, state.providers).forEach {

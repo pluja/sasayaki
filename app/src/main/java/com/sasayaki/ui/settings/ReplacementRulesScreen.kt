@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sasayaki.domain.model.TextReplacementRule
 import com.sasayaki.domain.processing.applyTo
 import com.sasayaki.domain.processing.patternError
+import com.sasayaki.ui.components.DestructiveDialog
 import com.sasayaki.ui.components.EmptyState
 import com.sasayaki.ui.components.LargeTitleBar
 import com.sasayaki.ui.components.Pill
@@ -156,6 +157,7 @@ private fun RuleEditorSheet(
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
+    var confirmDelete by rememberSaveable(initial.id) { mutableStateOf(false) }
     var pattern by rememberSaveable(initial.id) { mutableStateOf(initial.pattern) }
     var replacement by rememberSaveable(initial.id) { mutableStateOf(initial.replacement) }
     var isRegex by rememberSaveable(initial.id) { mutableStateOf(initial.isRegex) }
@@ -236,7 +238,7 @@ private fun RuleEditorSheet(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = Spacing.s)) {
                 if (onDelete != null) {
                     TextButton(
-                        onClick = onDelete,
+                        onClick = { confirmDelete = true },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     ) { Text("Delete") }
                 }
@@ -249,6 +251,16 @@ private fun RuleEditorSheet(
                 ) { Text("Save") }
             }
         }
+    }
+    if (confirmDelete && onDelete != null) {
+        DestructiveDialog(
+            icon = SasayakiIcons.Delete,
+            title = "Delete this rule?",
+            text = "Profiles that use it stop applying it.",
+            confirmLabel = "Delete",
+            onConfirm = onDelete,
+            onDismiss = { confirmDelete = false }
+        )
     }
 }
 

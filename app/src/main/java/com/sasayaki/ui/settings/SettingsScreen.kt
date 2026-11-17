@@ -159,9 +159,9 @@ fun SettingsScreen(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Prompts",
+                            headline = "Cleanup instructions",
                             supporting = when (state.customPromptCount) {
-                                0 -> "Extra instructions for cleanup"
+                                0 -> "Habits the cleanup model should follow"
                                 1 -> "1 of your own"
                                 else -> "${state.customPromptCount} of your own"
                             },

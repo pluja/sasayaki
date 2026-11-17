@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sasayaki.domain.model.PostProcessingPrompt
+import com.sasayaki.ui.components.DestructiveDialog
 import com.sasayaki.ui.components.LargeTitleBar
 import com.sasayaki.ui.components.SasayakiScaffold
 import com.sasayaki.ui.components.SectionLabel
@@ -69,12 +70,12 @@ fun PromptsScreen(
     val builtIn = prompts.orEmpty().filter(PostProcessingPrompt::builtIn)
 
     SasayakiScaffold(
-        topBar = { scrollBehavior -> LargeTitleBar(title = "Prompts", scrollBehavior = scrollBehavior, onBack = onBack) },
+        topBar = { scrollBehavior -> LargeTitleBar(title = "Cleanup instructions", scrollBehavior = scrollBehavior, onBack = onBack) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { creating = true },
                 icon = { Icon(SasayakiIcons.Add, contentDescription = null) },
-                text = { Text("New prompt") }
+                text = { Text("New instruction") }
             )
         }
     ) { padding ->
@@ -89,7 +90,7 @@ fun PromptsScreen(
         ) {
             item(key = "intro") {
                 Text(
-                    text = "Prompts are instructions for cleanup. The built-in ones always apply; turn yours on per profile.",
+                    text = "Instructions the cleanup model follows. Built-in ones always apply; turn yours on in each profile.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = Spacing.xs)
@@ -172,6 +173,7 @@ private fun PromptEditorSheet(
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
+    var confirmDelete by rememberSaveable(initial.id) { mutableStateOf(false) }
     var title by rememberSaveable(initial.id) { mutableStateOf(initial.title) }
     var text by rememberSaveable(initial.id) { mutableStateOf(initial.prompt) }
 
@@ -187,7 +189,7 @@ private fun PromptEditorSheet(
             modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.xl),
             verticalArrangement = Arrangement.spacedBy(Spacing.m)
         ) {
-            Text(if (initial.id == 0L) "New prompt" else "Edit prompt", style = MaterialTheme.typography.headlineSmall)
+            Text(if (initial.id == 0L) "New instruction" else "Edit instruction", style = MaterialTheme.typography.headlineSmall)
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
@@ -209,7 +211,7 @@ private fun PromptEditorSheet(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = Spacing.s)) {
                 if (onDelete != null) {
                     TextButton(
-                        onClick = onDelete,
+                        onClick = { confirmDelete = true },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     ) { Text("Delete") }
                 }
@@ -222,6 +224,16 @@ private fun PromptEditorSheet(
                 ) { Text("Save") }
             }
         }
+    }
+    if (confirmDelete && onDelete != null) {
+        DestructiveDialog(
+            icon = SasayakiIcons.Delete,
+            title = "Delete ${initial.title.ifBlank { "this instruction" }}?",
+            text = "Profiles that use it stop applying it.",
+            confirmLabel = "Delete",
+            onConfirm = onDelete,
+            onDismiss = { confirmDelete = false }
+        )
     }
 }
 
