@@ -26,7 +26,8 @@ data class SettingsUiState(
     val preferences: UserPreferences = UserPreferences(),
     val providers: List<Provider> = emptyList(),
     val ruleCount: Int = 0,
-    val customPromptCount: Int = 0
+    val customPromptCount: Int = 0,
+    val historyCount: Int = 0
 )
 
 @HiltViewModel
@@ -41,14 +42,16 @@ class SettingsViewModel @Inject constructor(
         preferencesDataStore.preferences,
         providerRepository.providers,
         processingRepository.rules,
-        processingRepository.prompts
-    ) { prefs, providers, rules, prompts ->
+        processingRepository.prompts,
+        historyRepository.historyCount
+    ) { prefs, providers, rules, prompts, historyCount ->
         SettingsUiState(
             loaded = true,
             preferences = prefs,
             providers = providers,
             ruleCount = rules.size,
-            customPromptCount = prompts.count { !it.builtIn }
+            customPromptCount = prompts.count { !it.builtIn },
+            historyCount = historyCount
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SettingsUiState())
 

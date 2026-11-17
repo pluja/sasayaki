@@ -18,11 +18,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sasayaki.data.preferences.BUBBLE_SIZES
@@ -32,11 +32,11 @@ import com.sasayaki.data.preferences.ThemeMode
 import com.sasayaki.data.preferences.UserPreferences
 import com.sasayaki.service.bubble.BubbleAppearance
 import com.sasayaki.service.bubble.BubbleScales
-import com.sasayaki.ui.common.openKeyboardSettings
 import com.sasayaki.ui.common.rememberPermissionItems
 import com.sasayaki.ui.common.rememberRestrictedSettingsLikely
 import com.sasayaki.ui.common.rememberVoiceInputEnabled
 import com.sasayaki.ui.components.ConnectedChoice
+import com.sasayaki.ui.components.DestructiveDialog
 import com.sasayaki.ui.components.ItemIcon
 import com.sasayaki.ui.components.NavigationItem
 import com.sasayaki.ui.components.SegmentedGroup
@@ -171,6 +171,7 @@ fun AppsSettingsScreen(
     onSkipAiChatsChange: (Boolean) -> Unit,
     onBack: () -> Unit
 ) {
+    var confirmForget by rememberSaveable { mutableStateOf(false) }
     SettingsPage(title = "Apps", onBack = onBack) {
         if (!loaded) return@SettingsPage
         pageIntro("Sasayaki can adapt to the app you are dictating into.")
@@ -201,7 +202,7 @@ fun AppsSettingsScreen(
                             icon = SasayakiIcons.DeleteSweep,
                             trailingText = if (remembered > 0) "Forget" else "",
                             enabled = remembered > 0,
-                            onClick = onForgetApps
+                            onClick = { confirmForget = true }
                         )
                     }
                 )
@@ -226,6 +227,17 @@ fun AppsSettingsScreen(
             )
         }
     }
+    if (confirmForget) {
+        val remembered = prefs.appProfiles.size
+        DestructiveDialog(
+            icon = SasayakiIcons.DeleteSweep,
+            title = if (remembered == 1) "Forget 1 app?" else "Forget $remembered apps?",
+            text = "They go back to the active profile until you pick another one from the bubble there.",
+            confirmLabel = "Forget",
+            onConfirm = onForgetApps,
+            onDismiss = { confirmForget = false }
+        )
+    }
 }
 
 @Composable
@@ -249,7 +261,13 @@ fun HistorySettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = hilt
                         )
                     },
                     { shapes ->
-                        RetentionItem(shapes, prefs.historyRetentionLimit, prefs.historyEnabled, viewModel::setHistoryRetention)
+                        RetentionItem(
+                            shapes = shapes,
+                            limit = prefs.historyRetentionLimit,
+                            historyCount = state.historyCount,
+                            enabled = prefs.historyEnabled,
+                            onSelect = viewModel::setHistoryRetention
+                        )
                     },
                     { shapes ->
                         SwitchItem(
@@ -439,8 +457,9 @@ private fun SilenceItem(shapes: ListItemShapes, thresholdMs: Long, onChange: (Lo
 }
 
 @Composable
-private fun RetentionItem(shapes: ListItemShapes, limit: Int, enabled: Boolean, onSelect: (Int) -> Unit) {
+private fun RetentionItem(shapes: ListItemShapes, limit: Int, historyCount: Int, enabled: Boolean, onSelect: (Int) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    var pendingLimit by rememberSaveable { mutableStateOf<Int?>(null) }
     Box {
         NavigationItem(
             shapes = shapes,
@@ -456,8 +475,8 @@ private fun RetentionItem(shapes: ListItemShapes, limit: Int, enabled: Boolean, 
                 DropdownMenuItem(
                     text = { Text("$option dictations") },
                     onClick = {
-                        onSelect(option)
                         expanded = false
+                        if (historyCount > option) pendingLimit = option else onSelect(option)
                     },
                     trailingIcon = if (option == limit) {
                         { Icon(SasayakiIcons.Check, contentDescription = null) }
@@ -467,6 +486,18 @@ private fun RetentionItem(shapes: ListItemShapes, limit: Int, enabled: Boolean, 
                 )
             }
         }
+    }
+    pendingLimit?.let { newLimit ->
+        val erased = historyCount - newLimit
+        DestructiveDialog(
+            icon = SasayakiIcons.DeleteSweep,
+            title = "Keep only the last $newLimit?",
+            text = "The ${if (erased == 1) "oldest dictation" else "$erased oldest dictations"} and " +
+                "${if (erased == 1) "its" else "their"} audio will be erased from this device.",
+            confirmLabel = "Erase",
+            onConfirm = { onSelect(newLimit) },
+            onDismiss = { pendingLimit = null }
+        )
     }
 }
 

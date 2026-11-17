@@ -57,6 +57,8 @@ class HistoryRepository internal constructor(
         .distinctUntilChanged()
         .flatMapLatest(dictationDao::getRecent)
 
+    val historyCount: Flow<Int> = dictationDao.countVisible()
+
     fun recent(limit: Int): Flow<List<DictationSummary>> = dictationDao.getRecent(limit)
 
     suspend fun entry(id: Long): Dictation? = dictationDao.getById(id)

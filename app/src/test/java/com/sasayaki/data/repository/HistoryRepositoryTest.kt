@@ -75,6 +75,14 @@ class HistoryRepositoryTest {
     }
 
     @Test
+    fun `history count ignores entries removed from history`() = runBlocking {
+        repeat(3) { insertVisible(timestamp = now.toEpochMilli() - it) }
+        repository.removeFromHistory(repository.history.first().first().id)
+
+        assertEquals(2, repository.historyCount.first())
+    }
+
+    @Test
     fun `entries beyond the retention limit are deleted with their audio`() = runBlocking {
         preferences.update { it.copy(historyRetentionLimit = 2) }
         repeat(3) { repository.recordSuccess(record(), text = "entry $it", rawText = "entry $it") }

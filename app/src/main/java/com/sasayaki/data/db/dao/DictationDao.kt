@@ -18,6 +18,9 @@ interface DictationDao {
     )
     fun getRecent(limit: Int): Flow<List<DictationSummary>>
 
+    @Query("SELECT COUNT(*) FROM dictations WHERE historyVisible = 1")
+    fun countVisible(): Flow<Int>
+
     @Query("SELECT * FROM dictations WHERE id = :id")
     suspend fun getById(id: Long): Dictation?
 
