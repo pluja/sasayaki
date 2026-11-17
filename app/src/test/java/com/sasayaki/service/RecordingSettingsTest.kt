@@ -37,8 +37,6 @@ class RecordingSettingsTest {
                     prefs.value = prefs.value.copy(keepScreenOnWhileRecording = enabled)
                 },
                 onVibrateOnRecord = {},
-                onAutoClipboard = {},
-                onStartOnBoot = {},
                 onBack = {}
             )
         }

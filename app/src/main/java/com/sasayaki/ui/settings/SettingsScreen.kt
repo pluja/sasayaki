@@ -6,16 +6,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sasayaki.BuildConfig
-import com.sasayaki.data.preferences.BubbleSize
 import com.sasayaki.data.preferences.ThemeMode
 import com.sasayaki.ui.common.openKeyboardSettings
 import com.sasayaki.ui.common.rememberPermissionItems
 import com.sasayaki.ui.common.rememberVoiceInputEnabled
+import com.sasayaki.ui.components.ExternalItem
 import com.sasayaki.ui.components.ItemIcon
 import com.sasayaki.ui.components.NavigationItem
 import com.sasayaki.ui.components.SegmentedGroup
@@ -25,9 +26,12 @@ import com.sasayaki.ui.theme.SasayakiIcons
 import java.util.Locale
 
 private const val SOURCE_URL = "https://github.com/pluja/sasayaki"
+private const val RELEASES_URL = "$SOURCE_URL/releases"
+private const val ISSUES_URL = "$SOURCE_URL/issues"
 
 class SettingsDestinations(
     val onProviders: () -> Unit,
+    val onBubble: () -> Unit,
     val onRecording: () -> Unit,
     val onApps: () -> Unit,
     val onRules: () -> Unit,
@@ -35,49 +39,78 @@ class SettingsDestinations(
     val onPrompts: () -> Unit,
     val onPermissions: () -> Unit,
     val onHistory: () -> Unit,
-    val onAppearance: () -> Unit
+    val onAppearance: () -> Unit,
+    val onLicenses: () -> Unit
 )
 
 @Composable
 fun SettingsRoute(destinations: SettingsDestinations, viewModel: SettingsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val bubbleRunning by viewModel.bubbleRunning.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val voiceInputEnabled = rememberVoiceInputEnabled()
     val missingPermissions = rememberPermissionItems(bubbleNeeded = !voiceInputEnabled).count { it.required && !it.done }
     SettingsScreen(
         state = state,
-        missingPermissions = missingPermissions,
-        voiceInputEnabled = voiceInputEnabled,
-        onOpenKeyboardSettings = { openKeyboardSettings(context) },
+        status = SettingsStatus(missingPermissions, voiceInputEnabled, bubbleRunning),
         destinations = destinations,
-        onOpenSource = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(SOURCE_URL))) }
+        onOpenKeyboardSettings = { openKeyboardSettings(context) },
+        onOpenLink = { url -> context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
     )
 }
+
+@Immutable
+data class SettingsStatus(val missingPermissions: Int, val voiceInputEnabled: Boolean, val bubbleRunning: Boolean)
 
 @Composable
 fun SettingsScreen(
     state: SettingsUiState,
-    missingPermissions: Int,
-    voiceInputEnabled: Boolean,
-    onOpenKeyboardSettings: () -> Unit,
+    status: SettingsStatus,
     destinations: SettingsDestinations,
-    onOpenSource: () -> Unit
+    onOpenKeyboardSettings: () -> Unit,
+    onOpenLink: (String) -> Unit
 ) {
     val prefs = state.preferences
     SettingsPage(title = "Settings", onBack = null) {
         if (!state.loaded) return@SettingsPage
-        item(key = "dictation") {
+        item(key = "providers") {
             SegmentedGroup(
-                title = "Dictation",
+                { shapes ->
+                    NavigationItem(
+                        shapes = shapes,
+                        headline = "Providers",
+                        supporting = state.providers.joinToString { it.name }.ifEmpty { "None yet. Add one to start dictating." },
+                        needsAttention = state.providers.isEmpty(),
+                        icon = SasayakiIcons.Dns,
+                        onClick = destinations.onProviders
+                    )
+                }
+            )
+        }
+        item(key = "input") {
+            SegmentedGroup(
+                title = "Input",
                 items = listOf(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Providers",
-                            supporting = state.providers.joinToString { it.name }.ifEmpty { "None yet. Add one to start dictating." },
-                            needsAttention = state.providers.isEmpty(),
-                            icon = SasayakiIcons.Dns,
-                            onClick = destinations.onProviders
+                            headline = "Bubble",
+                            supporting = if (status.bubbleRunning) "On. Appears when your keyboard opens." else "Off",
+                            icon = SasayakiIcons.ChatBubble,
+                            onClick = destinations.onBubble
+                        )
+                    },
+                    { shapes ->
+                        ExternalItem(
+                            shapes = shapes,
+                            headline = "Keyboard mic key",
+                            supporting = if (status.voiceInputEnabled) {
+                                "On. Your keyboard's mic key opens Sasayaki."
+                            } else {
+                                "Turn on Sasayaki voice input in Android settings"
+                            },
+                            icon = SasayakiIcons.Keyboard,
+                            onClick = onOpenKeyboardSettings
                         )
                     },
                     { shapes ->
@@ -89,29 +122,14 @@ fun SettingsScreen(
                             icon = SasayakiIcons.Mic,
                             onClick = destinations.onRecording
                         )
-                    },
-                    { shapes ->
-                        NavigationItem(
-                            shapes = shapes,
-                            headline = "Keyboard mic key",
-                            supporting = if (voiceInputEnabled) {
-                                "On. Your keyboard's mic key opens Sasayaki."
-                            } else {
-                                "Turn on Sasayaki voice input to dictate from your keyboard's mic key"
-                            },
-                            icon = SasayakiIcons.Keyboard,
-                            onClick = onOpenKeyboardSettings
-                        )
-                    },
-                    { shapes ->
-                        NavigationItem(
-                            shapes = shapes,
-                            headline = "Apps",
-                            supporting = appsSummary(prefs.rememberProfilePerApp, prefs.skipCleanupInAiChats),
-                            icon = SasayakiIcons.Apps,
-                            onClick = destinations.onApps
-                        )
-                    },
+                    }
+                )
+            )
+        }
+        item(key = "text") {
+            SegmentedGroup(
+                title = "Text",
+                items = listOf(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
@@ -154,20 +172,33 @@ fun SettingsScreen(
                 )
             )
         }
-        item(key = "app") {
+        item(key = "apps") {
             SegmentedGroup(
-                title = "App",
+                { shapes ->
+                    NavigationItem(
+                        shapes = shapes,
+                        headline = "Apps",
+                        supporting = appsSummary(prefs.rememberProfilePerApp, prefs.skipCleanupInAiChats),
+                        icon = SasayakiIcons.Apps,
+                        onClick = destinations.onApps
+                    )
+                }
+            )
+        }
+        item(key = "sasayaki") {
+            SegmentedGroup(
+                title = "Sasayaki",
                 items = listOf(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
                             headline = "Permissions",
-                            supporting = when (missingPermissions) {
+                            supporting = when (status.missingPermissions) {
                                 0 -> "All set"
                                 1 -> "1 needs your attention"
-                                else -> "$missingPermissions need your attention"
+                                else -> "${status.missingPermissions} need your attention"
                             },
-                            needsAttention = missingPermissions > 0,
+                            needsAttention = status.missingPermissions > 0,
                             icon = SasayakiIcons.Shield,
                             onClick = destinations.onPermissions
                         )
@@ -191,11 +222,7 @@ fun SettingsScreen(
                             headline = "Appearance",
                             supporting = listOfNotNull(
                                 prefs.themeMode.label(),
-                                "wallpaper colors".takeIf { prefs.wallpaperColors },
-                                "${prefs.bubbleSize.label().lowercase()} bubble".takeIf { prefs.bubbleSize != BubbleSize.STANDARD },
-                                "${prefs.controlsSize.label().lowercase()} controls".takeIf { prefs.controlsSize != BubbleSize.STANDARD },
-                                "see-through".takeIf { prefs.bubbleTranslucent },
-                                "monochrome".takeIf { prefs.bubbleMonochrome }
+                                "wallpaper colors".takeIf { prefs.wallpaperColors }
                             ).joinToString(" · "),
                             icon = SasayakiIcons.Palette,
                             onClick = destinations.onAppearance
@@ -209,12 +236,39 @@ fun SettingsScreen(
                 title = "About",
                 items = listOf(
                     { shapes ->
-                        NavigationItem(
+                        ExternalItem(
+                            shapes = shapes,
+                            headline = "What's new",
+                            supporting = "Release notes for every version",
+                            icon = SasayakiIcons.NewReleases,
+                            onClick = { onOpenLink(RELEASES_URL) }
+                        )
+                    },
+                    { shapes ->
+                        ExternalItem(
+                            shapes = shapes,
+                            headline = "Report a problem",
+                            supporting = "Open an issue on GitHub",
+                            icon = SasayakiIcons.BugReport,
+                            onClick = { onOpenLink(ISSUES_URL) }
+                        )
+                    },
+                    { shapes ->
+                        ExternalItem(
                             shapes = shapes,
                             headline = "Source code",
-                            supporting = "Free and open source",
+                            supporting = "Free software under the GPL-3.0",
                             icon = SasayakiIcons.Code,
-                            onClick = onOpenSource
+                            onClick = { onOpenLink(SOURCE_URL) }
+                        )
+                    },
+                    { shapes ->
+                        NavigationItem(
+                            shapes = shapes,
+                            headline = "Open-source licenses",
+                            supporting = "The libraries Sasayaki is built with",
+                            icon = SasayakiIcons.License,
+                            onClick = destinations.onLicenses
                         )
                     },
                     { shapes ->

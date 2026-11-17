@@ -107,6 +107,21 @@ fun NavigationItem(
     }
 }
 
+/** ExternalItem is a row that leaves the app, to system settings or a web page. */
+@Composable
+fun ExternalItem(shapes: ListItemShapes, headline: String, onClick: () -> Unit, supporting: String? = null, icon: ImageVector? = null) {
+    SegmentedListItem(
+        onClick = onClick,
+        shapes = shapes,
+        colors = segmentedItemColors(),
+        leadingContent = icon?.let { { ItemIcon(it) } },
+        supportingContent = supporting?.let { { Text(it) } },
+        trailingContent = { Icon(SasayakiIcons.OpenInNew, contentDescription = null) }
+    ) {
+        Text(headline)
+    }
+}
+
 @Composable
 fun SwitchItem(
     shapes: ListItemShapes,

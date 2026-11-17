@@ -29,6 +29,9 @@ data object ProvidersDestination
 data class ProviderEditorDestination(val id: Long)
 
 @Serializable
+data object BubbleSettingsDestination
+
+@Serializable
 data object RecordingSettingsDestination
 
 @Serializable
@@ -51,3 +54,6 @@ data object VocabularyDestination
 
 @Serializable
 data object PromptsDestination
+
+@Serializable
+data object LicensesDestination

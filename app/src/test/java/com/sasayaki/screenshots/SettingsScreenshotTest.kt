@@ -13,9 +13,11 @@ import com.sasayaki.domain.provider.Provider
 import com.sasayaki.ui.common.SetupItem
 import com.sasayaki.ui.components.SettingsPage
 import com.sasayaki.ui.components.SetupGroup
-import com.sasayaki.ui.settings.AppearanceActions
 import com.sasayaki.ui.settings.AppearanceSettingsScreen
 import com.sasayaki.ui.settings.AppsSettingsScreen
+import com.sasayaki.ui.settings.BubbleSettingsActions
+import com.sasayaki.ui.settings.BubbleSettingsScreen
+import com.sasayaki.ui.settings.LicensesScreen
 import com.sasayaki.ui.settings.ProviderEditorActions
 import com.sasayaki.ui.settings.ProviderEditorScreen
 import com.sasayaki.ui.settings.ProviderEditorUiState
@@ -25,8 +27,10 @@ import com.sasayaki.ui.settings.RecordingSettingsScreen
 import com.sasayaki.ui.settings.ReplacementRulesScreen
 import com.sasayaki.ui.settings.SettingsDestinations
 import com.sasayaki.ui.settings.SettingsScreen
+import com.sasayaki.ui.settings.SettingsStatus
 import com.sasayaki.ui.settings.SettingsUiState
 import com.sasayaki.ui.settings.VocabularyScreen
+import com.sasayaki.ui.settings.openSourceLibraries
 import com.sasayaki.ui.theme.SasayakiIcons
 import org.junit.Rule
 import org.junit.Test
@@ -47,7 +51,7 @@ class SettingsScreenshotTest {
         Provider(3, "OpenAI", "https://api.openai.com", apiKey = "sk", speechModel = "whisper-1", cleanupModel = "gpt-4o-mini")
     )
 
-    private val noDestinations = SettingsDestinations({}, {}, {}, {}, {}, {}, {}, {}, {})
+    private val noDestinations = SettingsDestinations({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
 
     private val editorActions = ProviderEditorActions({}, {}, {}, {}, {}, {}, {}, {}, {})
 
@@ -55,11 +59,10 @@ class SettingsScreenshotTest {
     fun overview() = compose.screenshot("settings_overview_light") {
         SettingsScreen(
             state = SettingsUiState(loaded = true, preferences = UserPreferences(), providers = providers, ruleCount = 3),
-            missingPermissions = 1,
-            voiceInputEnabled = false,
-            onOpenKeyboardSettings = {},
+            status = SettingsStatus(missingPermissions = 1, voiceInputEnabled = false, bubbleRunning = true),
             destinations = noDestinations,
-            onOpenSource = {}
+            onOpenKeyboardSettings = {},
+            onOpenLink = {}
         )
     }
 
@@ -67,11 +70,10 @@ class SettingsScreenshotTest {
     fun overviewDark() = compose.screenshot("settings_overview_dark", dark = true) {
         SettingsScreen(
             state = SettingsUiState(loaded = true, preferences = UserPreferences(), providers = emptyList()),
-            missingPermissions = 0,
-            voiceInputEnabled = true,
-            onOpenKeyboardSettings = {},
+            status = SettingsStatus(missingPermissions = 0, voiceInputEnabled = true, bubbleRunning = false),
             destinations = noDestinations,
-            onOpenSource = {}
+            onOpenKeyboardSettings = {},
+            onOpenLink = {}
         )
     }
 
@@ -89,34 +91,44 @@ class SettingsScreenshotTest {
 
     @Test
     fun recording() = compose.screenshot("settings_recording_light") {
-        RecordingSettingsScreen(true, UserPreferences(), {}, {}, {}, {}, {}, {}, {})
+        RecordingSettingsScreen(true, UserPreferences(), {}, {}, {}, {}, {})
     }
 
     @Test
     fun recordingDark() = compose.screenshot("settings_recording_dark", dark = true) {
-        RecordingSettingsScreen(true, UserPreferences(keepScreenOnWhileRecording = false), {}, {}, {}, {}, {}, {}, {})
+        RecordingSettingsScreen(true, UserPreferences(keepScreenOnWhileRecording = false), {}, {}, {}, {}, {})
     }
 
     @Test
     fun appearance() = compose.screenshot("settings_appearance_dark", dark = true) {
-        AppearanceSettingsScreen(
+        AppearanceSettingsScreen(loaded = true, prefs = UserPreferences(), onThemeMode = {}, onWallpaperColors = {}, onBack = {})
+    }
+
+    @Test
+    fun bubble() = compose.screenshot("settings_bubble_dark", dark = true) {
+        BubbleSettingsScreen(
             loaded = true,
             prefs = UserPreferences(bubbleTranslucent = true, bubbleSize = BubbleSize.TINY, controlsSize = BubbleSize.LARGE),
             bubbleRunning = true,
-            actions = AppearanceActions({}, {}, {}, {}, {}, {}, {}),
+            actions = BubbleSettingsActions({}, {}, {}, {}, {}, {}, {}),
             onBack = {}
         )
     }
 
     @Test
-    fun appearanceBubbleOff() = compose.screenshot("settings_appearance_off_light") {
-        AppearanceSettingsScreen(
+    fun bubbleOff() = compose.screenshot("settings_bubble_off_light") {
+        BubbleSettingsScreen(
             loaded = true,
             prefs = UserPreferences(),
             bubbleRunning = false,
-            actions = AppearanceActions({}, {}, {}, {}, {}, {}, {}),
+            actions = BubbleSettingsActions({}, {}, {}, {}, {}, {}, {}),
             onBack = {}
         )
+    }
+
+    @Test
+    fun licenses() = compose.screenshot("settings_licenses_light") {
+        LicensesScreen(libraries = openSourceLibraries, onOpen = {}, onBack = {})
     }
 
     @Test
