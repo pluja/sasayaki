@@ -35,6 +35,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -42,6 +44,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.R
 import com.sasayaki.data.repository.ConnectionResult
 import com.sasayaki.domain.provider.ModelKind
 import com.sasayaki.domain.provider.Purpose
@@ -101,21 +104,22 @@ class ProviderEditorActions(
 @Composable
 fun ProviderEditorScreen(isNew: Boolean, form: ProviderForm, state: ProviderEditorUiState, actions: ProviderEditorActions) {
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    val intro = stringResource(R.string.provider_intro)
 
     SettingsPage(
-        title = if (isNew) "Add provider" else form.name.ifBlank { "Provider" },
+        title = if (isNew) stringResource(R.string.provider_add) else form.name.ifBlank { stringResource(R.string.provider_untitled) },
         onBack = actions.onBack,
         itemSpacing = Spacing.l,
         actions = {
             if (!isNew) {
                 IconButton(onClick = { confirmDelete = true }) {
-                    Icon(SasayakiIcons.Delete, contentDescription = "Delete provider")
+                    Icon(SasayakiIcons.Delete, contentDescription = stringResource(R.string.provider_delete))
                 }
             }
         }
     ) {
         if (isNew) {
-            pageIntro("Any OpenAI-compatible server works: your own (speaches, whisper.cpp, llama.cpp) or a hosted one.")
+            pageIntro(intro)
         }
         item(key = "connection") {
             ProviderConnectionForm(form, state, actions)
@@ -131,7 +135,7 @@ fun ProviderEditorScreen(isNew: Boolean, form: ProviderForm, state: ProviderEdit
                 if (state.testing) {
                     LoadingIndicator(modifier = Modifier.size(28.dp), color = MaterialTheme.colorScheme.onPrimary)
                 } else {
-                    Text(if (state.models.isEmpty()) "Test connection" else "Test again")
+                    Text(stringResource(if (state.models.isEmpty()) R.string.provider_test else R.string.provider_test_again))
                 }
             }
         }
@@ -159,7 +163,7 @@ fun ProviderEditorScreen(isNew: Boolean, form: ProviderForm, state: ProviderEdit
                         .fillMaxWidth()
                         .heightIn(min = ButtonDefaults.MediumContainerHeight)
                 ) {
-                    Text("Add provider")
+                    Text(stringResource(R.string.provider_add))
                 }
             }
         }
@@ -168,9 +172,13 @@ fun ProviderEditorScreen(isNew: Boolean, form: ProviderForm, state: ProviderEdit
     if (confirmDelete) {
         DestructiveDialog(
             icon = SasayakiIcons.Delete,
-            title = "Delete ${form.name.ifBlank { "this provider" }}?",
-            text = "Profiles that use it switch to another provider. The API key is erased from this device.",
-            confirmLabel = "Delete",
+            title = if (form.name.isBlank()) {
+                stringResource(R.string.provider_delete_unnamed_title)
+            } else {
+                stringResource(R.string.provider_delete_named_title, form.name)
+            },
+            text = stringResource(R.string.provider_delete_text),
+            confirmLabel = stringResource(R.string.action_delete),
             onConfirm = actions.onDelete,
             onDismiss = { confirmDelete = false }
         )
@@ -187,7 +195,7 @@ internal fun ProviderConnectionForm(form: ProviderForm, state: ProviderEditorUiS
                 onValueChange = actions.onUrlChange,
                 enabled = state.loaded,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Server address") },
+                label = { Text(stringResource(R.string.provider_server_address)) },
                 placeholder = { Text("https://api.example.com") },
                 singleLine = true,
                 isError = state.urlError != null,
@@ -196,11 +204,11 @@ internal fun ProviderConnectionForm(form: ProviderForm, state: ProviderEditorUiS
                         state.urlError != null -> Text(state.urlError)
 
                         state.unencrypted -> Text(
-                            "Not encrypted. Use it only on a network you trust.",
+                            stringResource(R.string.provider_unencrypted),
                             color = MaterialTheme.colorScheme.tertiary
                         )
 
-                        else -> Text("https://, or http:// for a server on your local network.")
+                        else -> Text(stringResource(R.string.provider_server_address_hint))
                     }
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next, autoCorrectEnabled = false)
@@ -210,9 +218,9 @@ internal fun ProviderConnectionForm(form: ProviderForm, state: ProviderEditorUiS
                 onValueChange = actions.onApiKeyChange,
                 enabled = state.loaded,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("API key") },
+                label = { Text(stringResource(R.string.provider_api_key)) },
                 singleLine = true,
-                supportingText = { Text("Leave empty if your server doesn't use one.") },
+                supportingText = { Text(stringResource(R.string.provider_api_key_hint)) },
                 visualTransformation = if (revealKey) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
@@ -223,7 +231,7 @@ internal fun ProviderConnectionForm(form: ProviderForm, state: ProviderEditorUiS
                     IconButton(onClick = { revealKey = !revealKey }) {
                         Icon(
                             imageVector = if (revealKey) SasayakiIcons.VisibilityOff else SasayakiIcons.Visibility,
-                            contentDescription = if (revealKey) "Hide key" else "Show key"
+                            contentDescription = stringResource(if (revealKey) R.string.provider_hide_key else R.string.provider_show_key)
                         )
                     }
                 }
@@ -233,9 +241,9 @@ internal fun ProviderConnectionForm(form: ProviderForm, state: ProviderEditorUiS
                 onValueChange = actions.onNameChange,
                 enabled = state.loaded,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Name") },
+                label = { Text(stringResource(R.string.provider_name)) },
                 singleLine = true,
-                supportingText = { Text("How it appears in profiles.") },
+                supportingText = { Text(stringResource(R.string.provider_name_hint)) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { actions.onTest() })
             )
@@ -247,13 +255,13 @@ internal fun ProviderConnectionForm(form: ProviderForm, state: ProviderEditorUiS
 internal fun DefaultModels(form: ProviderForm, state: ProviderEditorUiState, actions: ProviderEditorActions) {
     var picking by rememberSaveable { mutableStateOf<Purpose?>(null) }
     SegmentedGroup(
-        title = "Default models",
+        title = stringResource(R.string.provider_default_models),
         items = listOf(
             { shapes ->
                 NavigationItem(
                     shapes = shapes,
-                    headline = "Speech to text",
-                    supporting = form.speechModel ?: "Not used",
+                    headline = stringResource(R.string.provider_speech_to_text),
+                    supporting = form.speechModel ?: stringResource(R.string.provider_not_used),
                     icon = SasayakiIcons.Mic,
                     onClick = { picking = Purpose.SPEECH }
                 )
@@ -261,8 +269,8 @@ internal fun DefaultModels(form: ProviderForm, state: ProviderEditorUiState, act
             { shapes ->
                 NavigationItem(
                     shapes = shapes,
-                    headline = "Cleanup",
-                    supporting = form.cleanupModel ?: "Not used",
+                    headline = stringResource(R.string.provider_cleanup),
+                    supporting = form.cleanupModel ?: stringResource(R.string.provider_not_used),
                     icon = SasayakiIcons.AutoAwesome,
                     onClick = { picking = Purpose.CLEANUP }
                 )
@@ -270,7 +278,7 @@ internal fun DefaultModels(form: ProviderForm, state: ProviderEditorUiState, act
         )
     )
     Text(
-        text = "Profiles use these unless you pick other models for a profile.",
+        text = stringResource(R.string.provider_default_models_hint),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(start = Spacing.l, top = Spacing.s)
@@ -279,15 +287,15 @@ internal fun DefaultModels(form: ProviderForm, state: ProviderEditorUiState, act
     picking?.let { purpose ->
         val speech = purpose == Purpose.SPEECH
         ModelPickerSheet(
-            title = if (speech) "Speech to text model" else "Cleanup model",
+            title = stringResource(if (speech) R.string.provider_speech_model else R.string.provider_cleanup_model),
             models = state.models.suitableFor(purpose),
             selected = if (speech) form.speechModel else form.cleanupModel,
-            noneLabel = if (speech) "Don't use for speech to text" else "Don't use for cleanup",
+            noneLabel = stringResource(if (speech) R.string.provider_no_speech_model else R.string.provider_no_cleanup_model),
             loading = state.loadingModels,
             note = when {
                 state.models.isNotEmpty() -> null
-                state.result is ConnectionResult.Connected -> "This server doesn't list its models. Type the model name below."
-                else -> "Test the connection to load this server's models, or type a name below."
+                state.result is ConnectionResult.Connected -> stringResource(R.string.provider_models_unlisted_note)
+                else -> stringResource(R.string.provider_models_untested_note)
             },
             onSelect = { model ->
                 if (speech) actions.onSpeechModel(model) else actions.onCleanupModel(model)
@@ -312,7 +320,10 @@ internal fun ConnectionResultCard(result: ConnectionResult) {
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.m), verticalAlignment = Alignment.CenterVertically) {
                 Icon(if (connected) SasayakiIcons.CheckCircle else SasayakiIcons.Error, contentDescription = null)
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
-                    Text(if (connected) "Connected" else "Couldn't connect", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(if (connected) R.string.provider_connected else R.string.provider_connection_failed),
+                        style = MaterialTheme.typography.titleMedium
+                    )
                     Text(resultSummary(result), style = MaterialTheme.typography.bodyMedium)
                 }
             }
@@ -331,7 +342,7 @@ internal fun ConnectionResultCard(result: ConnectionResult) {
                         0
                     ) {
                         Pill(
-                            text = "+$more more",
+                            text = pluralStringResource(R.plurals.provider_more_models, more, more),
                             containerColor = Color.Transparent,
                             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -342,15 +353,17 @@ internal fun ConnectionResultCard(result: ConnectionResult) {
     }
 }
 
+@Composable
 private fun resultSummary(result: ConnectionResult): String = when (result) {
     is ConnectionResult.Failed -> result.message
 
     is ConnectionResult.Connected -> {
+        val total = result.models.size
         val speech = result.models.count { it.kind == ModelKind.SPEECH }
         when {
-            result.models.isEmpty() -> "The server answered but doesn't list its models."
-            speech == 0 -> "${result.models.size} models available."
-            else -> "${result.models.size} models available, $speech for speech to text."
+            result.models.isEmpty() -> stringResource(R.string.provider_models_unlisted)
+            speech == 0 -> pluralStringResource(R.plurals.provider_models_available, total, total)
+            else -> pluralStringResource(R.plurals.provider_models_available_speech, total, total, speech)
         }
     }
 }

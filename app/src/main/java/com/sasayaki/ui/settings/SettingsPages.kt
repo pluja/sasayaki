@@ -1,6 +1,7 @@
 package com.sasayaki.ui.settings
 
 import android.os.Build
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,9 +23,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.R
 import com.sasayaki.data.preferences.BUBBLE_SIZES
 import com.sasayaki.data.preferences.BubbleSize
 import com.sasayaki.data.preferences.CONTROLS_SIZES
@@ -75,18 +78,18 @@ fun RecordingSettingsScreen(
     onVibrateOnRecord: (Boolean) -> Unit,
     onBack: () -> Unit
 ) {
-    SettingsPage(title = "Recording", onBack = onBack) {
+    SettingsPage(title = stringResource(R.string.settings_recording), onBack = onBack) {
         if (!loaded) return@SettingsPage
         item(key = "listening") {
             SegmentedGroup(
-                title = "Listening",
+                title = stringResource(R.string.settings_listening),
                 items = listOf(
                     { shapes -> SilenceItem(shapes, prefs.silenceThresholdMs, onSilenceThreshold) },
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
-                            headline = "Pause other audio",
-                            supporting = "Music and videos pause while you speak",
+                            headline = stringResource(R.string.settings_pause_other_audio),
+                            supporting = stringResource(R.string.settings_pause_other_audio_summary),
                             icon = SasayakiIcons.MusicOff,
                             checked = prefs.pauseOtherAudio,
                             onCheckedChange = onPauseOtherAudio
@@ -95,8 +98,8 @@ fun RecordingSettingsScreen(
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
-                            headline = "Keep screen on while recording",
-                            supporting = "The screen stays on while you dictate, and can turn off again when you pause",
+                            headline = stringResource(R.string.settings_keep_screen_on),
+                            supporting = stringResource(R.string.settings_keep_screen_on_summary),
                             icon = SasayakiIcons.Visibility,
                             checked = prefs.keepScreenOnWhileRecording,
                             onCheckedChange = onKeepScreenOnWhileRecording
@@ -105,8 +108,8 @@ fun RecordingSettingsScreen(
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
-                            headline = "Haptic feedback",
-                            supporting = "A short buzz when recording starts and stops",
+                            headline = stringResource(R.string.settings_haptic_feedback),
+                            supporting = stringResource(R.string.settings_haptic_feedback_summary),
                             icon = SasayakiIcons.Vibration,
                             checked = prefs.vibrateOnRecord,
                             onCheckedChange = onVibrateOnRecord
@@ -141,19 +144,20 @@ fun AppsSettingsScreen(
     onBack: () -> Unit
 ) {
     var confirmForget by rememberSaveable { mutableStateOf(false) }
-    SettingsPage(title = "Apps", onBack = onBack) {
+    val intro = stringResource(R.string.settings_apps_intro)
+    SettingsPage(title = stringResource(R.string.settings_apps), onBack = onBack) {
         if (!loaded) return@SettingsPage
-        pageIntro("Sasayaki can adapt to the app you are dictating into.")
+        pageIntro(intro)
         item(key = "profiles") {
             val remembered = prefs.appProfiles.size
             SegmentedGroup(
-                title = "Profiles",
+                title = stringResource(R.string.settings_apps_profiles),
                 items = listOf(
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
-                            headline = "Remember profile per app",
-                            supporting = "Switch to the profile you last picked from the bubble in each app",
+                            headline = stringResource(R.string.settings_remember_profile),
+                            supporting = stringResource(R.string.settings_remember_profile_summary),
                             icon = SasayakiIcons.SwitchAccount,
                             checked = prefs.rememberProfilePerApp,
                             onCheckedChange = onRememberProfilesChange
@@ -162,14 +166,13 @@ fun AppsSettingsScreen(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Remembered apps",
+                            headline = stringResource(R.string.settings_remembered_apps),
                             supporting = when (remembered) {
-                                0 -> "None yet"
-                                1 -> "1 app"
-                                else -> "$remembered apps"
+                                0 -> stringResource(R.string.settings_remembered_apps_none)
+                                else -> pluralStringResource(R.plurals.settings_remembered_apps_count, remembered, remembered)
                             },
                             icon = SasayakiIcons.DeleteSweep,
-                            trailingText = if (remembered > 0) "Forget" else "",
+                            trailingText = if (remembered > 0) stringResource(R.string.settings_forget) else "",
                             enabled = remembered > 0,
                             onClick = { confirmForget = true }
                         )
@@ -179,14 +182,13 @@ fun AppsSettingsScreen(
         }
         item(key = "cleanup") {
             SegmentedGroup(
-                title = "Cleanup",
+                title = stringResource(R.string.settings_apps_cleanup),
                 items = listOf(
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
-                            headline = "Skip cleanup in AI chats",
-                            supporting = "Assistants like ChatGPT and Claude get your words as spoken, " +
-                                "so cleanup never answers the prompt for them",
+                            headline = stringResource(R.string.settings_skip_ai_chats),
+                            supporting = stringResource(R.string.settings_skip_ai_chats_summary),
                             icon = SasayakiIcons.SmartToy,
                             checked = prefs.skipCleanupInAiChats,
                             onCheckedChange = onSkipAiChatsChange
@@ -200,9 +202,9 @@ fun AppsSettingsScreen(
         val remembered = prefs.appProfiles.size
         DestructiveDialog(
             icon = SasayakiIcons.DeleteSweep,
-            title = if (remembered == 1) "Forget 1 app?" else "Forget $remembered apps?",
-            text = "They go back to the active profile until you pick another one from the bubble there.",
-            confirmLabel = "Forget",
+            title = pluralStringResource(R.plurals.settings_forget_apps_title, remembered, remembered),
+            text = stringResource(R.string.settings_forget_apps_text),
+            confirmLabel = stringResource(R.string.settings_forget),
             onConfirm = onForgetApps,
             onDismiss = { confirmForget = false }
         )
@@ -213,17 +215,18 @@ fun AppsSettingsScreen(
 fun HistorySettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val prefs = state.preferences
-    SettingsPage(title = "History and privacy", onBack = onBack) {
+    val intro = stringResource(R.string.settings_history_intro)
+    SettingsPage(title = stringResource(R.string.settings_history), onBack = onBack) {
         if (!state.loaded) return@SettingsPage
-        pageIntro("Dictations never leave this device except to reach your providers.")
+        pageIntro(intro)
         item(key = "history") {
             SegmentedGroup(
                 items = listOf(
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
-                            headline = "Keep history",
-                            supporting = "Saves text and audio so you can copy or retry later",
+                            headline = stringResource(R.string.settings_keep_history),
+                            supporting = stringResource(R.string.settings_keep_history_summary),
                             icon = SasayakiIcons.History,
                             checked = prefs.historyEnabled,
                             onCheckedChange = viewModel::setHistoryEnabled
@@ -241,8 +244,8 @@ fun HistorySettingsRoute(onBack: () -> Unit, viewModel: SettingsViewModel = hilt
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
-                            headline = "Count words without history",
-                            supporting = "Keep your totals when nothing else is saved",
+                            headline = stringResource(R.string.settings_count_words),
+                            supporting = stringResource(R.string.settings_count_words_summary),
                             icon = SasayakiIcons.Speed,
                             checked = prefs.keepStatsWithoutHistory,
                             onCheckedChange = viewModel::setKeepStatsWithoutHistory,
@@ -275,7 +278,7 @@ fun AppearanceSettingsScreen(
     onWallpaperColors: (Boolean) -> Unit,
     onBack: () -> Unit
 ) {
-    SettingsPage(title = "Appearance", onBack = onBack) {
+    SettingsPage(title = stringResource(R.string.settings_appearance), onBack = onBack) {
         if (!loaded) return@SettingsPage
         item(key = "app") {
             val items = buildList<SegmentedItem> {
@@ -284,8 +287,8 @@ fun AppearanceSettingsScreen(
                     add { shapes ->
                         SwitchItem(
                             shapes = shapes,
-                            headline = "Wallpaper colors",
-                            supporting = "Match your wallpaper instead of Sasayaki green",
+                            headline = stringResource(R.string.settings_wallpaper_colors),
+                            supporting = stringResource(R.string.settings_wallpaper_colors_summary),
                             icon = SasayakiIcons.Wallpaper,
                             checked = prefs.wallpaperColors,
                             onCheckedChange = onWallpaperColors
@@ -341,17 +344,18 @@ fun BubbleSettingsScreen(
     actions: BubbleSettingsActions,
     onBack: () -> Unit
 ) {
-    SettingsPage(title = "Bubble", onBack = onBack) {
+    val intro = stringResource(R.string.settings_bubble_intro)
+    SettingsPage(title = stringResource(R.string.settings_bubble), onBack = onBack) {
         if (!loaded) return@SettingsPage
-        pageIntro("A floating button that appears whenever your keyboard opens. Tap it to dictate into any app.")
+        pageIntro(intro)
         item(key = "behavior") {
             SegmentedGroup(
                 items = listOf(
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
-                            headline = "Show the bubble",
-                            supporting = "Needs the overlay and text insertion permissions",
+                            headline = stringResource(R.string.settings_show_bubble),
+                            supporting = stringResource(R.string.settings_show_bubble_summary),
                             icon = SasayakiIcons.PowerSettings,
                             checked = bubbleRunning,
                             onCheckedChange = actions.onBubbleEnabled
@@ -360,8 +364,8 @@ fun BubbleSettingsScreen(
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
-                            headline = "Start on boot",
-                            supporting = "Turn the bubble back on after a restart",
+                            headline = stringResource(R.string.settings_start_on_boot),
+                            supporting = stringResource(R.string.settings_start_on_boot_summary),
                             icon = SasayakiIcons.Refresh,
                             checked = prefs.startOnBoot,
                             onCheckedChange = actions.onStartOnBoot
@@ -370,8 +374,8 @@ fun BubbleSettingsScreen(
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
-                            headline = "Copy when typing fails",
-                            supporting = "If an app doesn't accept the text, it is copied so you can paste it",
+                            headline = stringResource(R.string.settings_copy_on_failure),
+                            supporting = stringResource(R.string.settings_copy_on_failure_summary),
                             icon = SasayakiIcons.ContentPaste,
                             checked = prefs.autoClipboard,
                             onCheckedChange = actions.onAutoClipboard
@@ -383,15 +387,15 @@ fun BubbleSettingsScreen(
         item(key = "look") {
             val appearance = BubbleAppearance(prefs.wallpaperColors, prefs.bubbleTranslucent, prefs.bubbleMonochrome)
             SegmentedGroup(
-                title = "Look",
+                title = stringResource(R.string.settings_bubble_look),
                 items = listOf(
                     { shapes -> BubblePreview(shapes, appearance, BubbleScales(prefs.bubbleSize.scale, prefs.controlsSize.scale)) },
                     { shapes ->
                         SizeItem(
                             shapes = shapes,
                             icon = SasayakiIcons.ChatBubble,
-                            headline = "Bubble size",
-                            supporting = "The bubble that waits by your keyboard.",
+                            headline = stringResource(R.string.settings_bubble_size),
+                            supporting = stringResource(R.string.settings_bubble_size_summary),
                             options = BUBBLE_SIZES,
                             selected = prefs.bubbleSize,
                             onSelect = actions.onBubbleSize
@@ -401,8 +405,8 @@ fun BubbleSettingsScreen(
                         SizeItem(
                             shapes = shapes,
                             icon = SasayakiIcons.GraphicEq,
-                            headline = "Controls size",
-                            supporting = "The controls while recording. Bigger buttons are easier to hit on the move.",
+                            headline = stringResource(R.string.settings_controls_size),
+                            supporting = stringResource(R.string.settings_controls_size_summary),
                             options = CONTROLS_SIZES,
                             selected = prefs.controlsSize,
                             onSelect = actions.onControlsSize
@@ -411,8 +415,8 @@ fun BubbleSettingsScreen(
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
-                            headline = "See-through",
-                            supporting = "Let what is underneath show through the bubble",
+                            headline = stringResource(R.string.settings_see_through),
+                            supporting = stringResource(R.string.settings_see_through_summary),
                             icon = SasayakiIcons.Opacity,
                             checked = prefs.bubbleTranslucent,
                             onCheckedChange = actions.onBubbleTranslucent
@@ -421,8 +425,8 @@ fun BubbleSettingsScreen(
                     { shapes ->
                         SwitchItem(
                             shapes = shapes,
-                            headline = "Monochrome",
-                            supporting = "Gray instead of color, for the bubble and the keyboard panel",
+                            headline = stringResource(R.string.settings_monochrome),
+                            supporting = stringResource(R.string.settings_monochrome_summary),
                             icon = SasayakiIcons.FilterBAndW,
                             checked = prefs.bubbleMonochrome,
                             onCheckedChange = actions.onBubbleMonochrome
@@ -438,8 +442,9 @@ fun BubbleSettingsScreen(
 fun PermissionsRoute(onBack: () -> Unit) {
     val items = rememberPermissionItems(bubbleNeeded = !rememberVoiceInputEnabled())
     val restricted = rememberRestrictedSettingsLikely()
-    SettingsPage(title = "Permissions", onBack = onBack) {
-        pageIntro("Sasayaki needs these to listen when you ask and type the result where you are.")
+    val intro = stringResource(R.string.settings_permissions_intro)
+    SettingsPage(title = stringResource(R.string.settings_permissions), onBack = onBack) {
+        pageIntro(intro)
         item(key = "permissions") {
             SetupGroup(items = items, restrictedSettingsLikely = restricted)
         }
@@ -449,17 +454,16 @@ fun PermissionsRoute(onBack: () -> Unit) {
 @Composable
 private fun SilenceItem(shapes: ListItemShapes, thresholdMs: Long, onChange: (Long) -> Unit) {
     val state = rememberSliderState(value = thresholdMs / 1000f, steps = 8, trackRange = 0.5f..5f)
-    val locale = LocalConfiguration.current.locales[0]
     SegmentedListItem(
         shapes = shapes,
         colors = segmentedItemColors(),
         leadingContent = { ItemIcon(SasayakiIcons.Timer) },
         trailingContent = {
-            Text(String.format(locale, "%.1f s", state.value), style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.settings_silence_seconds, state.value), style = MaterialTheme.typography.labelLarge)
         },
         supportingContent = {
             Column {
-                Text("Recording stops after this much quiet")
+                Text(stringResource(R.string.settings_silence_summary))
                 Slider(
                     state = state,
                     onValueChange = { state.value = it },
@@ -469,7 +473,7 @@ private fun SilenceItem(shapes: ListItemShapes, thresholdMs: Long, onChange: (Lo
             }
         }
     ) {
-        Text("Stop after silence")
+        Text(stringResource(R.string.settings_silence))
     }
 }
 
@@ -480,8 +484,8 @@ private fun RetentionItem(shapes: ListItemShapes, limit: Int, historyCount: Int,
     Box {
         NavigationItem(
             shapes = shapes,
-            headline = "Keep the last",
-            supporting = "Older dictations are removed automatically",
+            headline = stringResource(R.string.settings_retention),
+            supporting = stringResource(R.string.settings_retention_summary),
             icon = SasayakiIcons.DeleteSweep,
             trailingText = "$limit",
             enabled = enabled,
@@ -490,7 +494,7 @@ private fun RetentionItem(shapes: ListItemShapes, limit: Int, historyCount: Int,
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             retentionOptions.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text("$option dictations") },
+                    text = { Text(pluralStringResource(R.plurals.settings_retention_option, option, option)) },
                     onClick = {
                         expanded = false
                         if (historyCount > option) pendingLimit = option else onSelect(option)
@@ -508,10 +512,9 @@ private fun RetentionItem(shapes: ListItemShapes, limit: Int, historyCount: Int,
         val erased = historyCount - newLimit
         DestructiveDialog(
             icon = SasayakiIcons.DeleteSweep,
-            title = "Keep only the last $newLimit?",
-            text = "The ${if (erased == 1) "oldest dictation" else "$erased oldest dictations"} and " +
-                "${if (erased == 1) "its" else "their"} audio will be erased from this device.",
-            confirmLabel = "Erase",
+            title = pluralStringResource(R.plurals.settings_retention_confirm_title, newLimit, newLimit),
+            text = pluralStringResource(R.plurals.settings_retention_confirm_text, erased, erased),
+            confirmLabel = stringResource(R.string.settings_erase),
             onConfirm = { onSelect(newLimit) },
             onDismiss = { pendingLimit = null }
         )
@@ -528,6 +531,7 @@ private fun SizeItem(
     selected: BubbleSize,
     onSelect: (BubbleSize) -> Unit
 ) {
+    val labels = options.associateWith { stringResource(it.label()) }
     SegmentedListItem(
         shapes = shapes,
         colors = segmentedItemColors(),
@@ -539,7 +543,7 @@ private fun SizeItem(
                     options = options,
                     selected = selected,
                     onSelect = onSelect,
-                    label = BubbleSize::label
+                    label = labels::getValue
                 )
             }
         }
@@ -548,16 +552,26 @@ private fun SizeItem(
     }
 }
 
-internal fun BubbleSize.label(): String = when (this) {
-    BubbleSize.TINY -> "Tiny"
-    BubbleSize.SMALL -> "Small"
-    BubbleSize.STANDARD -> "Normal"
-    BubbleSize.LARGE -> "Large"
-    BubbleSize.LARGER -> "Huge"
+@StringRes
+internal fun BubbleSize.label(): Int = when (this) {
+    BubbleSize.TINY -> R.string.settings_size_tiny
+    BubbleSize.SMALL -> R.string.settings_size_small
+    BubbleSize.STANDARD -> R.string.settings_size_normal
+    BubbleSize.LARGE -> R.string.settings_size_large
+    BubbleSize.LARGER -> R.string.settings_size_huge
 }
 
 @Composable
 private fun ThemeItem(shapes: ListItemShapes, mode: ThemeMode, onSelect: (ThemeMode) -> Unit) {
+    val labels = ThemeMode.entries.associateWith {
+        stringResource(
+            when (it) {
+                ThemeMode.SYSTEM -> R.string.settings_theme_system
+                ThemeMode.LIGHT -> R.string.settings_theme_light
+                ThemeMode.DARK -> R.string.settings_theme_dark
+            }
+        )
+    }
     SegmentedListItem(
         shapes = shapes,
         colors = segmentedItemColors(),
@@ -567,17 +581,11 @@ private fun ThemeItem(shapes: ListItemShapes, mode: ThemeMode, onSelect: (ThemeM
                 options = ThemeMode.entries,
                 selected = mode,
                 onSelect = onSelect,
-                label = {
-                    when (it) {
-                        ThemeMode.SYSTEM -> "System"
-                        ThemeMode.LIGHT -> "Light"
-                        ThemeMode.DARK -> "Dark"
-                    }
-                },
+                label = labels::getValue,
                 modifier = Modifier.padding(top = Spacing.s)
             )
         }
     ) {
-        Text("Theme")
+        Text(stringResource(R.string.settings_theme))
     }
 }

@@ -29,12 +29,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.text.input.ImeAction
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.R
 import com.sasayaki.domain.processing.MAX_VOCABULARY_TERM_LENGTH
 import com.sasayaki.domain.processing.hasOverlongTerm
 import com.sasayaki.domain.processing.vocabularyReach
@@ -62,19 +66,23 @@ fun VocabularyScreen(terms: List<String>?, onAdd: (String) -> Unit, onRemove: (S
     }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val resources = LocalResources.current
+    val undoLabel = stringResource(R.string.action_undo)
     val remove: (String) -> Unit = { term ->
         onRemove(term)
         scope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
-            val result = snackbarHostState.showSnackbar("Removed $term", actionLabel = "Undo", duration = SnackbarDuration.Short)
+            val result = snackbarHostState.showSnackbar(
+                resources.getString(R.string.vocabulary_removed, term),
+                actionLabel = undoLabel,
+                duration = SnackbarDuration.Short
+            )
             if (result == SnackbarResult.ActionPerformed) onAdd(term)
         }
     }
-    SettingsPage(title = "Vocabulary", onBack = onBack, snackbarHostState = snackbarHostState) {
-        pageIntro(
-            "Names, brands and jargon your speech model gets wrong. Both models get this list, " +
-                "so they come out spelled the way you write them."
-        )
+    val intro = stringResource(R.string.vocabulary_intro)
+    SettingsPage(title = stringResource(R.string.vocabulary_title), onBack = onBack, snackbarHostState = snackbarHostState) {
+        pageIntro(intro)
         item(key = "add") {
             Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceBright) {
                 Row(
@@ -85,13 +93,17 @@ fun VocabularyScreen(terms: List<String>?, onAdd: (String) -> Unit, onRemove: (S
                     OutlinedTextField(
                         value = draft,
                         onValueChange = { draft = it },
-                        label = { Text("Add words") },
+                        label = { Text(stringResource(R.string.vocabulary_add_words)) },
                         supportingText = {
                             Text(
                                 if (overlong) {
-                                    "Keep each word under $MAX_VOCABULARY_TERM_LENGTH characters"
+                                    pluralStringResource(
+                                        R.plurals.vocabulary_term_too_long,
+                                        MAX_VOCABULARY_TERM_LENGTH,
+                                        MAX_VOCABULARY_TERM_LENGTH
+                                    )
                                 } else {
-                                    "Separate several with commas"
+                                    stringResource(R.string.vocabulary_separate_hint)
                                 }
                             )
                         },
@@ -102,7 +114,7 @@ fun VocabularyScreen(terms: List<String>?, onAdd: (String) -> Unit, onRemove: (S
                         modifier = Modifier.weight(1f)
                     )
                     FilledIconButton(onClick = submit, enabled = canSubmit) {
-                        Icon(SasayakiIcons.Add, contentDescription = "Add")
+                        Icon(SasayakiIcons.Add, contentDescription = stringResource(R.string.action_add))
                     }
                 }
             }
@@ -113,8 +125,8 @@ fun VocabularyScreen(terms: List<String>?, onAdd: (String) -> Unit, onRemove: (S
             terms.isEmpty() -> item(key = "empty") {
                 EmptyState(
                     icon = SasayakiIcons.Spellcheck,
-                    title = "No words yet",
-                    body = "Add the names and terms you dictate often, like your colleagues or the tools you use."
+                    title = stringResource(R.string.vocabulary_empty_title),
+                    body = stringResource(R.string.vocabulary_empty_body)
                 )
             }
 
@@ -123,9 +135,9 @@ fun VocabularyScreen(terms: List<String>?, onAdd: (String) -> Unit, onRemove: (S
                 if (reach.speech < terms.size) {
                     Text(
                         text = if (reach.cleanup < terms.size) {
-                            "The speech model fits the first ${reach.speech} words and cleanup the first ${reach.cleanup}."
+                            pluralStringResource(R.plurals.vocabulary_reach_partial, reach.speech, reach.speech, reach.cleanup)
                         } else {
-                            "The speech model fits the first ${reach.speech} words; cleanup gets them all."
+                            pluralStringResource(R.plurals.vocabulary_reach_speech, reach.speech, reach.speech)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -139,6 +151,7 @@ fun VocabularyScreen(terms: List<String>?, onAdd: (String) -> Unit, onRemove: (S
                 ) {
                     terms.forEach { term ->
                         key(term) {
+                            val removeLabel = stringResource(R.string.vocabulary_remove, term)
                             // InputChip announces itself as a checkbox; a removable term is
                             // read as the word with a remove action instead.
                             InputChip(
@@ -154,7 +167,7 @@ fun VocabularyScreen(terms: List<String>?, onAdd: (String) -> Unit, onRemove: (S
                                 },
                                 modifier = Modifier.clearAndSetSemantics {
                                     contentDescription = term
-                                    onClick(label = "Remove $term") {
+                                    onClick(label = removeLabel) {
                                         remove(term)
                                         true
                                     }

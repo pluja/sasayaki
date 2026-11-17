@@ -14,7 +14,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import com.sasayaki.R
 import com.sasayaki.service.bubble.BubbleActions
 import com.sasayaki.service.bubble.BubbleAppearance
 import com.sasayaki.service.bubble.BubbleContent
@@ -29,18 +31,18 @@ import com.sasayaki.ui.theme.Spacing
 import kotlin.math.abs
 import kotlin.math.sin
 
-private const val BACKDROP =
-    "Hey! Are we still on for Saturday? I booked the table for eight, and Mika said she might " +
-        "bring her brother along. Let me know if the time works, or if we should move it a bit earlier."
-
 private val previewActions = BubbleActions({}, {}, {}, {}, {}, {}, {})
 private val previewLevels = List(WAVEFORM_BARS) { abs(sin(it * 0.7f)) * (0.3f + (it % 5) * 0.15f) }
-private val recording = BubbleUiState(BubblePhase.Recording(paused = false), elapsedSeconds = 7, profileName = "Chat")
 private val idle = BubbleUiState(BubblePhase.Idle)
 
 // BubblePreview lays the bubble over sample text so see-through has something to show.
 @Composable
 fun BubblePreview(shapes: ListItemShapes, appearance: BubbleAppearance, scales: BubbleScales) {
+    val recording = BubbleUiState(
+        BubblePhase.Recording(paused = false),
+        elapsedSeconds = 7,
+        profileName = stringResource(R.string.settings_bubble_preview_profile)
+    )
     Surface(
         shape = shapes.shape,
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -49,7 +51,11 @@ fun BubblePreview(shapes: ListItemShapes, appearance: BubbleAppearance, scales: 
             .clearAndSetSemantics {}
     ) {
         BoxWithConstraints(modifier = Modifier.padding(Spacing.l)) {
-            Text(BACKDROP, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                stringResource(R.string.settings_bubble_preview_backdrop),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             val fitted = scales.copy(controls = scales.controls.coerceAtMost(maxWidth / BubbleMode.RECORDING.windowWidth))
             BubbleTheme(appearance) {
                 Column(

@@ -33,10 +33,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.R
 import com.sasayaki.domain.model.TextReplacementRule
 import com.sasayaki.domain.processing.applyTo
 import com.sasayaki.domain.processing.patternError
@@ -70,12 +72,14 @@ fun ReplacementRulesScreen(
     var editing by rememberSaveable(stateSaver = RuleDraftSaver) { mutableStateOf<TextReplacementRule?>(null) }
 
     SasayakiScaffold(
-        topBar = { scrollBehavior -> LargeTitleBar(title = "Replacement rules", scrollBehavior = scrollBehavior, onBack = onBack) },
+        topBar = { scrollBehavior ->
+            LargeTitleBar(title = stringResource(R.string.rules_title), scrollBehavior = scrollBehavior, onBack = onBack)
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { editing = TextReplacementRule(name = "", pattern = "", replacement = "") },
                 icon = { Icon(SasayakiIcons.Add, contentDescription = null) },
-                text = { Text("New rule") }
+                text = { Text(stringResource(R.string.rules_new)) }
             )
         }
     ) { padding ->
@@ -90,7 +94,7 @@ fun ReplacementRulesScreen(
         ) {
             item(key = "intro") {
                 Text(
-                    text = "Rules fix words before cleanup runs. Choose which ones each profile uses.",
+                    text = stringResource(R.string.rules_intro),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = Spacing.xs, end = Spacing.xs, bottom = Spacing.l)
@@ -102,8 +106,8 @@ fun ReplacementRulesScreen(
                 rules.isEmpty() -> item(key = "empty") {
                     EmptyState(
                         icon = SasayakiIcons.FindReplace,
-                        title = "No rules yet",
-                        body = "Add one for a name or term your speech model keeps getting wrong."
+                        title = stringResource(R.string.rules_empty_title),
+                        body = stringResource(R.string.rules_empty_body)
                     )
                 }
 
@@ -117,7 +121,7 @@ fun ReplacementRulesScreen(
                         supportingContent = rule.name.takeIf { it.isNotBlank() }?.let { { Text(it) } }
                     ) {
                         Text(
-                            text = "${rule.pattern}  →  ${rule.replacement.ifEmpty { "∅" }}",
+                            text = stringResource(R.string.rules_pattern_to_replacement, rule.pattern, rule.replacement.ifEmpty { "∅" }),
                             fontFamily = if (rule.isRegex) FontFamily.Monospace else null,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
@@ -179,12 +183,15 @@ private fun RuleEditorSheet(
             modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.xl),
             verticalArrangement = Arrangement.spacedBy(Spacing.m)
         ) {
-            Text(if (initial.id == 0L) "New rule" else "Edit rule", style = MaterialTheme.typography.headlineSmall)
+            Text(
+                stringResource(if (initial.id == 0L) R.string.rules_new else R.string.rules_edit),
+                style = MaterialTheme.typography.headlineSmall
+            )
             OutlinedTextField(
                 value = pattern,
                 onValueChange = { pattern = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Find") },
+                label = { Text(stringResource(R.string.rules_find)) },
                 singleLine = true,
                 isError = error != null,
                 supportingText = error?.let { { Text(it) } }
@@ -193,15 +200,17 @@ private fun RuleEditorSheet(
                 value = replacement,
                 onValueChange = { replacement = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Replace with") },
+                label = { Text(stringResource(R.string.rules_replace_with)) },
                 singleLine = true,
-                supportingText = { Text(if (isRegex) "Use \$1, \$2… for captured groups." else "Leave empty to remove the match.") }
+                supportingText = {
+                    Text(stringResource(if (isRegex) R.string.rules_regex_replacement_hint else R.string.rules_plain_replacement_hint))
+                }
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Regular expression", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.rules_regex), style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        "Match patterns instead of exact text.",
+                        stringResource(R.string.rules_regex_summary),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -212,15 +221,15 @@ private fun RuleEditorSheet(
                 value = name,
                 onValueChange = { name = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Note (optional)") },
+                label = { Text(stringResource(R.string.rules_note)) },
                 singleLine = true
             )
             OutlinedTextField(
                 value = sample,
                 onValueChange = { sample = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Try it") },
-                placeholder = { Text("Type a sentence to test the rule") },
+                label = { Text(stringResource(R.string.rules_try)) },
+                placeholder = { Text(stringResource(R.string.rules_try_placeholder)) },
                 leadingIcon = { Icon(SasayakiIcons.Science, contentDescription = null) }
             )
             if (sample.isNotBlank() && pattern.isNotBlank() && error == null) {
@@ -240,24 +249,24 @@ private fun RuleEditorSheet(
                     TextButton(
                         onClick = { confirmDelete = true },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                    ) { Text("Delete") }
+                    ) { Text(stringResource(R.string.action_delete)) }
                 }
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                 Button(
                     onClick = { onSave(draft) },
                     enabled = pattern.isNotBlank() && error == null,
                     modifier = Modifier.padding(start = Spacing.s)
-                ) { Text("Save") }
+                ) { Text(stringResource(R.string.action_save)) }
             }
         }
     }
     if (confirmDelete && onDelete != null) {
         DestructiveDialog(
             icon = SasayakiIcons.Delete,
-            title = "Delete this rule?",
-            text = "Profiles that use it stop applying it.",
-            confirmLabel = "Delete",
+            title = stringResource(R.string.rules_delete_title),
+            text = stringResource(R.string.rules_delete_text),
+            confirmLabel = stringResource(R.string.action_delete),
             onConfirm = onDelete,
             onDismiss = { confirmDelete = false }
         )

@@ -17,9 +17,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.R
 import com.sasayaki.ui.components.DestructiveDialog
 import com.sasayaki.ui.components.ItemIcon
 import com.sasayaki.ui.components.SegmentedGroup
@@ -35,8 +38,9 @@ private val importTypes = arrayOf("application/json", "text/plain", "application
 fun BackupSettingsRoute(onBack: () -> Unit, viewModel: BackupViewModel = hiltViewModel()) {
     val working by viewModel.working.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val resources = LocalResources.current
     LaunchedEffect(viewModel) {
-        viewModel.messages.collect { snackbarHostState.showSnackbar(it) }
+        viewModel.messages.collect { snackbarHostState.showSnackbar(resources.getString(it)) }
     }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         uri?.let(viewModel::export)
@@ -56,11 +60,9 @@ fun BackupSettingsRoute(onBack: () -> Unit, viewModel: BackupViewModel = hiltVie
 @Composable
 fun BackupScreen(working: Boolean, snackbarHostState: SnackbarHostState, onExport: () -> Unit, onImport: () -> Unit, onBack: () -> Unit) {
     var confirmImport by rememberSaveable { mutableStateOf(false) }
-    SettingsPage(title = "Backup", onBack = onBack, snackbarHostState = snackbarHostState) {
-        pageIntro(
-            "Save your providers, profiles, rules, cleanup instructions, vocabulary and settings to a file, " +
-                "then load it on another phone. API keys and history are never included."
-        )
+    val intro = stringResource(R.string.backup_intro)
+    SettingsPage(title = stringResource(R.string.backup_title), onBack = onBack, snackbarHostState = snackbarHostState) {
+        pageIntro(intro)
         item(key = "actions") {
             SegmentedGroup(
                 items = listOf(
@@ -68,8 +70,8 @@ fun BackupScreen(working: Boolean, snackbarHostState: SnackbarHostState, onExpor
                         ActionItem(
                             shapes = shapes,
                             icon = SasayakiIcons.Upload,
-                            headline = "Export settings",
-                            supporting = "Save everything to a file you choose",
+                            headline = stringResource(R.string.backup_export),
+                            supporting = stringResource(R.string.backup_export_summary),
                             enabled = !working,
                             onClick = onExport
                         )
@@ -78,8 +80,8 @@ fun BackupScreen(working: Boolean, snackbarHostState: SnackbarHostState, onExpor
                         ActionItem(
                             shapes = shapes,
                             icon = SasayakiIcons.Download,
-                            headline = "Import settings",
-                            supporting = "Replace your settings with the ones in a file",
+                            headline = stringResource(R.string.backup_import),
+                            supporting = stringResource(R.string.backup_import_summary),
                             enabled = !working,
                             onClick = { confirmImport = true }
                         )
@@ -95,11 +97,9 @@ fun BackupScreen(working: Boolean, snackbarHostState: SnackbarHostState, onExpor
     if (confirmImport) {
         DestructiveDialog(
             icon = SasayakiIcons.Download,
-            title = "Replace your settings?",
-            text = "Your providers, profiles, rules, cleanup instructions, vocabulary and settings are replaced " +
-                "by the ones in the file. History stays. Files hold no API keys, so a key is kept only for a " +
-                "provider whose server address you already have.",
-            confirmLabel = "Replace",
+            title = stringResource(R.string.backup_import_confirm_title),
+            text = stringResource(R.string.backup_import_confirm_text),
+            confirmLabel = stringResource(R.string.backup_replace),
             onConfirm = onImport,
             onDismiss = { confirmImport = false }
         )

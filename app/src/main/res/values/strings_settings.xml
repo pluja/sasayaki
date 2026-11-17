@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Settings</string>
+    <string name="settings_providers_none">None yet. Add one to start dictating.</string>
+    <string name="settings_input">Input</string>
+    <string name="settings_bubble_on">On. Appears when your keyboard opens.</string>
+    <string name="settings_bubble_off">Off</string>
+    <string name="settings_keyboard_mic">Keyboard mic key</string>
+    <string name="settings_keyboard_mic_on">On. Your keyboard\'s mic key opens Sasayaki.</string>
+    <string name="settings_keyboard_mic_off">Turn on Sasayaki voice input in Android settings</string>
+    <string name="settings_recording_summary">Stops after %1$.1f s of silence</string>
+    <string name="settings_text">Text</string>
+    <string name="settings_vocabulary_empty">Names and terms to spell right</string>
+    <string name="settings_rules_empty">Fix words your speech model gets wrong</string>
+    <plurals name="rules_count">
+        <item quantity="one">%d rule</item>
+        <item quantity="other">%d rules</item>
+    </plurals>
+    <string name="settings_instructions_empty">Habits the cleanup model should follow</string>
+    <plurals name="instructions_custom_count">
+        <item quantity="one">%d of your own</item>
+        <item quantity="other">%d of your own</item>
+    </plurals>
+    <string name="settings_apps_summary_profiles_and_skip_ai">Per-app profiles, no AI chat cleanup</string>
+    <string name="settings_apps_summary_profiles">Remembers each app\'s profile</string>
+    <string name="settings_apps_summary_skip_ai">Skips cleanup in AI chats</string>
+    <string name="settings_apps_summary_default">Same everywhere</string>
+    <string name="settings_app_section">Sasayaki</string>
+    <string name="settings_permissions_all_set">All set</string>
+    <plurals name="settings_permissions_missing">
+        <item quantity="one">%d needs your attention</item>
+        <item quantity="other">%d need your attention</item>
+    </plurals>
+    <plurals name="settings_history_keeping">
+        <item quantity="one">Keeping the last %d</item>
+        <item quantity="other">Keeping the last %d</item>
+    </plurals>
+    <string name="settings_history_off">Not keeping history</string>
+    <string name="settings_backup_summary">Move your settings to another phone</string>
+    <string name="settings_wallpaper_colors_on">wallpaper colors</string>
+    <string name="settings_about">About</string>
+    <string name="settings_whats_new">What\'s new</string>
+    <string name="settings_whats_new_summary">Release notes for every version</string>
+    <string name="settings_report_problem">Report a problem</string>
+    <string name="settings_report_problem_summary">Open an issue on GitHub</string>
+    <string name="settings_source_code">Source code</string>
+    <string name="settings_source_code_summary">Free software under the GPL-3.0</string>
+    <string name="settings_licenses_summary">The libraries Sasayaki is built with</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_theme_system_summary">System theme</string>
+
+    <string name="settings_recording">Recording</string>
+    <string name="settings_listening">Listening</string>
+    <string name="settings_pause_other_audio">Pause other audio</string>
+    <string name="settings_pause_other_audio_summary">Music and videos pause while you speak</string>
+    <string name="settings_keep_screen_on">Keep screen on while recording</string>
+    <string name="settings_keep_screen_on_summary">The screen stays on while you dictate, and can turn off again when you pause</string>
+    <string name="settings_haptic_feedback">Haptic feedback</string>
+    <string name="settings_haptic_feedback_summary">A short buzz when recording starts and stops</string>
+    <string name="settings_silence">Stop after silence</string>
+    <string name="settings_silence_summary">Recording stops after this much quiet</string>
+    <string name="settings_silence_seconds">%1$.1f s</string>
+
+    <string name="settings_apps">Apps</string>
+    <string name="settings_apps_intro">Sasayaki can adapt to the app you are dictating into.</string>
+    <string name="settings_apps_profiles">Profiles</string>
+    <string name="settings_remember_profile">Remember profile per app</string>
+    <string name="settings_remember_profile_summary">Switch to the profile you last picked from the bubble in each app</string>
+    <string name="settings_remembered_apps">Remembered apps</string>
+    <string name="settings_remembered_apps_none">None yet</string>
+    <plurals name="settings_remembered_apps_count">
+        <item quantity="one">%d app</item>
+        <item quantity="other">%d apps</item>
+    </plurals>
+    <string name="settings_forget">Forget</string>
+    <string name="settings_apps_cleanup">Cleanup</string>
+    <string name="settings_skip_ai_chats">Skip cleanup in AI chats</string>
+    <string name="settings_skip_ai_chats_summary">Assistants like ChatGPT and Claude get your words as spoken, so cleanup never answers the prompt for them</string>
+    <plurals name="settings_forget_apps_title">
+        <item quantity="one">Forget %d app?</item>
+        <item quantity="other">Forget %d apps?</item>
+    </plurals>
+    <string name="settings_forget_apps_text">They go back to the active profile until you pick another one from the bubble there.</string>
+
+    <string name="settings_history">History and privacy</string>
+    <string name="settings_history_intro">Dictations never leave this device except to reach your providers.</string>
+    <string name="settings_keep_history">Keep history</string>
+    <string name="settings_keep_history_summary">Saves text and audio so you can copy or retry later</string>
+    <string name="settings_count_words">Count words without history</string>
+    <string name="settings_count_words_summary">Keep your totals when nothing else is saved</string>
+    <string name="settings_retention">Keep the last</string>
+    <string name="settings_retention_summary">Older dictations are removed automatically</string>
+    <plurals name="settings_retention_option">
+        <item quantity="one">%d dictation</item>
+        <item quantity="other">%d dictations</item>
+    </plurals>
+    <plurals name="settings_retention_confirm_title">
+        <item quantity="one">Keep only the last %d?</item>
+        <item quantity="other">Keep only the last %d?</item>
+    </plurals>
+    <plurals name="settings_retention_confirm_text">
+        <item quantity="one">The oldest dictation and its audio will be erased from this device.</item>
+        <item quantity="other">The %d oldest dictations and their audio will be erased from this device.</item>
+    </plurals>
+    <string name="settings_erase">Erase</string>
+
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_wallpaper_colors">Wallpaper colors</string>
+    <string name="settings_wallpaper_colors_summary">Match your wallpaper instead of Sasayaki green</string>
+
+    <string name="settings_bubble">Bubble</string>
+    <string name="settings_bubble_intro">A floating button that appears whenever your keyboard opens. Tap it to dictate into any app.</string>
+    <string name="settings_show_bubble">Show the bubble</string>
+    <string name="settings_show_bubble_summary">Needs the overlay and text insertion permissions</string>
+    <string name="settings_start_on_boot">Start on boot</string>
+    <string name="settings_start_on_boot_summary">Turn the bubble back on after a restart</string>
+    <string name="settings_copy_on_failure">Copy when typing fails</string>
+    <string name="settings_copy_on_failure_summary">If an app doesn\'t accept the text, it is copied so you can paste it</string>
+    <string name="settings_bubble_look">Look</string>
+    <string name="settings_bubble_size">Bubble size</string>
+    <string name="settings_bubble_size_summary">The bubble that waits by your keyboard.</string>
+    <string name="settings_controls_size">Controls size</string>
+    <string name="settings_controls_size_summary">The controls while recording. Bigger buttons are easier to hit on the move.</string>
+    <string name="settings_see_through">See-through</string>
+    <string name="settings_see_through_summary">Let what is underneath show through the bubble</string>
+    <string name="settings_monochrome">Monochrome</string>
+    <string name="settings_monochrome_summary">Gray instead of color, for the bubble and the keyboard panel</string>
+    <string name="settings_size_tiny">Tiny</string>
+    <string name="settings_size_small">Small</string>
+    <string name="settings_size_normal">Normal</string>
+    <string name="settings_size_large">Large</string>
+    <string name="settings_size_huge">Huge</string>
+    <string name="settings_bubble_preview_backdrop">Hey! Are we still on for Saturday? I booked the table for eight, and Mika said she might bring her brother along. Let me know if the time works, or if we should move it a bit earlier.</string>
+    <string name="settings_bubble_preview_profile">Chat</string>
+
+    <string name="settings_permissions">Permissions</string>
+    <string name="settings_permissions_intro">Sasayaki needs these to listen when you ask and type the result where you are.</string>
+
+    <string name="provider_list_title">Providers</string>
+    <string name="provider_list_intro">The servers Sasayaki talks to. Each can offer a speech to text model, a cleanup model, or both.</string>
+    <string name="provider_list_empty_title">No providers yet</string>
+    <string name="provider_list_empty_body">Add the server that turns your voice into text.</string>
+    <string name="provider_uses_speech">Speech · %1$s</string>
+    <string name="provider_uses_cleanup">Cleanup · %1$s</string>
+    <string name="provider_no_default_models">No default models yet</string>
+    <string name="provider_add">Add provider</string>
+    <string name="provider_untitled">Provider</string>
+    <string name="provider_delete">Delete provider</string>
+    <string name="provider_intro">Any OpenAI-compatible server works: your own (speaches, whisper.cpp, llama.cpp) or a hosted one.</string>
+    <string name="provider_test">Test connection</string>
+    <string name="provider_test_again">Test again</string>
+    <string name="provider_delete_named_title">Delete %1$s?</string>
+    <string name="provider_delete_unnamed_title">Delete this provider?</string>
+    <string name="provider_delete_text">Profiles that use it switch to another provider. The API key is erased from this device.</string>
+    <string name="provider_server_address">Server address</string>
+    <string name="provider_unencrypted">Not encrypted. Use it only on a network you trust.</string>
+    <string name="provider_server_address_hint">https://, or http:// for a server on your local network.</string>
+    <string name="provider_api_key">API key</string>
+    <string name="provider_api_key_hint">Leave empty if your server doesn\'t use one.</string>
+    <string name="provider_hide_key">Hide key</string>
+    <string name="provider_show_key">Show key</string>
+    <string name="provider_name">Name</string>
+    <string name="provider_name_hint">How it appears in profiles.</string>
+    <string name="provider_default_models">Default models</string>
+    <string name="provider_speech_to_text">Speech to text</string>
+    <string name="provider_cleanup">Cleanup</string>
+    <string name="provider_not_used">Not used</string>
+    <string name="provider_default_models_hint">Profiles use these unless you pick other models for a profile.</string>
+    <string name="provider_speech_model">Speech to text model</string>
+    <string name="provider_cleanup_model">Cleanup model</string>
+    <string name="provider_no_speech_model">Don\'t use for speech to text</string>
+    <string name="provider_no_cleanup_model">Don\'t use for cleanup</string>
+    <string name="provider_models_unlisted_note">This server doesn\'t list its models. Type the model name below.</string>
+    <string name="provider_models_untested_note">Test the connection to load this server\'s models, or type a name below.</string>
+    <string name="provider_connected">Connected</string>
+    <string name="provider_connection_failed">Couldn\'t connect</string>
+    <plurals name="provider_more_models">
+        <item quantity="one">+%d more</item>
+        <item quantity="other">+%d more</item>
+    </plurals>
+    <string name="provider_models_unlisted">The server answered but doesn\'t list its models.</string>
+    <plurals name="provider_models_available">
+        <item quantity="one">%d model available.</item>
+        <item quantity="other">%d models available.</item>
+    </plurals>
+    <plurals name="provider_models_available_speech">
+        <item quantity="one">%1$d model available, %2$d for speech to text.</item>
+        <item quantity="other">%1$d models available, %2$d for speech to text.</item>
+    </plurals>
+
+    <string name="instructions_title">Cleanup instructions</string>
+    <string name="instructions_new">New instruction</string>
+    <string name="instructions_edit">Edit instruction</string>
+    <string name="instructions_intro">Instructions the cleanup model follows. Built-in ones always apply; turn yours on in each profile.</string>
+    <string name="instructions_yours">Yours</string>
+    <string name="instructions_yours_empty">None yet. Write one for a habit cleanup should always follow.</string>
+    <string name="instructions_built_in">Built in</string>
+    <string name="instructions_untitled">Untitled</string>
+    <string name="instructions_name">Name</string>
+    <string name="instructions_instruction">Instruction</string>
+    <string name="instructions_placeholder">Always write numbers as digits.</string>
+    <string name="instructions_delete_named_title">Delete %1$s?</string>
+    <string name="instructions_delete_unnamed_title">Delete this instruction?</string>
+    <string name="instructions_delete_text">Profiles that use it stop applying it.</string>
+    <string name="instructions_built_in_note">Built in. Always applied when cleanup is on.</string>
+
+    <string name="rules_title">Replacement rules</string>
+    <string name="rules_new">New rule</string>
+    <string name="rules_edit">Edit rule</string>
+    <string name="rules_intro">Rules fix words before cleanup runs. Choose which ones each profile uses.</string>
+    <string name="rules_empty_title">No rules yet</string>
+    <string name="rules_empty_body">Add one for a name or term your speech model keeps getting wrong.</string>
+    <string name="rules_pattern_to_replacement">"%1$s  →  %2$s"</string>
+    <string name="rules_find">Find</string>
+    <string name="rules_replace_with">Replace with</string>
+    <string name="rules_regex_replacement_hint">Use $1, $2… for captured groups.</string>
+    <string name="rules_plain_replacement_hint">Leave empty to remove the match.</string>
+    <string name="rules_regex">Regular expression</string>
+    <string name="rules_regex_summary">Match patterns instead of exact text.</string>
+    <string name="rules_note">Note (optional)</string>
+    <string name="rules_try">Try it</string>
+    <string name="rules_try_placeholder">Type a sentence to test the rule</string>
+    <string name="rules_delete_title">Delete this rule?</string>
+    <string name="rules_delete_text">Profiles that use it stop applying it.</string>
+
+    <string name="vocabulary_title">Vocabulary</string>
+    <string name="vocabulary_intro">Names, brands and jargon your speech model gets wrong. Both models get this list, so they come out spelled the way you write them.</string>
+    <string name="vocabulary_add_words">Add words</string>
+    <plurals name="vocabulary_term_too_long">
+        <item quantity="one">Keep each word under %d character</item>
+        <item quantity="other">Keep each word under %d characters</item>
+    </plurals>
+    <string name="vocabulary_separate_hint">Separate several with commas</string>
+    <string name="vocabulary_empty_title">No words yet</string>
+    <string name="vocabulary_empty_body">Add the names and terms you dictate often, like your colleagues or the tools you use.</string>
+    <plurals name="vocabulary_reach_partial">
+        <item quantity="one">The speech model fits the first %1$d word and cleanup the first %2$d.</item>
+        <item quantity="other">The speech model fits the first %1$d words and cleanup the first %2$d.</item>
+    </plurals>
+    <plurals name="vocabulary_reach_speech">
+        <item quantity="one">The speech model fits the first %d word; cleanup gets them all.</item>
+        <item quantity="other">The speech model fits the first %d words; cleanup gets them all.</item>
+    </plurals>
+    <string name="vocabulary_removed">Removed %1$s</string>
+    <string name="vocabulary_remove">Remove %1$s</string>
+
+    <string name="backup_title">Backup</string>
+    <string name="backup_intro">Save your providers, profiles, rules, cleanup instructions, vocabulary and settings to a file, then load it on another phone. API keys and history are never included.</string>
+    <string name="backup_export">Export settings</string>
+    <string name="backup_export_summary">Save everything to a file you choose</string>
+    <string name="backup_import">Import settings</string>
+    <string name="backup_import_summary">Replace your settings with the ones in a file</string>
+    <string name="backup_import_confirm_title">Replace your settings?</string>
+    <string name="backup_import_confirm_text">Your providers, profiles, rules, cleanup instructions, vocabulary and settings are replaced by the ones in the file. History stays. Files hold no API keys, so a key is kept only for a provider whose server address you already have.</string>
+    <string name="backup_replace">Replace</string>
+    <string name="backup_exported">Settings exported</string>
+    <string name="backup_imported">Settings imported</string>
+    <string name="backup_file_unreadable">Couldn\'t open that file. Try another location.</string>
+    <string name="backup_not_settings_file">That file isn\'t a Sasayaki settings file.</string>
+    <string name="backup_newer_version">This file is from a newer Sasayaki. Update the app first.</string>
+    <string name="backup_damaged">That settings file is damaged, so nothing was changed.</string>
+
+    <string name="licenses_title">Open-source licenses</string>
+    <string name="licenses_intro">Sasayaki is free software under the GPL-3.0, built on these open-source projects.</string>
+    <string name="licenses_apache_2">Apache License 2.0</string>
+</resources>

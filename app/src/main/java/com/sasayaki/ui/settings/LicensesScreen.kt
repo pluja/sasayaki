@@ -2,20 +2,23 @@ package com.sasayaki.ui.settings
 
 import android.content.Intent
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.sasayaki.R
 import com.sasayaki.ui.components.SegmentedGroup
 import com.sasayaki.ui.components.SettingsPage
 import com.sasayaki.ui.components.pageIntro
 import com.sasayaki.ui.components.segmentedItemColors
 
 @Immutable
-data class OpenSourceLibrary(val name: String, val license: String, val url: String)
+data class OpenSourceLibrary(val name: String, @StringRes val license: Int, val url: String)
 
-private const val APACHE_2 = "Apache License 2.0"
+private val APACHE_2 = R.string.licenses_apache_2
 
 // Keep in step with the implementation dependencies in app/build.gradle.kts.
 val openSourceLibraries = listOf(
@@ -44,8 +47,9 @@ fun LicensesRoute(onBack: () -> Unit) {
 
 @Composable
 fun LicensesScreen(libraries: List<OpenSourceLibrary>, onOpen: (String) -> Unit, onBack: () -> Unit) {
-    SettingsPage(title = "Open-source licenses", onBack = onBack) {
-        pageIntro("Sasayaki is free software under the GPL-3.0, built on these open-source projects.")
+    val intro = stringResource(R.string.licenses_intro)
+    SettingsPage(title = stringResource(R.string.licenses_title), onBack = onBack) {
+        pageIntro(intro)
         item(key = "libraries") {
             SegmentedGroup(
                 items = libraries.map { library ->
@@ -54,7 +58,7 @@ fun LicensesScreen(libraries: List<OpenSourceLibrary>, onOpen: (String) -> Unit,
                             onClick = { onOpen(library.url) },
                             shapes = shapes,
                             colors = segmentedItemColors(),
-                            supportingContent = { Text(library.license) }
+                            supportingContent = { Text(stringResource(library.license)) }
                         ) {
                             Text(library.name)
                         }

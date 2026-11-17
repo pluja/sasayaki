@@ -9,11 +9,13 @@ import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.sasayaki.R
 import com.sasayaki.data.repository.ProviderRepository
 import com.sasayaki.domain.provider.Provider
 import com.sasayaki.ui.components.EmptyState
@@ -46,8 +48,9 @@ fun ProvidersRoute(onOpenProvider: (Long) -> Unit, onBack: () -> Unit, viewModel
 
 @Composable
 fun ProvidersScreen(providers: List<Provider>?, onOpenProvider: (Long) -> Unit, onBack: () -> Unit) {
+    val intro = stringResource(R.string.provider_list_intro)
     SettingsPage(
-        title = "Providers",
+        title = stringResource(R.string.provider_list_title),
         onBack = onBack,
         bottomInset = Spacing.xxxl * 2,
         floatingActionButton = {
@@ -55,21 +58,21 @@ fun ProvidersScreen(providers: List<Provider>?, onOpenProvider: (Long) -> Unit, 
                 ExtendedFloatingActionButton(
                     onClick = { onOpenProvider(0) },
                     icon = { Icon(SasayakiIcons.Add, contentDescription = null) },
-                    text = { Text("Add provider") }
+                    text = { Text(stringResource(R.string.provider_add)) }
                 )
             }
         }
     ) {
-        pageIntro("The servers Sasayaki talks to. Each can offer a speech to text model, a cleanup model, or both.")
+        pageIntro(intro)
         when {
             providers == null -> Unit
 
             providers.isEmpty() -> item(key = "empty") {
                 EmptyState(
                     icon = SasayakiIcons.Dns,
-                    title = "No providers yet",
-                    body = "Add the server that turns your voice into text.",
-                    action = { Button(onClick = { onOpenProvider(0) }) { Text("Add provider") } }
+                    title = stringResource(R.string.provider_list_empty_title),
+                    body = stringResource(R.string.provider_list_empty_body),
+                    action = { Button(onClick = { onOpenProvider(0) }) { Text(stringResource(R.string.provider_add)) } }
                 )
             }
 
@@ -99,7 +102,8 @@ fun ProvidersScreen(providers: List<Provider>?, onOpenProvider: (Long) -> Unit, 
     }
 }
 
+@Composable
 fun providerUses(provider: Provider): List<String> = listOfNotNull(
-    provider.speechModel?.let { "Speech · $it" },
-    provider.cleanupModel?.let { "Cleanup · $it" }
-).ifEmpty { listOf("No default models yet") }
+    provider.speechModel?.let { stringResource(R.string.provider_uses_speech, it) },
+    provider.cleanupModel?.let { stringResource(R.string.provider_uses_cleanup, it) }
+).ifEmpty { listOf(stringResource(R.string.provider_no_default_models)) }

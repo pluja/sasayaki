@@ -1,8 +1,10 @@
 package com.sasayaki.ui.settings
 
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sasayaki.R
 import com.sasayaki.data.backup.BackupException
 import com.sasayaki.data.backup.BackupProblem
 import com.sasayaki.data.backup.SettingsBackupRepository
@@ -24,16 +26,16 @@ class BackupViewModel @Inject constructor(private val backupRepository: Settings
     private val _working = MutableStateFlow(false)
     val working: StateFlow<Boolean> = _working.asStateFlow()
 
-    private val _messages = Channel<String>(Channel.BUFFERED)
-    val messages: Flow<String> = _messages.receiveAsFlow()
+    private val _messages = Channel<Int>(Channel.BUFFERED)
+    val messages: Flow<Int> = _messages.receiveAsFlow()
 
     fun suggestedFileName(): String = backupFileName(LocalDate.now())
 
-    fun export(uri: Uri) = run("Settings exported") { backupRepository.exportTo(uri) }
+    fun export(uri: Uri) = run(R.string.backup_exported) { backupRepository.exportTo(uri) }
 
-    fun import(uri: Uri) = run("Settings imported") { backupRepository.importFrom(uri) }
+    fun import(uri: Uri) = run(R.string.backup_imported) { backupRepository.importFrom(uri) }
 
-    private fun run(success: String, block: suspend () -> Unit) {
+    private fun run(@StringRes success: Int, block: suspend () -> Unit) {
         if (_working.value) return
         _working.value = true
         viewModelScope.launch {
@@ -43,9 +45,9 @@ class BackupViewModel @Inject constructor(private val backupRepository: Settings
             } catch (e: BackupException) {
                 e.problem.message()
             } catch (_: IOException) {
-                "Couldn't open that file. Try another location."
+                R.string.backup_file_unreadable
             } catch (_: SecurityException) {
-                "Couldn't open that file. Try another location."
+                R.string.backup_file_unreadable
             } finally {
                 _working.value = false
             }
@@ -54,8 +56,9 @@ class BackupViewModel @Inject constructor(private val backupRepository: Settings
     }
 }
 
-private fun BackupProblem.message(): String = when (this) {
-    BackupProblem.NOT_SETTINGS_FILE -> "That file isn't a Sasayaki settings file."
-    BackupProblem.NEWER_VERSION -> "This file is from a newer Sasayaki. Update the app first."
-    BackupProblem.DAMAGED -> "That settings file is damaged, so nothing was changed."
+@StringRes
+private fun BackupProblem.message(): Int = when (this) {
+    BackupProblem.NOT_SETTINGS_FILE -> R.string.backup_not_settings_file
+    BackupProblem.NEWER_VERSION -> R.string.backup_newer_version
+    BackupProblem.DAMAGED -> R.string.backup_damaged
 }

@@ -31,10 +31,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.R
 import com.sasayaki.domain.model.PostProcessingPrompt
 import com.sasayaki.ui.components.DestructiveDialog
 import com.sasayaki.ui.components.LargeTitleBar
@@ -70,12 +72,14 @@ fun PromptsScreen(
     val builtIn = prompts.orEmpty().filter(PostProcessingPrompt::builtIn)
 
     SasayakiScaffold(
-        topBar = { scrollBehavior -> LargeTitleBar(title = "Cleanup instructions", scrollBehavior = scrollBehavior, onBack = onBack) },
+        topBar = { scrollBehavior ->
+            LargeTitleBar(title = stringResource(R.string.instructions_title), scrollBehavior = scrollBehavior, onBack = onBack)
+        },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { creating = true },
                 icon = { Icon(SasayakiIcons.Add, contentDescription = null) },
-                text = { Text("New instruction") }
+                text = { Text(stringResource(R.string.instructions_new)) }
             )
         }
     ) { padding ->
@@ -90,7 +94,7 @@ fun PromptsScreen(
         ) {
             item(key = "intro") {
                 Text(
-                    text = "Instructions the cleanup model follows. Built-in ones always apply; turn yours on in each profile.",
+                    text = stringResource(R.string.instructions_intro),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = Spacing.xs)
@@ -100,9 +104,9 @@ fun PromptsScreen(
                 item(key = "custom") {
                     if (custom.isEmpty()) {
                         Column {
-                            SectionLabel("Yours")
+                            SectionLabel(stringResource(R.string.instructions_yours))
                             Text(
-                                text = "None yet. Write one for a habit cleanup should always follow.",
+                                text = stringResource(R.string.instructions_yours_empty),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = Spacing.l)
@@ -110,7 +114,7 @@ fun PromptsScreen(
                         }
                     } else {
                         SegmentedGroup(
-                            title = "Yours",
+                            title = stringResource(R.string.instructions_yours),
                             items = custom.map { prompt -> { shapes -> PromptItem(prompt, shapes) { editingId = prompt.id } } }
                         )
                     }
@@ -118,7 +122,7 @@ fun PromptsScreen(
                 if (builtIn.isNotEmpty()) {
                     item(key = "builtin") {
                         SegmentedGroup(
-                            title = "Built in",
+                            title = stringResource(R.string.instructions_built_in),
                             items = builtIn.map { prompt -> { shapes -> PromptItem(prompt, shapes) { viewingId = prompt.id } } }
                         )
                     }
@@ -162,7 +166,7 @@ private fun PromptItem(prompt: PostProcessingPrompt, shapes: ListItemShapes, onC
         colors = segmentedItemColors(),
         supportingContent = { Text(prompt.prompt, maxLines = 2, overflow = TextOverflow.Ellipsis) }
     ) {
-        Text(prompt.title.ifBlank { "Untitled" })
+        Text(prompt.title.ifBlank { stringResource(R.string.instructions_untitled) })
     }
 }
 
@@ -189,12 +193,15 @@ private fun PromptEditorSheet(
             modifier = Modifier.padding(start = Spacing.xl, end = Spacing.xl, bottom = Spacing.xl),
             verticalArrangement = Arrangement.spacedBy(Spacing.m)
         ) {
-            Text(if (initial.id == 0L) "New instruction" else "Edit instruction", style = MaterialTheme.typography.headlineSmall)
+            Text(
+                stringResource(if (initial.id == 0L) R.string.instructions_new else R.string.instructions_edit),
+                style = MaterialTheme.typography.headlineSmall
+            )
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Name") },
+                label = { Text(stringResource(R.string.instructions_name)) },
                 singleLine = true
             )
             OutlinedTextField(
@@ -203,8 +210,8 @@ private fun PromptEditorSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 160.dp),
-                label = { Text("Instruction") },
-                placeholder = { Text("Always write numbers as digits.") },
+                label = { Text(stringResource(R.string.instructions_instruction)) },
+                placeholder = { Text(stringResource(R.string.instructions_placeholder)) },
                 minLines = 5,
                 maxLines = 12
             )
@@ -213,24 +220,28 @@ private fun PromptEditorSheet(
                     TextButton(
                         onClick = { confirmDelete = true },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                    ) { Text("Delete") }
+                    ) { Text(stringResource(R.string.action_delete)) }
                 }
                 Spacer(Modifier.weight(1f))
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
                 Button(
                     onClick = { onSave(initial.copy(title = title.trim(), prompt = text.trim())) },
                     enabled = title.isNotBlank() && text.isNotBlank(),
                     modifier = Modifier.padding(start = Spacing.s)
-                ) { Text("Save") }
+                ) { Text(stringResource(R.string.action_save)) }
             }
         }
     }
     if (confirmDelete && onDelete != null) {
         DestructiveDialog(
             icon = SasayakiIcons.Delete,
-            title = "Delete ${initial.title.ifBlank { "this instruction" }}?",
-            text = "Profiles that use it stop applying it.",
-            confirmLabel = "Delete",
+            title = if (initial.title.isBlank()) {
+                stringResource(R.string.instructions_delete_unnamed_title)
+            } else {
+                stringResource(R.string.instructions_delete_named_title, initial.title)
+            },
+            text = stringResource(R.string.instructions_delete_text),
+            confirmLabel = stringResource(R.string.action_delete),
             onConfirm = onDelete,
             onDismiss = { confirmDelete = false }
         )
@@ -248,7 +259,7 @@ private fun BuiltInPromptSheet(prompt: PostProcessingPrompt, onDismiss: () -> Un
         ) {
             Text(prompt.title, style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Built in. Always applied when cleanup is on.",
+                stringResource(R.string.instructions_built_in_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

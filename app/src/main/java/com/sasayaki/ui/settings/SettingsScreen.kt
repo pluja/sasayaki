@@ -2,6 +2,7 @@ package com.sasayaki.ui.settings
 
 import android.content.Intent
 import android.net.Uri
+import androidx.annotation.StringRes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
@@ -9,9 +10,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sasayaki.BuildConfig
+import com.sasayaki.R
 import com.sasayaki.data.preferences.ThemeMode
 import com.sasayaki.ui.common.openKeyboardSettings
 import com.sasayaki.ui.common.rememberPermissionItems
@@ -23,7 +27,6 @@ import com.sasayaki.ui.components.SegmentedGroup
 import com.sasayaki.ui.components.SettingsPage
 import com.sasayaki.ui.components.segmentedItemColors
 import com.sasayaki.ui.theme.SasayakiIcons
-import java.util.Locale
 
 private const val SOURCE_URL = "https://github.com/pluja/sasayaki"
 private const val RELEASES_URL = "$SOURCE_URL/releases"
@@ -72,15 +75,15 @@ fun SettingsScreen(
     onOpenLink: (String) -> Unit
 ) {
     val prefs = state.preferences
-    SettingsPage(title = "Settings", onBack = null) {
+    SettingsPage(title = stringResource(R.string.settings_title), onBack = null) {
         if (!state.loaded) return@SettingsPage
         item(key = "providers") {
             SegmentedGroup(
                 { shapes ->
                     NavigationItem(
                         shapes = shapes,
-                        headline = "Providers",
-                        supporting = state.providers.joinToString { it.name }.ifEmpty { "None yet. Add one to start dictating." },
+                        headline = stringResource(R.string.provider_list_title),
+                        supporting = state.providers.joinToString { it.name }.ifEmpty { stringResource(R.string.settings_providers_none) },
                         needsAttention = state.providers.isEmpty(),
                         icon = SasayakiIcons.Dns,
                         onClick = destinations.onProviders
@@ -90,13 +93,15 @@ fun SettingsScreen(
         }
         item(key = "input") {
             SegmentedGroup(
-                title = "Input",
+                title = stringResource(R.string.settings_input),
                 items = listOf(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Bubble",
-                            supporting = if (status.bubbleRunning) "On. Appears when your keyboard opens." else "Off",
+                            headline = stringResource(R.string.settings_bubble),
+                            supporting = stringResource(
+                                if (status.bubbleRunning) R.string.settings_bubble_on else R.string.settings_bubble_off
+                            ),
                             icon = SasayakiIcons.ChatBubble,
                             onClick = destinations.onBubble
                         )
@@ -104,12 +109,10 @@ fun SettingsScreen(
                     { shapes ->
                         ExternalItem(
                             shapes = shapes,
-                            headline = "Keyboard mic key",
-                            supporting = if (status.voiceInputEnabled) {
-                                "On. Your keyboard's mic key opens Sasayaki."
-                            } else {
-                                "Turn on Sasayaki voice input in Android settings"
-                            },
+                            headline = stringResource(R.string.settings_keyboard_mic),
+                            supporting = stringResource(
+                                if (status.voiceInputEnabled) R.string.settings_keyboard_mic_on else R.string.settings_keyboard_mic_off
+                            ),
                             icon = SasayakiIcons.Keyboard,
                             onClick = onOpenKeyboardSettings
                         )
@@ -117,9 +120,8 @@ fun SettingsScreen(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Recording",
-                            supporting = "Stops after " +
-                                "${String.format(Locale.getDefault(), "%.1f", prefs.silenceThresholdMs / 1000f)} s of silence",
+                            headline = stringResource(R.string.settings_recording),
+                            supporting = stringResource(R.string.settings_recording_summary, prefs.silenceThresholdMs / 1000f),
                             icon = SasayakiIcons.Mic,
                             onClick = destinations.onRecording
                         )
@@ -129,16 +131,15 @@ fun SettingsScreen(
         }
         item(key = "text") {
             SegmentedGroup(
-                title = "Text",
+                title = stringResource(R.string.settings_text),
                 items = listOf(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Vocabulary",
+                            headline = stringResource(R.string.vocabulary_title),
                             supporting = when (val count = prefs.vocabulary.size) {
-                                0 -> "Names and terms to spell right"
-                                1 -> "1 word"
-                                else -> "$count words"
+                                0 -> stringResource(R.string.settings_vocabulary_empty)
+                                else -> pluralStringResource(R.plurals.word_count, count, count)
                             },
                             icon = SasayakiIcons.Spellcheck,
                             onClick = destinations.onVocabulary
@@ -147,11 +148,10 @@ fun SettingsScreen(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Replacement rules",
+                            headline = stringResource(R.string.rules_title),
                             supporting = when (state.ruleCount) {
-                                0 -> "Fix words your speech model gets wrong"
-                                1 -> "1 rule"
-                                else -> "${state.ruleCount} rules"
+                                0 -> stringResource(R.string.settings_rules_empty)
+                                else -> pluralStringResource(R.plurals.rules_count, state.ruleCount, state.ruleCount)
                             },
                             icon = SasayakiIcons.FindReplace,
                             onClick = destinations.onRules
@@ -160,11 +160,15 @@ fun SettingsScreen(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Cleanup instructions",
+                            headline = stringResource(R.string.instructions_title),
                             supporting = when (state.customPromptCount) {
-                                0 -> "Habits the cleanup model should follow"
-                                1 -> "1 of your own"
-                                else -> "${state.customPromptCount} of your own"
+                                0 -> stringResource(R.string.settings_instructions_empty)
+
+                                else -> pluralStringResource(
+                                    R.plurals.instructions_custom_count,
+                                    state.customPromptCount,
+                                    state.customPromptCount
+                                )
                             },
                             icon = SasayakiIcons.Notes,
                             onClick = destinations.onPrompts
@@ -178,8 +182,8 @@ fun SettingsScreen(
                 { shapes ->
                     NavigationItem(
                         shapes = shapes,
-                        headline = "Apps",
-                        supporting = appsSummary(prefs.rememberProfilePerApp, prefs.skipCleanupInAiChats),
+                        headline = stringResource(R.string.settings_apps),
+                        supporting = stringResource(appsSummary(prefs.rememberProfilePerApp, prefs.skipCleanupInAiChats)),
                         icon = SasayakiIcons.Apps,
                         onClick = destinations.onApps
                     )
@@ -188,16 +192,20 @@ fun SettingsScreen(
         }
         item(key = "sasayaki") {
             SegmentedGroup(
-                title = "Sasayaki",
+                title = stringResource(R.string.settings_app_section),
                 items = listOf(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Permissions",
+                            headline = stringResource(R.string.settings_permissions),
                             supporting = when (status.missingPermissions) {
-                                0 -> "All set"
-                                1 -> "1 needs your attention"
-                                else -> "${status.missingPermissions} need your attention"
+                                0 -> stringResource(R.string.settings_permissions_all_set)
+
+                                else -> pluralStringResource(
+                                    R.plurals.settings_permissions_missing,
+                                    status.missingPermissions,
+                                    status.missingPermissions
+                                )
                             },
                             needsAttention = status.missingPermissions > 0,
                             icon = SasayakiIcons.Shield,
@@ -207,11 +215,15 @@ fun SettingsScreen(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "History and privacy",
+                            headline = stringResource(R.string.settings_history),
                             supporting = if (prefs.historyEnabled) {
-                                "Keeping the last ${prefs.historyRetentionLimit}"
+                                pluralStringResource(
+                                    R.plurals.settings_history_keeping,
+                                    prefs.historyRetentionLimit,
+                                    prefs.historyRetentionLimit
+                                )
                             } else {
-                                "Not keeping history"
+                                stringResource(R.string.settings_history_off)
                             },
                             icon = SasayakiIcons.History,
                             onClick = destinations.onHistory
@@ -220,8 +232,8 @@ fun SettingsScreen(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Backup",
-                            supporting = "Move your settings to another phone",
+                            headline = stringResource(R.string.backup_title),
+                            supporting = stringResource(R.string.settings_backup_summary),
                             icon = SasayakiIcons.SettingsBackupRestore,
                             onClick = destinations.onBackup
                         )
@@ -229,10 +241,10 @@ fun SettingsScreen(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Appearance",
+                            headline = stringResource(R.string.settings_appearance),
                             supporting = listOfNotNull(
-                                prefs.themeMode.label(),
-                                "wallpaper colors".takeIf { prefs.wallpaperColors }
+                                stringResource(prefs.themeMode.label()),
+                                stringResource(R.string.settings_wallpaper_colors_on).takeIf { prefs.wallpaperColors }
                             ).joinToString(" · "),
                             icon = SasayakiIcons.Palette,
                             onClick = destinations.onAppearance
@@ -243,13 +255,13 @@ fun SettingsScreen(
         }
         item(key = "about") {
             SegmentedGroup(
-                title = "About",
+                title = stringResource(R.string.settings_about),
                 items = listOf(
                     { shapes ->
                         ExternalItem(
                             shapes = shapes,
-                            headline = "What's new",
-                            supporting = "Release notes for every version",
+                            headline = stringResource(R.string.settings_whats_new),
+                            supporting = stringResource(R.string.settings_whats_new_summary),
                             icon = SasayakiIcons.NewReleases,
                             onClick = { onOpenLink(RELEASES_URL) }
                         )
@@ -257,8 +269,8 @@ fun SettingsScreen(
                     { shapes ->
                         ExternalItem(
                             shapes = shapes,
-                            headline = "Report a problem",
-                            supporting = "Open an issue on GitHub",
+                            headline = stringResource(R.string.settings_report_problem),
+                            supporting = stringResource(R.string.settings_report_problem_summary),
                             icon = SasayakiIcons.BugReport,
                             onClick = { onOpenLink(ISSUES_URL) }
                         )
@@ -266,8 +278,8 @@ fun SettingsScreen(
                     { shapes ->
                         ExternalItem(
                             shapes = shapes,
-                            headline = "Source code",
-                            supporting = "Free software under the GPL-3.0",
+                            headline = stringResource(R.string.settings_source_code),
+                            supporting = stringResource(R.string.settings_source_code_summary),
                             icon = SasayakiIcons.Code,
                             onClick = { onOpenLink(SOURCE_URL) }
                         )
@@ -275,8 +287,8 @@ fun SettingsScreen(
                     { shapes ->
                         NavigationItem(
                             shapes = shapes,
-                            headline = "Open-source licenses",
-                            supporting = "The libraries Sasayaki is built with",
+                            headline = stringResource(R.string.licenses_title),
+                            supporting = stringResource(R.string.settings_licenses_summary),
                             icon = SasayakiIcons.License,
                             onClick = destinations.onLicenses
                         )
@@ -288,7 +300,7 @@ fun SettingsScreen(
                             leadingContent = { ItemIcon(SasayakiIcons.Info) },
                             trailingContent = { Text(BuildConfig.VERSION_NAME, style = MaterialTheme.typography.labelLarge) }
                         ) {
-                            Text("Version")
+                            Text(stringResource(R.string.settings_version))
                         }
                     }
                 )
@@ -297,15 +309,17 @@ fun SettingsScreen(
     }
 }
 
-fun ThemeMode.label(): String = when (this) {
-    ThemeMode.SYSTEM -> "System theme"
-    ThemeMode.LIGHT -> "Light"
-    ThemeMode.DARK -> "Dark"
+@StringRes
+fun ThemeMode.label(): Int = when (this) {
+    ThemeMode.SYSTEM -> R.string.settings_theme_system_summary
+    ThemeMode.LIGHT -> R.string.settings_theme_light
+    ThemeMode.DARK -> R.string.settings_theme_dark
 }
 
-private fun appsSummary(rememberProfiles: Boolean, skipAiChats: Boolean): String = when {
-    rememberProfiles && skipAiChats -> "Per-app profiles, no AI chat cleanup"
-    rememberProfiles -> "Remembers each app's profile"
-    skipAiChats -> "Skips cleanup in AI chats"
-    else -> "Same everywhere"
+@StringRes
+private fun appsSummary(rememberProfiles: Boolean, skipAiChats: Boolean): Int = when {
+    rememberProfiles && skipAiChats -> R.string.settings_apps_summary_profiles_and_skip_ai
+    rememberProfiles -> R.string.settings_apps_summary_profiles
+    skipAiChats -> R.string.settings_apps_summary_skip_ai
+    else -> R.string.settings_apps_summary_default
 }
