@@ -1,37 +1,37 @@
-<p>Sasayaki turns your voice into text in any app. It sends your recording to a speech-to-text server you choose, such as your own Whisper server or any hosted service with an OpenAI-compatible API, and types the result where you are.</p>
+<p>Sasayaki lets you dictate into any app. You talk, it sends the audio to a speech-to-text server you choose, and types the text where you are. That can be your own Whisper server or any service with an OpenAI-compatible API.</p>
 
 <p><b>Two ways to dictate</b></p>
 <ul>
-<li><b>Floating bubble:</b> appears whenever a keyboard opens. Tap it, speak, and it stops when you go quiet. While you talk it shows a live waveform with pause, discard and stop.</li>
-<li><b>Keyboard mic key:</b> keyboards like HeliBoard and FlorisBoard open Sasayaki from their mic key, right in the keyboard area. This needs only the microphone permission.</li>
+<li>A small bubble shows up when the keyboard opens. Tap it and talk. It stops when you go quiet.</li>
+<li>Or use the mic key of keyboards like HeliBoard and FlorisBoard. Sasayaki opens in the keyboard area. This only needs the microphone permission.</li>
 </ul>
 
-<p><b>Your servers, your words</b></p>
+<p><b>Your servers</b></p>
 <ul>
-<li>Works with any OpenAI-compatible server: whisper.cpp, faster-whisper, speaches, llama.cpp and many hosted services.</li>
-<li>Self-hosted servers on your local network or tailnet work over plain http, and certificates from your own authority work once installed on the phone.</li>
-<li>Nothing leaves the phone except requests to the servers you add. No analytics, no ads, no cloud backup.</li>
-<li>Recordings with no speech are dropped on the phone instead of being sent.</li>
-<li>Sasayaki refuses to dictate into password fields and into apps it recognises as banking or payment apps.</li>
+<li>Works with whisper.cpp, faster-whisper, speaches, llama.cpp and many hosted services.</li>
+<li>Servers on your home network or tailnet can use plain http. Certificates from your own authority work once installed on the phone.</li>
+<li>Audio only goes to the servers you add. No analytics, no ads, no cloud backup.</li>
+<li>Recordings with no speech are dropped instead of sent.</li>
+<li>It won't dictate into password fields or apps it recognises as banking apps.</li>
 </ul>
 
-<p><b>Optional cleanup</b></p>
-<p>Add a chat model (an LLM) and Sasayaki turns what you said into a clean written message: filler words go, self-corrections are applied ("at 8, no sorry, at 9" becomes "at 9"), and punctuation is fixed. Choose how much it may rewrite, how much it shortens, and whether emoji are allowed, with a live example of the result. Without a chat model you get the plain transcript.</p>
+<p><b>Cleanup (optional)</b></p>
+<p>If you add a chat model, Sasayaki tidies up what you said: it drops filler words, applies corrections like "at 8, no, at 9", and fixes punctuation. You choose how much it rewrites or shortens. Without a chat model you get the plain transcript.</p>
 
-<p><b>Made for how you write</b></p>
+<p><b>Also</b></p>
 <ul>
-<li>Profiles bundle a language, models and a writing style. Sasayaki remembers which profile you use in each app.</li>
-<li>Vocabulary keeps names and jargon spelled your way.</li>
-<li>Replacement rules fix words your speech model keeps getting wrong, as plain text or regular expressions.</li>
-<li>History keeps your dictations and their audio on the phone, so you can copy or retry them. It can be limited or turned off.</li>
-<li>Light and dark themes, wallpaper colors, and a bubble you can resize, make see-through or monochrome.</li>
+<li>Profiles with their own language, models and style. Sasayaki remembers which one you use in each app.</li>
+<li>A vocabulary list so names and jargon come out right.</li>
+<li>Replacement rules for words your speech model keeps getting wrong.</li>
+<li>History of your dictations, kept on the phone. You can copy or retry them, limit it, or turn it off.</li>
+<li>Export and import your settings to move to a new phone.</li>
 </ul>
 
 <p><b>Permissions</b></p>
 <ul>
-<li><b>Microphone:</b> records only while you dictate.</li>
-<li><b>Display over other apps</b> and <b>accessibility</b> (bubble only): show the bubble above your keyboard and type the text into the focused field. The accessibility service reads the field you are typing in, to place the text at the cursor.</li>
-<li><b>Notifications</b> (optional): show that the bubble is on, with a button to turn it off.</li>
+<li>Microphone: only while you dictate.</li>
+<li>Display over other apps and accessibility (bubble only): to show the bubble and type into the field you're using. Accessibility reads that field to put the text at the cursor.</li>
+<li>Notifications (optional): shows when the bubble is on, with a button to turn it off.</li>
 </ul>
 
-<p>Sasayaki needs a speech-to-text server to work. The project page lists servers and models that work well.</p>
+<p>You need a speech-to-text server to use it. The project page lists some that work well.</p>
