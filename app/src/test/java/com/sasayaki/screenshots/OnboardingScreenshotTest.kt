@@ -8,7 +8,10 @@ import com.sasayaki.data.repository.ConnectionResult
 import com.sasayaki.domain.provider.ModelInfo
 import com.sasayaki.domain.provider.ModelKind
 import com.sasayaki.ui.common.SetupItem
+import com.sasayaki.ui.onboarding.DictationMethod
+import com.sasayaki.ui.onboarding.OnboardingActions
 import com.sasayaki.ui.onboarding.OnboardingScreen
+import com.sasayaki.ui.onboarding.OnboardingSetup
 import com.sasayaki.ui.onboarding.OnboardingStep
 import com.sasayaki.ui.settings.ProviderEditorActions
 import com.sasayaki.ui.settings.ProviderEditorUiState
@@ -30,7 +33,7 @@ class OnboardingScreenshotTest {
     private val models = listOf(ModelInfo("whisper-1", ModelKind.SPEECH), ModelInfo("gpt-4o-mini", ModelKind.CHAT))
     private val actions = ProviderEditorActions({}, {}, {}, {}, {}, {}, {}, {}, {})
     private val permissions = listOf(
-        SetupItem("microphone", "Microphone", "Records your voice while the bubble is listening.", SasayakiIcons.Mic, true, true, "Allow") {
+        SetupItem("microphone", "Microphone", "Records your voice while you dictate.", SasayakiIcons.Mic, true, true, "Allow") {
         },
         SetupItem(
             "overlay",
@@ -55,7 +58,7 @@ class OnboardingScreenshotTest {
         SetupItem(
             "notifications",
             "Notifications",
-            "Keeps the bubble running reliably.",
+            "Shows that the bubble is on, with a button to turn it off.",
             SasayakiIcons.Notifications,
             false,
             false,
@@ -68,9 +71,17 @@ class OnboardingScreenshotTest {
     private fun onboarding(
         step: OnboardingStep,
         form: ProviderForm = ProviderForm("", "", "", null, null),
-        state: ProviderEditorUiState = ProviderEditorUiState(loaded = true)
-    ) = OnboardingScreen(step, form, state, actions, permissions, restrictedSettingsLikely = false, bubbleRunning = false, onStep = {
-    }, onSaveProvider = {}, onFinish = {})
+        state: ProviderEditorUiState = ProviderEditorUiState(loaded = true),
+        method: DictationMethod = DictationMethod.BUBBLE,
+        items: List<SetupItem> = permissions
+    ) = OnboardingScreen(
+        step = step,
+        providerForm = form,
+        providerState = state,
+        providerActions = actions,
+        setup = OnboardingSetup(method, items, restrictedSettingsLikely = false, bubbleRunning = false),
+        actions = OnboardingActions(onStep = {}, onMethod = {}, onSaveProvider = {}, onFinish = {})
+    )
 
     @Test
     fun welcome() = compose.screenshot("onboarding_welcome_light") { onboarding(OnboardingStep.WELCOME) }
@@ -89,6 +100,30 @@ class OnboardingScreenshotTest {
 
     @Test
     fun permissions() = compose.screenshot("onboarding_permissions_dark", dark = true) { onboarding(OnboardingStep.PERMISSIONS) }
+
+    @Test
+    fun method() = compose.screenshot("onboarding_method_light") { onboarding(OnboardingStep.METHOD) }
+
+    @Test
+    fun keyboardSetup() = compose.screenshot("onboarding_keyboard_light") {
+        onboarding(
+            OnboardingStep.PERMISSIONS,
+            method = DictationMethod.KEYBOARD,
+            items = listOf(
+                permissions.first(),
+                SetupItem(
+                    "voice_input",
+                    "Sasayaki voice input",
+                    "Lets your keyboard's mic key open Sasayaki.",
+                    SasayakiIcons.Keyboard,
+                    false,
+                    true,
+                    "Turn on"
+                ) {
+                }
+            )
+        )
+    }
 
     @Test
     fun tryIt() = compose.screenshot("onboarding_try_light") { onboarding(OnboardingStep.TRY) }

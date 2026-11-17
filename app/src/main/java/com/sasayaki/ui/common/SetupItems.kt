@@ -3,9 +3,11 @@ package com.sasayaki.ui.common
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import com.sasayaki.ui.theme.SasayakiIcons
 
 const val ACCESSIBILITY_KEY = "accessibility"
+const val MICROPHONE_KEY = "microphone"
 private const val OVERLAY_KEY = "overlay"
 
 // BUBBLE_KEYS are the steps only the bubble needs; the keyboard mic key works without them.
@@ -30,10 +32,25 @@ fun rememberPermissionItems(bubbleNeeded: Boolean = true): List<SetupItem> {
     val accessibility = rememberAccessibilityPermissionState()
     val notifications = rememberNotificationPermissionState()
     return listOf(
-        microphone.toItem("microphone", SasayakiIcons.Mic, required = true),
+        microphone.toItem(MICROPHONE_KEY, SasayakiIcons.Mic, required = true),
         overlay.toItem(OVERLAY_KEY, SasayakiIcons.Layers, required = bubbleNeeded),
         accessibility.toItem(ACCESSIBILITY_KEY, SasayakiIcons.Keyboard, required = bubbleNeeded),
         notifications.toItem("notifications", SasayakiIcons.Notifications, required = false)
+    )
+}
+
+@Composable
+fun rememberVoiceInputItem(): SetupItem {
+    val context = LocalContext.current
+    return SetupItem(
+        key = "voice_input",
+        title = "Sasayaki voice input",
+        description = "Lets your keyboard's mic key open Sasayaki. Turn it on in the list of keyboards.",
+        icon = SasayakiIcons.Keyboard,
+        done = rememberVoiceInputEnabled(),
+        required = true,
+        actionLabel = "Turn on",
+        onAction = { openKeyboardSettings(context) }
     )
 }
 

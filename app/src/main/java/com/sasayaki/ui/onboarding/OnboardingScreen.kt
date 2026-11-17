@@ -28,21 +28,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,14 +58,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sasayaki.ui.common.MICROPHONE_KEY
 import com.sasayaki.ui.common.SetupItem
 import com.sasayaki.ui.common.rememberPermissionItems
 import com.sasayaki.ui.common.rememberRestrictedSettingsLikely
+import com.sasayaki.ui.common.rememberVoiceInputItem
 import com.sasayaki.ui.components.SetupGroup
 import com.sasayaki.ui.settings.ConnectionResultCard
 import com.sasayaki.ui.settings.DefaultModels
@@ -73,19 +83,47 @@ import com.sasayaki.ui.theme.SasayakiIcons
 import com.sasayaki.ui.theme.SasayakiLogo
 import com.sasayaki.ui.theme.Spacing
 
-enum class OnboardingStep { WELCOME, PROVIDER, PERMISSIONS, TRY }
+enum class OnboardingStep { WELCOME, PROVIDER, METHOD, PERMISSIONS, TRY }
+
+enum class DictationMethod { BUBBLE, KEYBOARD }
+
+@Immutable
+data class OnboardingSetup(
+    val method: DictationMethod,
+    val items: List<SetupItem>,
+    val restrictedSettingsLikely: Boolean,
+    val bubbleRunning: Boolean
+) {
+    val ready: Boolean get() = items.none { it.required && !it.done }
+}
+
+class OnboardingActions(
+    val onStep: (OnboardingStep) -> Unit,
+    val onMethod: (DictationMethod) -> Unit,
+    val onSaveProvider: () -> Unit,
+    val onFinish: () -> Unit
+)
 
 @Composable
 fun OnboardingRoute(onFinished: () -> Unit, viewModel: OnboardingViewModel = hiltViewModel()) {
     var step by rememberSaveable { mutableStateOf(OnboardingStep.WELCOME) }
+    var method by rememberSaveable { mutableStateOf(DictationMethod.BUBBLE) }
     val providerState by viewModel.providerState.collectAsStateWithLifecycle()
     val serviceRunning by viewModel.serviceRunning.collectAsStateWithLifecycle()
-    val permissions = rememberPermissionItems()
-    val restricted = rememberRestrictedSettingsLikely()
-    val ready = permissions.none { it.required && !it.done }
+    val bubbleItems = rememberPermissionItems()
+    val voiceInput = rememberVoiceInputItem()
+    val setup = OnboardingSetup(
+        method = method,
+        items = when (method) {
+            DictationMethod.BUBBLE -> bubbleItems
+            DictationMethod.KEYBOARD -> bubbleItems.filter { it.key == MICROPHONE_KEY } + voiceInput
+        },
+        restrictedSettingsLikely = rememberRestrictedSettingsLikely(),
+        bubbleRunning = serviceRunning
+    )
 
-    LaunchedEffect(step, ready) {
-        if (step == OnboardingStep.TRY && ready && !serviceRunning) viewModel.startBubble()
+    LaunchedEffect(step, setup.ready, method) {
+        if (step == OnboardingStep.TRY && method == DictationMethod.BUBBLE && setup.ready && !serviceRunning) viewModel.startBubble()
     }
 
     OnboardingScreen(
@@ -93,12 +131,13 @@ fun OnboardingRoute(onFinished: () -> Unit, viewModel: OnboardingViewModel = hil
         providerForm = viewModel.draft.form,
         providerState = providerState,
         providerActions = providerEditorActions(viewModel.draft, onAdd = {}, onDelete = {}, onBack = {}),
-        permissions = permissions,
-        restrictedSettingsLikely = restricted,
-        bubbleRunning = serviceRunning,
-        onStep = { step = it },
-        onSaveProvider = { viewModel.saveProvider { step = OnboardingStep.PERMISSIONS } },
-        onFinish = { viewModel.complete(onFinished) }
+        setup = setup,
+        actions = OnboardingActions(
+            onStep = { step = it },
+            onMethod = { method = it },
+            onSaveProvider = { viewModel.saveProvider { step = OnboardingStep.METHOD } },
+            onFinish = { viewModel.complete(onFinished) }
+        )
     )
 }
 
@@ -108,21 +147,16 @@ fun OnboardingScreen(
     providerForm: ProviderForm,
     providerState: ProviderEditorUiState,
     providerActions: ProviderEditorActions,
-    permissions: List<SetupItem>,
-    restrictedSettingsLikely: Boolean,
-    bubbleRunning: Boolean,
-    onStep: (OnboardingStep) -> Unit,
-    onSaveProvider: () -> Unit,
-    onFinish: () -> Unit
+    setup: OnboardingSetup,
+    actions: OnboardingActions
 ) {
     val previous = OnboardingStep.entries.getOrNull(step.ordinal - 1)
-    BackHandler(enabled = previous != null) { previous?.let(onStep) }
+    BackHandler(enabled = previous != null) { previous?.let(actions.onStep) }
     val progress by animateFloatAsState(
         targetValue = (step.ordinal + 1f) / OnboardingStep.entries.size,
         animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
         label = "progress"
     )
-    val permissionsReady = permissions.none { it.required && !it.done }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
@@ -134,45 +168,19 @@ fun OnboardingScreen(
                         .padding(top = Spacing.xxl, start = Spacing.xs, end = Spacing.xl),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = { previous?.let(onStep) }) {
+                    IconButton(onClick = { previous?.let(actions.onStep) }) {
                         Icon(SasayakiIcons.ArrowBack, contentDescription = "Back")
                     }
-                    LinearWavyProgressIndicator(progress = { progress }, modifier = Modifier.weight(1f))
+                    LinearWavyProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .weight(1f)
+                            .semantics { contentDescription = "Step ${step.ordinal + 1} of ${OnboardingStep.entries.size}" }
+                    )
                 }
             }
         },
-        bottomBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
-                    .navigationBarsPadding()
-                    .imePadding()
-                    .padding(horizontal = Spacing.xl, vertical = Spacing.l),
-                verticalArrangement = Arrangement.spacedBy(Spacing.xs),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                when (step) {
-                    OnboardingStep.WELCOME -> PrimaryButton("Get started") { onStep(OnboardingStep.PROVIDER) }
-
-                    OnboardingStep.PROVIDER -> {
-                        PrimaryButton(
-                            "Continue",
-                            enabled = providerForm.url.isNotBlank() && providerForm.speechModel != null,
-                            onClick = onSaveProvider
-                        )
-                        TextButton(onClick = { onStep(OnboardingStep.PERMISSIONS) }) { Text("Set up later") }
-                    }
-
-                    OnboardingStep.PERMISSIONS -> {
-                        PrimaryButton("Continue", enabled = permissionsReady) { onStep(OnboardingStep.TRY) }
-                        TextButton(onClick = { onStep(OnboardingStep.TRY) }) { Text("Skip for now") }
-                    }
-
-                    OnboardingStep.TRY -> PrimaryButton("Done", onClick = onFinish)
-                }
-            }
-        }
+        bottomBar = { OnboardingBottomBar(step, providerForm, setup, actions) }
     ) { padding ->
         val forward = MaterialTheme.motionScheme.defaultEffectsSpec<IntOffset>()
         val fade = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
@@ -198,12 +206,62 @@ fun OnboardingScreen(
                 when (current) {
                     OnboardingStep.WELCOME -> welcome()
                     OnboardingStep.PROVIDER -> provider(providerForm, providerState, providerActions)
-                    OnboardingStep.PERMISSIONS -> permissionsStep(permissions, restrictedSettingsLikely)
-                    OnboardingStep.TRY -> tryIt(bubbleRunning, permissionsReady)
+                    OnboardingStep.METHOD -> methodStep(setup.method, actions.onMethod)
+                    OnboardingStep.PERMISSIONS -> permissionsStep(setup)
+                    OnboardingStep.TRY -> tryIt(setup)
                 }
             }
         }
     }
+}
+
+@Composable
+private fun OnboardingBottomBar(step: OnboardingStep, providerForm: ProviderForm, setup: OnboardingSetup, actions: OnboardingActions) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .navigationBarsPadding()
+            .imePadding()
+            .padding(horizontal = Spacing.xl, vertical = Spacing.l),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        when (step) {
+            OnboardingStep.WELCOME -> PrimaryButton("Get started") { actions.onStep(OnboardingStep.PROVIDER) }
+
+            OnboardingStep.PROVIDER -> {
+                val blocker = when {
+                    providerForm.url.isBlank() -> "Enter your server address to continue."
+                    providerForm.speechModel == null -> "Test the connection or pick a speech to text model to continue."
+                    else -> null
+                }
+                blocker?.let { BlockerText(it) }
+                PrimaryButton("Continue", enabled = blocker == null, onClick = actions.onSaveProvider)
+                TextButton(onClick = { actions.onStep(OnboardingStep.METHOD) }) { Text("Set up later") }
+            }
+
+            OnboardingStep.METHOD -> PrimaryButton("Continue") { actions.onStep(OnboardingStep.PERMISSIONS) }
+
+            OnboardingStep.PERMISSIONS -> {
+                PrimaryButton("Continue", enabled = setup.ready) { actions.onStep(OnboardingStep.TRY) }
+                TextButton(onClick = { actions.onStep(OnboardingStep.TRY) }) { Text("Skip for now") }
+            }
+
+            OnboardingStep.TRY -> PrimaryButton("Done", onClick = actions.onFinish)
+        }
+    }
+}
+
+@Composable
+private fun BlockerText(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(bottom = Spacing.xs)
+    )
 }
 
 @Composable
@@ -245,7 +303,7 @@ private fun LazyListScope.welcome() {
                 textAlign = TextAlign.Center
             )
             Text(
-                "Sasayaki turns your voice into clean text in any app, using servers you choose.",
+                "Sasayaki turns your voice into text in any app, using speech models on servers you choose.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -256,9 +314,13 @@ private fun LazyListScope.welcome() {
     item(key = "points") {
         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceBright) {
             Column(modifier = Modifier.padding(Spacing.xl), verticalArrangement = Arrangement.spacedBy(Spacing.l)) {
-                WelcomePoint(SasayakiIcons.Keyboard, "Works in every app", "A bubble appears whenever your keyboard opens.")
-                WelcomePoint(SasayakiIcons.Shield, "Your servers, your words", "Recordings go only to the providers you add.")
-                WelcomePoint(SasayakiIcons.AutoAwesome, "Cleans up as you talk", "Filler words and self-corrections are handled for you.")
+                WelcomePoint(SasayakiIcons.Keyboard, "Works in every app", "Dictate from a floating bubble or your keyboard's mic key.")
+                WelcomePoint(SasayakiIcons.Shield, "Your servers, your words", "Recordings go only to the servers you add.")
+                WelcomePoint(
+                    SasayakiIcons.AutoAwesome,
+                    "Optional cleanup",
+                    "Add a chat model and Sasayaki drops filler words and applies your self-corrections."
+                )
             }
         }
     }
@@ -317,24 +379,101 @@ private fun LazyListScope.provider(form: ProviderForm, state: ProviderEditorUiSt
     }
     state.result?.let { result -> item(key = "result") { ConnectionResultCard(result) } }
     item(key = "models") { DefaultModels(form, state, actions) }
+    item(key = "cleanup") { CleanupNote(cleanupChosen = form.cleanupModel != null) }
 }
 
-private fun LazyListScope.permissionsStep(permissions: List<SetupItem>, restricted: Boolean) {
-    stepHeader("Let Sasayaki listen and type", "These let the bubble record when you tap it and type the result where you are.")
-    item(key = "permissions") { SetupGroup(items = permissions, restrictedSettingsLikely = restricted) }
+@Composable
+private fun CleanupNote(cleanupChosen: Boolean) {
+    Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceBright) {
+        Row(modifier = Modifier.padding(Spacing.l), horizontalArrangement = Arrangement.spacedBy(Spacing.m)) {
+            Icon(SasayakiIcons.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Text(
+                text = if (cleanupChosen) {
+                    "Cleanup is on: a chat model will tidy each dictation before it is typed."
+                } else {
+                    "Cleanup is optional. It needs a chat model (an LLM) to remove filler words and fix " +
+                        "self-corrections. Pick one under Cleanup above, or add it later in Settings."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
 
-private fun LazyListScope.tryIt(bubbleRunning: Boolean, ready: Boolean) {
+private fun LazyListScope.methodStep(selected: DictationMethod, onSelect: (DictationMethod) -> Unit) {
+    stepHeader("How do you want to dictate?", "Pick one to start with. You can turn on the other later in Settings.")
+    item(key = "methods") {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.s), modifier = Modifier.selectableGroup()) {
+            MethodCard(
+                icon = SasayakiIcons.ChatBubble,
+                title = "Floating bubble",
+                body = "Appears whenever a keyboard opens, in any app. Tap it to dictate into the field you are in.",
+                needs = "Needs: display over other apps, and accessibility access to type the text.",
+                selected = selected == DictationMethod.BUBBLE,
+                onClick = { onSelect(DictationMethod.BUBBLE) }
+            )
+            MethodCard(
+                icon = SasayakiIcons.Keyboard,
+                title = "Keyboard mic key",
+                body = "Keyboards like HeliBoard and FlorisBoard open Sasayaki from their mic key, right in the keyboard area.",
+                needs = "Needs: only the microphone.",
+                selected = selected == DictationMethod.KEYBOARD,
+                onClick = { onSelect(DictationMethod.KEYBOARD) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun MethodCard(icon: ImageVector, title: String, body: String, needs: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        shape = MaterialTheme.shapes.large,
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceBright,
+        contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
+    ) {
+        Row(modifier = Modifier.padding(Spacing.l), horizontalArrangement = Arrangement.spacedBy(Spacing.l)) {
+            Icon(icon, contentDescription = null, modifier = Modifier.padding(top = Spacing.xxs))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(body, style = MaterialTheme.typography.bodyMedium)
+                Text(needs, style = MaterialTheme.typography.bodySmall, color = LocalContentColor.current.copy(alpha = 0.78f))
+            }
+            RadioButton(selected = selected, onClick = null)
+        }
+    }
+}
+
+private fun LazyListScope.permissionsStep(setup: OnboardingSetup) {
+    when (setup.method) {
+        DictationMethod.BUBBLE -> stepHeader(
+            "Let Sasayaki listen and type",
+            "These let the bubble record when you tap it and type the result where you are."
+        )
+
+        DictationMethod.KEYBOARD -> stepHeader(
+            "Connect your keyboard",
+            "Allow the microphone, then turn on Sasayaki voice input so your keyboard's mic key can open it."
+        )
+    }
+    item(key = "permissions") { SetupGroup(items = setup.items, restrictedSettingsLikely = setup.restrictedSettingsLikely) }
+}
+
+private fun LazyListScope.tryIt(setup: OnboardingSetup) {
     stepHeader(
         "Try it",
-        if (ready) {
-            "Tap the field below, then tap the bubble that appears and say something."
-        } else {
-            "Finish the permissions to use the bubble. You can do that later from Home."
+        when {
+            !setup.ready -> "Finish the previous step to start dictating. You can also do it later from Home."
+            setup.method == DictationMethod.KEYBOARD -> "Tap the field below, then the mic key on your keyboard and say something."
+            else -> "Tap the field below, then tap the bubble that appears and say something."
         }
     )
-    item(key = "field") { TryField(enabled = ready) }
-    if (ready && !bubbleRunning) {
+    item(key = "field") { TryField(enabled = setup.ready) }
+    if (setup.method == DictationMethod.BUBBLE && setup.ready && !setup.bubbleRunning) {
         item(key = "starting") {
             Text("Starting the bubble…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
