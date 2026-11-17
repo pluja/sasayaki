@@ -36,27 +36,11 @@ Sasayaki does the same job as [WisprFlow](https://wisprflow.ai), except it costs
 - Nothing leaves the phone except requests to your providers: no analytics, no cloud backup, no device-to-device transfer.
 - The bubble comes back on its own after a reboot.
 
-<table>
-  <tr>
-    <td><img src="/assets/screenshot02.png" width="400"></td>
-    <td><img src="/assets/screenshot04.png" width="400"></td>
-  </tr>
-  <tr>
-    <td align="center"><i>Recording in a chat</i></td>
-    <td align="center"><i>Done: the text is in the field</i></td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <td><img src="/assets/screenshot01.png" width="250"></td>
-    <td><img src="/assets/screenshot03.png" width="250"></td>
-  </tr>
-  <tr>
-    <td align="center"><i>Home</i></td>
-    <td align="center"><i>A profile's writing style</i></td>
-  </tr>
-</table>
+<p align="center">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="260">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="260">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="260">
+</p>
 
 ## Install
 
