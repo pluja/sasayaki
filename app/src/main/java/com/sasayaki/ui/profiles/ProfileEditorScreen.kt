@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
@@ -20,7 +18,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +39,7 @@ import com.sasayaki.domain.provider.Provider
 import com.sasayaki.domain.provider.Purpose
 import com.sasayaki.domain.provider.suitableFor
 import com.sasayaki.ui.components.ConnectedChoice
+import com.sasayaki.ui.components.DestructiveDialog
 import com.sasayaki.ui.components.ItemIcon
 import com.sasayaki.ui.components.ModelPickerSheet
 import com.sasayaki.ui.components.NavigationItem
@@ -338,21 +336,13 @@ fun ProfileEditorScreen(
     )
 
     if (confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            icon = { Icon(SasayakiIcons.Delete, contentDescription = null) },
-            title = { Text("Delete ${profile.name.ifBlank { "this profile" }}?") },
-            text = { Text("Its settings are removed. Your dictation history stays.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirmDelete = false
-                        onDelete()
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
-            },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } }
+        DestructiveDialog(
+            icon = SasayakiIcons.Delete,
+            title = "Delete ${profile.name.ifBlank { "this profile" }}?",
+            text = "Its settings are removed. Your dictation history stays.",
+            confirmLabel = "Delete",
+            onConfirm = onDelete,
+            onDismiss = { confirmDelete = false }
         )
     }
 }

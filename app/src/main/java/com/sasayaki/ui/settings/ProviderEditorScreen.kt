@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -27,7 +26,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +46,7 @@ import com.sasayaki.data.repository.ConnectionResult
 import com.sasayaki.domain.provider.ModelKind
 import com.sasayaki.domain.provider.Purpose
 import com.sasayaki.domain.provider.suitableFor
+import com.sasayaki.ui.components.DestructiveDialog
 import com.sasayaki.ui.components.ModelPickerSheet
 import com.sasayaki.ui.components.NavigationItem
 import com.sasayaki.ui.components.Pill
@@ -167,21 +166,13 @@ fun ProviderEditorScreen(isNew: Boolean, form: ProviderForm, state: ProviderEdit
     }
 
     if (confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            icon = { Icon(SasayakiIcons.Delete, contentDescription = null) },
-            title = { Text("Delete ${form.name.ifBlank { "this provider" }}?") },
-            text = { Text("Profiles that use it switch to another provider. The API key is erased from this device.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirmDelete = false
-                        actions.onDelete()
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
-            },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } }
+        DestructiveDialog(
+            icon = SasayakiIcons.Delete,
+            title = "Delete ${form.name.ifBlank { "this provider" }}?",
+            text = "Profiles that use it switch to another provider. The API key is erased from this device.",
+            confirmLabel = "Delete",
+            onConfirm = actions.onDelete,
+            onDismiss = { confirmDelete = false }
         )
     }
 }

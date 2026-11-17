@@ -16,8 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,6 +52,7 @@ import com.sasayaki.data.db.entity.DictationSummary
 import com.sasayaki.domain.model.DictationStatus
 import com.sasayaki.ui.common.copyText
 import com.sasayaki.ui.common.displaySourceApp
+import com.sasayaki.ui.components.DestructiveDialog
 import com.sasayaki.ui.components.EmptyState
 import com.sasayaki.ui.components.LargeTitleBar
 import com.sasayaki.ui.components.Pill
@@ -181,21 +180,13 @@ fun HistoryScreen(
     }
 
     if (confirmClear) {
-        AlertDialog(
-            onDismissRequest = { confirmClear = false },
-            icon = { Icon(SasayakiIcons.DeleteSweep, contentDescription = null) },
-            title = { Text("Clear all history?") },
-            text = { Text("Saved text and retry audio are erased from this device. Your word counts are kept.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onClearAll()
-                        confirmClear = false
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Clear") }
-            },
-            dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } }
+        DestructiveDialog(
+            icon = SasayakiIcons.DeleteSweep,
+            title = "Clear all history?",
+            text = "Saved text and retry audio are erased from this device. Your word counts are kept.",
+            confirmLabel = "Clear",
+            onConfirm = onClearAll,
+            onDismiss = { confirmClear = false }
         )
     }
 }
