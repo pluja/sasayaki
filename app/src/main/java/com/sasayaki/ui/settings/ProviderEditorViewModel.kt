@@ -29,6 +29,7 @@ data class ProviderEditorUiState(
     val result: ConnectionResult? = null,
     val models: List<ModelInfo> = emptyList(),
     val urlError: String? = null,
+    val unencrypted: Boolean = false,
     val finished: Boolean = false
 )
 

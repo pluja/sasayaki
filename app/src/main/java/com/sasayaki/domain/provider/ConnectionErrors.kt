@@ -1,5 +1,6 @@
 package com.sasayaki.domain.provider
 
+import com.sasayaki.data.api.CleartextOutsideLocalNetworkException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -10,6 +11,8 @@ fun describeConnectionError(error: Throwable): String = when (error) {
     is IllegalArgumentException -> error.message ?: "That address is not valid."
 
     is UnknownHostException -> "Can't find that server. Check the address."
+
+    is CleartextOutsideLocalNetworkException -> "This http address leads outside your local network. Use https:// instead."
 
     is SocketTimeoutException -> "The server took too long to answer."
 

@@ -191,7 +191,18 @@ internal fun ProviderConnectionForm(form: ProviderForm, state: ProviderEditorUiS
                 placeholder = { Text("https://api.example.com") },
                 singleLine = true,
                 isError = state.urlError != null,
-                supportingText = { Text(state.urlError ?: "Starts with https://. A trailing /v1 is fine.") },
+                supportingText = {
+                    when {
+                        state.urlError != null -> Text(state.urlError)
+
+                        state.unencrypted -> Text(
+                            "Not encrypted. Use it only on a network you trust.",
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+
+                        else -> Text("https://, or http:// for a server on your local network.")
+                    }
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next, autoCorrectEnabled = false)
             )
             OutlinedTextField(

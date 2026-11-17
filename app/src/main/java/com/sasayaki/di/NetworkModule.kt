@@ -1,6 +1,7 @@
 package com.sasayaki.di
 
 import com.sasayaki.data.api.ApiClientFactory
+import com.sasayaki.data.api.LocalCleartextGuard
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,6 +19,11 @@ object NetworkModule {
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
+        // Cleartext is allowed for local servers, so no server may redirect a recording
+        // elsewhere; OpenAI-compatible APIs answer in place.
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .addNetworkInterceptor(LocalCleartextGuard())
         .applyDebugLogging()
         .build()
 

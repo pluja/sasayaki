@@ -14,7 +14,9 @@ object EndpointPolicy {
         val parsedUrl = normalizedUrl.toHttpUrlOrNull()
             ?: throw IllegalArgumentException("That address is not valid.")
 
-        require(parsedUrl.isHttps) { "Use an https:// address. Unencrypted http is not allowed." }
+        require(parsedUrl.isHttps || isLocalNetworkHost(parsedUrl.host)) {
+            "Use an https:// address. Plain http:// only works for servers on your local network."
+        }
 
         return parsedUrl.toString()
     }

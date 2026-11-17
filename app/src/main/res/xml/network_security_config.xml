@@ -1,4 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Self-hosted servers often use a certificate from a private authority the person installed,
+    so user certificates are trusted alongside the system ones. Cleartext is permitted here
+    because this file cannot express address ranges; EndpointPolicy limits plain http to
+    local network addresses.
+-->
 <network-security-config>
-    <base-config cleartextTrafficPermitted="false" />
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
 </network-security-config>

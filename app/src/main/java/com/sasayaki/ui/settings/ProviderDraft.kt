@@ -8,6 +8,7 @@ import com.sasayaki.data.repository.ProviderRepository
 import com.sasayaki.domain.provider.ModelInfo
 import com.sasayaki.domain.provider.ModelKind
 import com.sasayaki.domain.provider.Provider
+import com.sasayaki.domain.provider.isUnencryptedAddress
 import com.sasayaki.domain.provider.serverAddressError
 import com.sasayaki.domain.provider.suggestProviderName
 import kotlinx.coroutines.CoroutineScope
@@ -50,7 +51,14 @@ class ProviderDraft(private val repository: ProviderRepository, private val scop
         speechModel = provider.speechModel
         cleanupModel = provider.cleanupModel
         speechModelChosen = true
-        _state.update { it.copy(loaded = true, loadingModels = true, models = repository.models.value[id].orEmpty()) }
+        _state.update {
+            it.copy(
+                loaded = true,
+                loadingModels = true,
+                models = repository.models.value[id].orEmpty(),
+                unencrypted = isUnencryptedAddress(provider.baseUrl)
+            )
+        }
         val models = repository.refreshModels(id)
         _state.update { it.copy(loadingModels = false, models = models) }
         return true
@@ -64,7 +72,7 @@ class ProviderDraft(private val repository: ProviderRepository, private val scop
     fun onUrlChange(value: String) {
         url = value
         if (!nameEdited) name = suggestProviderName(value).orEmpty()
-        _state.update { it.copy(result = null, urlError = null) }
+        _state.update { it.copy(result = null, urlError = null, unencrypted = isUnencryptedAddress(value)) }
     }
 
     fun onApiKeyChange(value: String) {
