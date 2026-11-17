@@ -1,4 +1,4 @@
-.PHONY: build bump release-key test unit debug verify check format hooks screenshots clean docker-image
+.PHONY: build bump release-key test unit debug verify check format hooks screenshots store-images clean docker-image
 
 DOCKER_IMAGE := sasayaki-build
 APK_OUTPUT := sasayaki-release.apk
@@ -81,6 +81,11 @@ hooks:
 # Renders the screenshot tests to app/build/screenshots for visual review.
 screenshots: docker-image
 	$(call gradle,testDebugUnitTest -Pscreenshots)
+
+# Renders the store scenes and frames them with captions into the fastlane listing.
+store-images: docker-image
+	$(call gradle,testDebugUnitTest -Pscreenshots --tests '*StoreScreenshotTest')
+	scripts/store-images.sh
 
 clean:
 	rm -rf app/build build .gradle .gradle-cache .gradle-build-cache .android-cache $(APK_OUTPUT)
