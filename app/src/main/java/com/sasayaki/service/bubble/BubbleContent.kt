@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledIconButton
@@ -47,7 +48,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
@@ -296,7 +300,9 @@ private fun ProcessingPill(cleaningUp: Boolean, actions: BubbleActions) {
             Text(
                 text = if (cleaningUp) "Cleaning up" else "Transcribing",
                 style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(horizontal = Spacing.xs)
+                modifier = Modifier
+                    .padding(horizontal = Spacing.xs)
+                    .semantics { liveRegion = LiveRegionMode.Polite }
             )
             IconButton(onClick = actions.onCancelProcessing) {
                 Icon(SasayakiIcons.Close, contentDescription = "Cancel")
@@ -321,7 +327,9 @@ private fun FailedPill(phase: BubblePhase.Failed, actions: BubbleActions) {
                 style = MaterialTheme.typography.labelLarge,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 170.dp)
+                modifier = Modifier
+                    .widthIn(max = 170.dp)
+                    .semantics { liveRegion = LiveRegionMode.Assertive }
             )
             if (phase.canRetry) {
                 IconButton(onClick = actions.onRetry) {
@@ -352,7 +360,11 @@ private fun NoSpeechPill(onTryAgain: () -> Unit) {
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text("Didn't catch anything", style = MaterialTheme.typography.labelLarge)
+            Text(
+                "Didn't catch anything",
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+            )
         }
     }
 }
@@ -380,7 +392,7 @@ fun ProfileMenu(profiles: List<Profile>, onSelect: (Long) -> Unit) {
                 profiles.forEach { profile ->
                     Row(
                         modifier = Modifier
-                            .clickable { onSelect(profile.id) }
+                            .selectable(selected = profile.isActive, role = Role.RadioButton) { onSelect(profile.id) }
                             .padding(horizontal = Spacing.m, vertical = Spacing.xs),
                         verticalAlignment = Alignment.CenterVertically
                     ) {

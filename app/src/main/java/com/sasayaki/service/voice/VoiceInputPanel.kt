@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -27,9 +28,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sasayaki.domain.model.Profile
 import com.sasayaki.service.bubble.BubbleActions
 import com.sasayaki.service.bubble.BubbleAppearance
@@ -136,7 +141,7 @@ private fun Status(state: BubbleUiState, levels: () -> List<Float>, modifier: Mo
                     bars = KEYBOARD_WAVEFORM_BARS,
                     barWidth = 4.dp
                 )
-                StatusText(if (phase.paused) "Paused" else formatElapsed(state.elapsedSeconds))
+                if (phase.paused) StatusText("Paused") else ElapsedText(formatElapsed(state.elapsedSeconds))
             }
 
             is BubblePhase.Processing -> Row(
@@ -166,15 +171,29 @@ private fun Status(state: BubbleUiState, levels: () -> List<Float>, modifier: Mo
     }
 }
 
+// StatusText is announced by screen readers as it changes; the running timer is not, or it
+// would be read out every second.
 @Composable
-private fun StatusText(text: String, color: Color = MaterialTheme.colorScheme.onSurface) {
+private fun StatusText(text: String, color: Color = MaterialTheme.colorScheme.onSurface) =
+    PanelText(text, color, Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+
+@Composable
+private fun ElapsedText(text: String) = PanelText(text, MaterialTheme.colorScheme.onSurface, Modifier)
+
+// PanelText shrinks rather than clips, because the panel keeps a keyboard's fixed height even at
+// the largest font sizes.
+@Composable
+private fun PanelText(text: String, color: Color, modifier: Modifier) {
+    val size = MaterialTheme.typography.titleMedium.fontSize
     Text(
         text = text,
         style = MaterialTheme.typography.titleMedium,
         color = color,
         textAlign = TextAlign.Center,
         maxLines = 3,
-        overflow = TextOverflow.Ellipsis
+        overflow = TextOverflow.Ellipsis,
+        autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = size),
+        modifier = modifier
     )
 }
 

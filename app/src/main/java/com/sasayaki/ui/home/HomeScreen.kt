@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Icon
@@ -53,8 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -275,6 +275,17 @@ private fun StatusHero(
         else -> HeroMode.OFF
     }
     val active = mode == HeroMode.ON || mode == HeroMode.KEYBOARD
+    // The whole card toggles the bubble, so its text labels the switch for screen readers.
+    val toggleModifier = if (mode == HeroMode.ON || mode == HeroMode.OFF || mode == HeroMode.KEYBOARD) {
+        Modifier.toggleable(
+            value = mode == HeroMode.ON,
+            role = Role.Switch,
+            // A keyboard-only setup may lack what the bubble needs, so that comes first.
+            onValueChange = { if (!it) onStop() else bubbleBlocker?.onAction?.invoke() ?: onStart() }
+        )
+    } else {
+        Modifier
+    }
     val containerColor = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceBright
     val contentColor = if (active) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
 
@@ -282,7 +293,10 @@ private fun StatusHero(
     val fadeOutSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.extraLargeIncreased)
+            .then(toggleModifier),
         shape = MaterialTheme.shapes.extraLargeIncreased,
         color = containerColor,
         contentColor = contentColor
@@ -303,11 +317,7 @@ private fun StatusHero(
                 ) {
                     BubbleOrb(active = heroMode == HeroMode.ON)
                     if (heroMode == HeroMode.ON || heroMode == HeroMode.OFF || heroMode == HeroMode.KEYBOARD) {
-                        BubbleSwitch(
-                            checked = heroMode == HeroMode.ON,
-                            // A keyboard-only setup may lack what the bubble needs, so that comes first.
-                            onCheckedChange = { if (!it) onStop() else bubbleBlocker?.onAction?.invoke() ?: onStart() }
-                        )
+                        BubbleSwitch(checked = heroMode == HeroMode.ON)
                     }
                 }
                 when (heroMode) {
@@ -353,11 +363,10 @@ private fun HeroText(title: String, body: String) {
 }
 
 @Composable
-private fun BubbleSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun BubbleSwitch(checked: Boolean) {
     Switch(
         checked = checked,
-        onCheckedChange = onCheckedChange,
-        modifier = Modifier.semantics { contentDescription = "Dictation bubble" },
+        onCheckedChange = null,
         thumbContent = {
             Icon(
                 imageVector = if (checked) SasayakiIcons.Check else SasayakiIcons.Close,
