@@ -42,7 +42,8 @@ class SettingsBackupRepository @Inject constructor(
             preferences = preferencesDataStore.preferences.first()
         )
         val json = SettingsBackupCodec.encode(snapshot)
-        val output = context.contentResolver.openOutputStream(uri) ?: throw IOException("Cannot write to $uri")
+        // "wt" truncates: some storage providers otherwise keep the old file's tail after the JSON.
+        val output = context.contentResolver.openOutputStream(uri, "wt") ?: throw IOException("Cannot write to $uri")
         output.use { it.write(json.toByteArray(Charsets.UTF_8)) }
     }
 
@@ -96,9 +97,11 @@ class SettingsBackupRepository @Inject constructor(
                 .toMap()
         }
 
+        // Provider ids are never reused (AUTOINCREMENT), so writing the carried keys before erasing
+        // the old ones means a crash in between loses nothing.
+        val restoredProviders = snapshot.providers.associateBy { providerIds.getValue(it.id) }
+        carriedApiKeys(previousProviders, restoredProviders).forEach { (id, key) -> secureStore.setProviderApiKey(id, key) }
         previousProviders.forEach { secureStore.setProviderApiKey(it.id, "") }
-        val restoredUrls = snapshot.providers.associate { providerIds.getValue(it.id) to it.baseUrl }
-        carriedApiKeys(previousProviders, restoredUrls).forEach { (id, key) -> secureStore.setProviderApiKey(id, key) }
 
         val imported = snapshot.preferences
         preferencesDataStore.restore(
@@ -110,7 +113,9 @@ class SettingsBackupRepository @Inject constructor(
     }
 
     private companion object {
-        const val MAX_FILE_BYTES = 2 * 1024 * 1024
+        // MAX_FILE_BYTES is far above any real settings file, and low enough that a crafted one
+        // cannot exhaust memory while it is parsed.
+        const val MAX_FILE_BYTES = 256 * 1024
     }
 }
 

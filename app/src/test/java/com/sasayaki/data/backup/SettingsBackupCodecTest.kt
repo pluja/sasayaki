@@ -144,9 +144,27 @@ class SettingsBackupCodecTest {
 
     @Test
     fun `keys carry over only to providers on the same server`() {
-        val carried = carriedApiKeys(providers, mapOf(50L to "https://asr.home.lan", 51L to "https://other.example"))
+        val restored = mapOf(
+            50L to Provider(0, "Home server", "https://asr.home.lan"),
+            51L to Provider(0, "Other", "https://other.example")
+        )
 
-        assertEquals(mapOf(50L to "sk-home-secret"), carried)
+        assertEquals(mapOf(50L to "sk-home-secret"), carriedApiKeys(providers, restored))
+    }
+
+    @Test
+    fun `two accounts on one server keep their own keys`() {
+        val previous = listOf(
+            Provider(1, "Personal", "https://api.example.com/v1", apiKey = "sk-personal"),
+            Provider(2, "Work", "https://api.example.com", apiKey = "sk-work")
+        )
+        val restored = mapOf(
+            10L to Provider(0, "Personal", "https://api.example.com"),
+            11L to Provider(0, "Work", "https://api.example.com/v1"),
+            12L to Provider(0, "Renamed", "https://api.example.com")
+        )
+
+        assertEquals(mapOf(10L to "sk-personal", 11L to "sk-work"), carriedApiKeys(previous, restored))
     }
 
     @Test
@@ -183,6 +201,9 @@ class SettingsBackupCodecTest {
             """{"format": "sasayaki-settings", "version": 1, "rules": [], "instructions": [], "profiles": [{"ref": 1}]}""",
             minimalFile().replace("\"providers\": []", "\"providers\": [{\"ref\": 1, \"name\": \"No address\"}]"),
             minimalFile().replace("\"rules\": []", "\"rules\": [{\"ref\": 1, \"replacement\": \"x\"}]"),
+            minimalFile().replace("\"rules\": []", "\"rules\": [{\"ref\": 1, \"pattern\": \"(\", \"isRegex\": true}]"),
+            minimalFile().replace("\"rules\": []", "\"rules\": [{\"ref\": 1, \"pattern\": \"${"a".repeat(501)}\"}]"),
+            minimalFile().replace("\"providers\": []", "\"providers\": [{\"ref\": 1, \"baseUrl\": \"http://example.com\"}]"),
             minimalFile(""", "preferences": {"themeMode": "PURPLE"}"""),
             minimalFile(""", "preferences": {"controlsSize": "TINY"}"""),
             minimalFile(""", "preferences": {"silenceThresholdMs": "slow"}""")

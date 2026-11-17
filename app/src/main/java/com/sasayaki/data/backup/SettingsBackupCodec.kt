@@ -17,6 +17,7 @@ import com.sasayaki.domain.model.RewriteMode
 import com.sasayaki.domain.model.SummarizeMode
 import com.sasayaki.domain.model.TextReplacementRule
 import com.sasayaki.domain.processing.MAX_VOCABULARY_TERM_LENGTH
+import com.sasayaki.domain.processing.patternError
 import com.sasayaki.domain.processing.sortedVocabulary
 import com.sasayaki.domain.provider.Provider
 import java.time.LocalDate
@@ -159,7 +160,9 @@ object SettingsBackupCodec {
         return Provider(
             id = provider.ref ?: damaged("a provider has no ref"),
             name = provider.name?.trim().orEmpty(),
-            baseUrl = provider.baseUrl?.trim()?.takeIf(String::isNotEmpty) ?: damaged("a provider has no server address"),
+            baseUrl = provider.baseUrl?.trim()?.takeIf(String::isNotEmpty)
+                ?.also { url -> if (runCatching { EndpointPolicy.normalizeBaseUrl(url) }.isFailure) damaged("a provider has an invalid server address") }
+                ?: damaged("a provider has no server address"),
             speechModel = provider.speechModel?.trim()?.takeIf(String::isNotEmpty),
             cleanupModel = provider.cleanupModel?.trim()?.takeIf(String::isNotEmpty)
         )
@@ -167,13 +170,15 @@ object SettingsBackupCodec {
 
     private fun BackupRule?.toRule(): TextReplacementRule {
         val rule = this ?: damaged("a rule is empty")
+        val pattern = rule.pattern?.takeIf(String::isNotEmpty) ?: damaged("a rule has no pattern")
+        if (pattern.length > MAX_RULE_PATTERN_LENGTH) damaged("a rule pattern is too long")
         return TextReplacementRule(
             id = rule.ref ?: damaged("a rule has no ref"),
             name = rule.name.orEmpty(),
-            pattern = rule.pattern?.takeIf(String::isNotEmpty) ?: damaged("a rule has no pattern"),
+            pattern = pattern,
             replacement = rule.replacement.orEmpty(),
             isRegex = rule.isRegex ?: false
-        )
+        ).also { if (it.patternError() != null) damaged("a rule has an invalid pattern") }
     }
 
     private fun BackupInstruction?.toInstruction(): PostProcessingPrompt {
@@ -268,6 +273,7 @@ object SettingsBackupCodec {
     private const val MIN_SILENCE_MS = 500L
     private const val MAX_SILENCE_MS = 5000L
     private const val MAX_RETENTION = 5000
+    private const val MAX_RULE_PATTERN_LENGTH = 500
 }
 
 /** profilesForInsert returns the snapshot's profiles linked to the ids their refs were saved under. */
@@ -290,11 +296,19 @@ fun SettingsSnapshot.appProfilesFor(profileIds: Map<Long, Long>): Map<String, Lo
 
 /**
  * carriedApiKeys keeps the key of each [previous] provider for the restored provider on the same
- * server, since settings files never hold keys. [restored] maps new provider ids to addresses.
+ * server, since settings files never hold keys. Two accounts on one server are told apart by name;
+ * a server match alone only counts when one previous provider there had a key. [restored] maps
+ * new provider ids to the providers saved under them.
  */
-fun carriedApiKeys(previous: List<Provider>, restored: Map<Long, String>): Map<Long, String> {
-    val keysByServer = previous.filter { it.apiKey.isNotBlank() }.associate { serverKey(it.baseUrl) to it.apiKey }
-    return restored.mapNotNull { (id, url) -> keysByServer[serverKey(url)]?.let { id to it } }.toMap()
+fun carriedApiKeys(previous: List<Provider>, restored: Map<Long, Provider>): Map<Long, String> {
+    val withKeys = previous.filter { it.apiKey.isNotBlank() }
+    val byServerAndName = withKeys.associateBy { serverKey(it.baseUrl) to it.name.trim() }
+    val byServer = withKeys.groupBy { serverKey(it.baseUrl) }
+    return restored.mapNotNull { (id, provider) ->
+        val server = serverKey(provider.baseUrl)
+        val match = byServerAndName[server to provider.name.trim()] ?: byServer[server]?.singleOrNull()
+        match?.let { id to it.apiKey }
+    }.toMap()
 }
 
 private fun serverKey(url: String): String =
