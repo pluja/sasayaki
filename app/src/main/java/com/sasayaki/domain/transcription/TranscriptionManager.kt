@@ -1,6 +1,8 @@
 package com.sasayaki.domain.transcription
 
+import android.content.Context
 import android.util.Log
+import com.sasayaki.R
 import com.sasayaki.data.db.entity.Dictation
 import com.sasayaki.data.preferences.PreferencesDataStore
 import com.sasayaki.data.repository.DictationRecord
@@ -16,6 +18,8 @@ import com.sasayaki.domain.processing.speechPrompt
 import com.sasayaki.domain.processing.withoutRecitedGlossary
 import com.sasayaki.domain.provider.Purpose
 import com.sasayaki.domain.provider.Resolution
+import com.sasayaki.domain.provider.describeConnectionError
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,6 +30,7 @@ class DictationFailure(override val cause: Throwable, val retryEntryId: Long?) :
 
 @Singleton
 class TranscriptionManager @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val engine: TranscriptionEngine,
     private val textProcessor: TextProcessor,
     private val historyRepository: HistoryRepository,
@@ -55,9 +60,9 @@ class TranscriptionManager @Inject constructor(
     /** retry fails only with [DictationFailure]. */
     suspend fun retry(dictationId: Long, onPostProcessing: (() -> Unit)? = null): Result<String> {
         val entry = historyRepository.entry(dictationId)
-            ?: return unretriable("History entry not found.")
+            ?: return unretriable(context.getString(R.string.error_history_entry_missing))
         val audioFile = entry.audioPath?.let(::File)?.takeIf { it.exists() }
-            ?: return unretriable("The saved audio for this dictation is gone.")
+            ?: return unretriable(context.getString(R.string.error_audio_missing))
         val profile = entry.profileId?.let { profileRepository.getProfile(it) }
             ?: profileRepository.getActiveProfile()
         val dictation = DictationRecord(
@@ -75,10 +80,15 @@ class TranscriptionManager @Inject constructor(
         val profile = dictation.profile
         val endpoint = when (val speech = providerRepository.resolve(profile, Purpose.SPEECH)) {
             is Resolution.Ready -> speech.endpoint
-            Resolution.NoProvider -> return fail(dictation, Exception("Speech to text is not set up. Add a provider in Settings."))
-            is Resolution.NoModel -> return fail(dictation, Exception("Choose a speech model for ${speech.provider.name} in Settings."))
+
+            Resolution.NoProvider -> return fail(dictation, Exception(context.getString(R.string.error_speech_not_set_up)))
+
+            is Resolution.NoModel -> return fail(
+                dictation,
+                Exception(context.getString(R.string.error_speech_model_missing, speech.provider.name))
+            )
         }
-        if (!engine.isAvailable()) return fail(dictation, Exception("No network connection."))
+        if (!engine.isAvailable()) return fail(dictation, Exception(context.getString(R.string.error_offline)))
 
         Log.d(TAG, "Sending ${dictation.audio.length()} bytes for transcription (model=${endpoint.model})")
         val rawText = engine.transcribe(dictation.audio, endpoint, profile.language, speechPrompt(prefs.vocabulary))
@@ -99,7 +109,7 @@ class TranscriptionManager @Inject constructor(
 
     private suspend fun fail(dictation: DictationRecord, error: Throwable): Result<String> {
         Log.e(TAG, "Dictation failed", error)
-        val retryEntryId = historyRepository.recordFailure(dictation, error)
+        val retryEntryId = historyRepository.recordFailure(dictation, describeConnectionError(error, context.resources))
         return Result.failure(DictationFailure(error, retryEntryId))
     }
 

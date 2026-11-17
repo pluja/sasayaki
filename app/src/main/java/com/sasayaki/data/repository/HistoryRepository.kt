@@ -87,7 +87,7 @@ class HistoryRepository internal constructor(
     }
 
     /** recordFailure returns the entry the failure can be retried from, if one was kept. */
-    suspend fun recordFailure(dictation: DictationRecord, error: Throwable): Long? = writes.withLock {
+    suspend fun recordFailure(dictation: DictationRecord, message: String): Long? = writes.withLock {
         if (dictation.incognito) return@withLock null
         val prefs = preferences.first()
         if (!prefs.historyEnabled && dictation.retryEntryId == null) return@withLock null
@@ -98,7 +98,7 @@ class HistoryRepository internal constructor(
             text = "",
             rawText = "",
             wordCount = 0,
-            errorMessage = error.message ?: "Unknown transcription error"
+            errorMessage = message
         )
         pruneLocked(prefs.historyRetentionLimit)
         saved.id.takeIf { saved.audioPath != null }

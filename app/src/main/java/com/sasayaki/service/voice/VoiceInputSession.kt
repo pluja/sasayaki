@@ -5,7 +5,6 @@ import com.sasayaki.R
 import com.sasayaki.data.preferences.UserPreferences
 import com.sasayaki.domain.model.AppContext
 import com.sasayaki.domain.model.Profile
-import com.sasayaki.domain.provider.describeConnectionError
 import com.sasayaki.domain.transcription.DictationFailure
 import com.sasayaki.service.AudioRecorder
 import com.sasayaki.service.SilenceDetector
@@ -48,6 +47,7 @@ class VoiceInputSession(
     // onText reports whether the text reached the field.
     private val onText: (String) -> Boolean,
     private val getString: (resId: Int) -> String,
+    private val describeError: (Throwable) -> String,
     private val waveformBars: Int = WAVEFORM_BARS,
     private val newRecorder: () -> AudioRecorder = ::AudioRecorder,
     private val now: () -> Long = System::currentTimeMillis
@@ -119,7 +119,7 @@ class VoiceInputSession(
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Voice input failed", e)
-                fail(describeConnectionError(e))
+                fail(describeError(e))
             } finally {
                 recordedPcm.delete()
             }
@@ -163,7 +163,7 @@ class VoiceInputSession(
                         throw e
                     } catch (e: Exception) {
                         Log.e(TAG, "Voice input retry failed", e)
-                        fail(describeConnectionError(e), entryId)
+                        fail(describeError(e), entryId)
                     }
                 }
             }
@@ -258,7 +258,7 @@ class VoiceInputSession(
             }
         }.onFailure { error ->
             val failure = error as? DictationFailure
-            fail(describeConnectionError(failure?.cause ?: error), failure?.retryEntryId)
+            fail(describeError(failure?.cause ?: error), failure?.retryEntryId)
         }
     }
 

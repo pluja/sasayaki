@@ -3,6 +3,7 @@ package com.sasayaki.ui.settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.sasayaki.data.api.ServerAddressProblem
 import com.sasayaki.data.repository.ConnectionResult
 import com.sasayaki.data.repository.ProviderRepository
 import com.sasayaki.domain.provider.ModelInfo
@@ -102,13 +103,13 @@ class ProviderDraft(private val repository: ProviderRepository, private val scop
     }
 
     fun validateUrl(): Boolean {
-        val error = if (url.isBlank()) "Enter the server address." else serverAddressError(url)
-        _state.update { it.copy(urlError = error) }
+        val error = if (url.isBlank()) ServerAddressProblem.EMPTY else serverAddressError(url)
+        _state.update { it.copy(urlError = error?.message) }
         return error == null
     }
 
-    fun showUrlError(error: String?) {
-        _state.update { it.copy(urlError = error) }
+    fun showUrlError(error: ServerAddressProblem?) {
+        _state.update { it.copy(urlError = error?.message) }
     }
 
     fun markFinished() {

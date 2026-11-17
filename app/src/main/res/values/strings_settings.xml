@@ -267,4 +267,6 @@
     <string name="licenses_title">Open-source licenses</string>
     <string name="licenses_intro">Sasayaki is free software under the GPL-3.0, built on these open-source projects.</string>
     <string name="licenses_apache_2">Apache License 2.0</string>
+    <string name="backup_restore_interrupted">The import stopped partway. Check your providers and profiles, or import the file again.</string>
+    <string name="backup_failed">Something went wrong, so nothing was changed.</string>
 </resources>

@@ -1,5 +1,6 @@
 package com.sasayaki.ui.settings
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.SavedStateHandle
@@ -28,7 +29,7 @@ data class ProviderEditorUiState(
     val loadingModels: Boolean = false,
     val result: ConnectionResult? = null,
     val models: List<ModelInfo> = emptyList(),
-    val urlError: String? = null,
+    @StringRes val urlError: Int? = null,
     val unencrypted: Boolean = false,
     val finished: Boolean = false
 )

@@ -1,5 +1,7 @@
 package com.sasayaki.domain.processing
 
+import androidx.annotation.StringRes
+import com.sasayaki.R
 import com.sasayaki.domain.model.TextReplacementRule
 
 fun applyReplacementRules(text: String, rules: List<TextReplacementRule>): String =
@@ -12,7 +14,8 @@ fun TextReplacementRule.applyTo(text: String): String = if (isRegex) {
     text.replace(pattern, replacement)
 }
 
-fun TextReplacementRule.patternError(): String? {
+@StringRes
+fun TextReplacementRule.patternError(): Int? {
     if (!isRegex || pattern.isBlank()) return null
-    return runCatching { Regex(pattern) }.exceptionOrNull()?.let { "This pattern is not a valid regular expression." }
+    return runCatching { Regex(pattern) }.exceptionOrNull()?.let { R.string.error_invalid_pattern }
 }

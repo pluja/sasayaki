@@ -1,6 +1,8 @@
 package com.sasayaki.data.repository
 
+import android.content.Context
 import androidx.room.withTransaction
+import com.sasayaki.R
 import com.sasayaki.data.api.ApiClientFactory
 import com.sasayaki.data.api.AsrApiService
 import com.sasayaki.data.api.LlmApiService
@@ -24,6 +26,7 @@ import com.sasayaki.domain.provider.describeConnectionError
 import com.sasayaki.domain.provider.planLegacyMigration
 import com.sasayaki.domain.provider.resolveEndpoint
 import com.sasayaki.domain.provider.sameServer
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import javax.inject.Inject
@@ -51,6 +54,7 @@ sealed interface ConnectionResult {
 
 @Singleton
 class ProviderRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val database: SasayakiDatabase,
     private val providerDao: ProviderDao,
     private val profileDao: ProfileDao,
@@ -132,10 +136,10 @@ class ProviderRepository @Inject constructor(
         if (e.code() in MODELS_UNSUPPORTED) {
             probe(baseUrl, apiKey, speechModel, cleanupModel)
         } else {
-            ConnectionResult.Failed(describeConnectionError(e))
+            ConnectionResult.Failed(describeConnectionError(e, context.resources))
         }
     } catch (e: Exception) {
-        ConnectionResult.Failed(describeConnectionError(e))
+        ConnectionResult.Failed(describeConnectionError(e, context.resources))
     }
 
     /**
@@ -208,15 +212,13 @@ class ProviderRepository @Inject constructor(
                     service.chatCompletion(ChatCompletionRequest(cleanup, listOf(ChatMessage("user", "Reply with OK."))))
                 }
 
-                else -> return ConnectionResult.Failed(
-                    "This server doesn't list its models. Enter a model name below, then test again."
-                )
+                else -> return ConnectionResult.Failed(context.getString(R.string.error_models_not_listed))
             }
             ConnectionResult.Connected(emptyList())
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            ConnectionResult.Failed(describeConnectionError(e))
+            ConnectionResult.Failed(describeConnectionError(e, context.resources))
         }
     }
 

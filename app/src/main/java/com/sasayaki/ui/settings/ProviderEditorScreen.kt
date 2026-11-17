@@ -201,7 +201,7 @@ internal fun ProviderConnectionForm(form: ProviderForm, state: ProviderEditorUiS
                 isError = state.urlError != null,
                 supportingText = {
                     when {
-                        state.urlError != null -> Text(state.urlError)
+                        state.urlError != null -> Text(stringResource(state.urlError))
 
                         state.unencrypted -> Text(
                             stringResource(R.string.provider_unencrypted),

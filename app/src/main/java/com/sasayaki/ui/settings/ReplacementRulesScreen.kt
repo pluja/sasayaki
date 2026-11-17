@@ -194,7 +194,7 @@ private fun RuleEditorSheet(
                 label = { Text(stringResource(R.string.rules_find)) },
                 singleLine = true,
                 isError = error != null,
-                supportingText = error?.let { { Text(it) } }
+                supportingText = error?.let { { Text(stringResource(it)) } }
             )
             OutlinedTextField(
                 value = replacement,

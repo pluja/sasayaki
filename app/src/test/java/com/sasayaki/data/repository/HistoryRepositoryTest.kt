@@ -115,7 +115,7 @@ class HistoryRepositoryTest {
 
     @Test
     fun `a failure with history on can be retried`() = runBlocking {
-        val id = repository.recordFailure(record(), Exception("timeout"))
+        val id = repository.recordFailure(record(), "timeout")
 
         assertNotNull(id)
         assertNotNull(database.dictationDao().getAudioPath(id!!))
@@ -126,7 +126,7 @@ class HistoryRepositoryTest {
         preferences.update { it.copy(historyEnabled = false, keepStatsWithoutHistory = false) }
 
         repository.recordSuccess(record(), text = "secret words", rawText = "secret words")
-        val failureId = repository.recordFailure(record(), Exception("timeout"))
+        val failureId = repository.recordFailure(record(), "timeout")
 
         assertNull(failureId)
         assertNull(database.dictationDao().getById(1))
@@ -164,7 +164,7 @@ class HistoryRepositoryTest {
 
     @Test
     fun `a successful retry replaces the failure and its audio`() = runBlocking {
-        val id = repository.recordFailure(record(), Exception("timeout"))!!
+        val id = repository.recordFailure(record(), "timeout")!!
         val failedAudio = File(database.dictationDao().getAudioPath(id)!!)
 
         repository.recordSuccess(record(audio = failedAudio, retryEntryId = id), text = "done", rawText = "done")
@@ -177,7 +177,7 @@ class HistoryRepositoryTest {
 
     @Test
     fun `an entry deleted while its retry runs stays deleted`() = runBlocking {
-        val id = repository.recordFailure(record(), Exception("timeout"))!!
+        val id = repository.recordFailure(record(), "timeout")!!
         val failedAudio = File(database.dictationDao().getAudioPath(id)!!)
         repository.removeFromHistory(id)
 

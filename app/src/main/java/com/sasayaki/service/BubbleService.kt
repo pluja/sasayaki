@@ -611,7 +611,7 @@ class BubbleService : Service() {
         }
     }
 
-    private fun describe(error: Throwable): String = describeConnectionError((error as? DictationFailure)?.cause ?: error)
+    private fun describe(error: Throwable): String = describeConnectionError((error as? DictationFailure)?.cause ?: error, resources)
 
     private fun retryBubbleError() {
         val retryEntryId = (state as? ServiceState.Error)?.retryEntryId

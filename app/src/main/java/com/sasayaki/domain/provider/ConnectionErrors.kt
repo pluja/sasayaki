@@ -1,32 +1,40 @@
 package com.sasayaki.domain.provider
 
+import android.content.res.Resources
+import com.sasayaki.R
 import com.sasayaki.data.api.CleartextOutsideLocalNetworkException
+import com.sasayaki.data.api.InvalidServerAddressException
+import com.sasayaki.domain.transcription.MissingTranscriptException
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import javax.net.ssl.SSLException
 import retrofit2.HttpException
 
-fun describeConnectionError(error: Throwable): String = when (error) {
-    is IllegalArgumentException -> error.message ?: "That address is not valid."
+fun describeConnectionError(error: Throwable, resources: Resources): String = when (error) {
+    is InvalidServerAddressException -> resources.getString(error.problem.message)
 
-    is UnknownHostException -> "Can't find that server. Check the address."
+    is IllegalArgumentException -> resources.getString(R.string.error_address_invalid)
 
-    is CleartextOutsideLocalNetworkException -> "This http address leads outside your local network. Use https:// instead."
+    is CleartextOutsideLocalNetworkException -> resources.getString(R.string.error_cleartext_outside_local_network)
 
-    is SocketTimeoutException -> "The server took too long to answer."
+    is MissingTranscriptException -> resources.getString(R.string.error_no_transcript)
 
-    is SSLException -> "Secure connection failed. The server needs a valid HTTPS certificate."
+    is UnknownHostException -> resources.getString(R.string.error_unknown_host)
 
-    is ConnectException -> "Couldn't connect to the server."
+    is SocketTimeoutException -> resources.getString(R.string.error_timeout)
+
+    is SSLException -> resources.getString(R.string.error_tls)
+
+    is ConnectException -> resources.getString(R.string.error_connect)
 
     is HttpException -> when (error.code()) {
-        401, 403 -> "The server rejected the API key."
-        404 -> "Nothing found at this address. Check the URL."
-        429 -> "The server is rate limiting requests. Try again shortly."
-        in 500..599 -> "The server had an error (${error.code()})."
-        else -> "The server answered with error ${error.code()}."
+        401, 403 -> resources.getString(R.string.error_api_key_rejected)
+        404 -> resources.getString(R.string.error_not_found)
+        429 -> resources.getString(R.string.error_rate_limited)
+        in 500..599 -> resources.getString(R.string.error_server, error.code())
+        else -> resources.getString(R.string.error_http, error.code())
     }
 
-    else -> error.message ?: "Something went wrong."
+    else -> error.message ?: resources.getString(R.string.error_generic)
 }

@@ -13,6 +13,7 @@ import com.sasayaki.data.preferences.PreferencesDataStore
 import com.sasayaki.data.preferences.UserPreferences
 import com.sasayaki.data.repository.ProfileRepository
 import com.sasayaki.domain.model.AppContext
+import com.sasayaki.domain.provider.describeConnectionError
 import com.sasayaki.service.HapticFeedback
 import com.sasayaki.service.bubble.BubbleActions
 import com.sasayaki.service.bubble.BubbleAppearance
@@ -79,7 +80,8 @@ class VoiceInputService : InputMethodService() {
             cacheDir = cacheDir,
             onRecordingChanged = ::buzz,
             onText = ::insert,
-            getString = { resId -> getString(resId) }
+            getString = { resId -> getString(resId) },
+            describeError = { error -> describeConnectionError(error, resources) }
         )
     }
 

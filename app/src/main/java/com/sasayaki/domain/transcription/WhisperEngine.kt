@@ -37,7 +37,7 @@ class WhisperEngine @Inject constructor(private val apiClientFactory: ApiClientF
             if (promptPart == null || e.code() !in REFUSED_PROMPT_CODES) throw e
             service.transcribe(filePart, modelPart, language = languagePart)
         }
-        val text = response.text ?: throw IOException("The speech server answered without a transcript.")
+        val text = response.text ?: throw MissingTranscriptException()
         Result.success(text)
     } catch (e: CancellationException) {
         throw e
@@ -51,3 +51,5 @@ class WhisperEngine @Inject constructor(private val apiClientFactory: ApiClientF
 
     override fun isAvailable(): Boolean = networkMonitor.isOnline.value
 }
+
+class MissingTranscriptException : IOException("The speech server answered without a transcript.")

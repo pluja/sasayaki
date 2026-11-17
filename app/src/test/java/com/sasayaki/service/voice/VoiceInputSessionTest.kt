@@ -52,7 +52,8 @@ class VoiceInputSessionTest {
             typed += it
             true
         },
-        getString = { resId -> "string $resId" }
+        getString = { resId -> "string $resId" },
+        describeError = { error -> "failed: ${error.message}" }
     )
 
     @Test
