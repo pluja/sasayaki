@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -18,6 +19,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.ActivityCompat
+import androidx.core.content.edit
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -127,59 +130,74 @@ fun rememberAccessibilityPermissionState(): PermissionStatus {
 }
 
 @Composable
-fun rememberMicrophonePermissionState(): PermissionStatus {
-    val context = LocalContext.current
-    var granted by remember {
-        mutableStateOf(context.hasPermission(Manifest.permission.RECORD_AUDIO))
-    }
-
-    observeOnResume {
-        granted = context.hasPermission(Manifest.permission.RECORD_AUDIO)
-    }
-
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted -> granted = isGranted }
-
-    return PermissionStatus(
-        name = "Microphone",
-        description = "Records your voice while the bubble is listening.",
-        granted = granted,
-        actionLabel = "Allow",
-        onRequest = { launcher.launch(Manifest.permission.RECORD_AUDIO) }
-    )
-}
+fun rememberMicrophonePermissionState(): PermissionStatus = rememberRuntimePermissionState(
+    permission = Manifest.permission.RECORD_AUDIO,
+    name = "Microphone",
+    description = "Records your voice while you dictate."
+)
 
 @Composable
 fun rememberNotificationPermissionState(): PermissionStatus {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        return PermissionStatus(NOTIFICATIONS_NAME, NOTIFICATIONS_DESCRIPTION, granted = true, actionLabel = "", onRequest = {})
+    }
+    return rememberRuntimePermissionState(Manifest.permission.POST_NOTIFICATIONS, NOTIFICATIONS_NAME, NOTIFICATIONS_DESCRIPTION)
+}
+
+private const val NOTIFICATIONS_NAME = "Notifications"
+private const val NOTIFICATIONS_DESCRIPTION = "Shows that the bubble is on, with a button to turn it off."
+
+/**
+ * rememberRuntimePermissionState sends the person to App info once Android has stopped
+ * showing the permission dialog (after two denials), where "Allow" would otherwise do nothing.
+ */
+@Composable
+private fun rememberRuntimePermissionState(permission: String, name: String, description: String): PermissionStatus {
     val context = LocalContext.current
-    var granted by remember {
-        mutableStateOf(
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)
-        )
-    }
+    val activity = LocalActivity.current
+    fun isBlocked(): Boolean = activity != null &&
+        !context.hasPermission(permission) &&
+        PermissionRequests.wasRequested(context, permission) &&
+        !ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
 
+    var granted by remember { mutableStateOf(context.hasPermission(permission)) }
+    var blocked by remember { mutableStateOf(isBlocked()) }
     observeOnResume {
-        granted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            context.hasPermission(Manifest.permission.POST_NOTIFICATIONS)
+        granted = context.hasPermission(permission)
+        blocked = isBlocked()
     }
-
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted -> granted = isGranted }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        granted = isGranted
+        blocked = isBlocked()
+    }
 
     return PermissionStatus(
-        name = "Notifications",
-        description = "Keeps the bubble running reliably in the background.",
+        name = name,
+        description = if (blocked) "Android no longer asks. Allow it under Permissions in App info." else description,
         granted = granted,
-        actionLabel = "Allow",
+        actionLabel = if (blocked) "Open settings" else "Allow",
         onRequest = {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            if (blocked) {
+                openAppInfo(context)
+            } else {
+                PermissionRequests.markRequested(context, permission)
+                launcher.launch(permission)
             }
         }
     )
+}
+
+// PermissionRequests remembers which permissions were asked for, because Android reports a
+// permission that was never asked and one it no longer asks for in the same way.
+private object PermissionRequests {
+    private const val FILE = "permission_requests"
+
+    fun wasRequested(context: Context, permission: String): Boolean =
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean(permission, false)
+
+    fun markRequested(context: Context, permission: String) {
+        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit { putBoolean(permission, true) }
+    }
 }
 
 @Composable
