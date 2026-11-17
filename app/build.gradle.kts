@@ -15,7 +15,7 @@ android {
     defaultConfig {
         applicationId = "com.sasayaki"
         minSdk = 28
-        targetSdk = 35
+        targetSdk = 36
 
         // Releases are tagged v<date>[.<patch>]: v20261105 is 2026110500, v20261105.2 is
         // 2026110502. F-Droid rebuilds from the tag and reads these literals, so they are
