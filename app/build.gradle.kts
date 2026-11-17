@@ -1,5 +1,3 @@
-import java.util.Calendar
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -19,20 +17,11 @@ android {
         minSdk = 28
         targetSdk = 35
 
-        val tag = findProperty("versionTag")?.toString()?.removePrefix("v") ?: ""
-        val cal = Calendar.getInstance()
-        val dateCode = cal.get(Calendar.YEAR) * 10000 + (cal.get(Calendar.MONTH) + 1) * 100 + cal.get(Calendar.DAY_OF_MONTH)
-
-        // Tags are dated, optionally with a same-day patch: v20260813, v20260813.2.
-        // Parsing the whole tag as an Int returned null for the patch form and fell back
-        // to the date, so v20260813.2 shipped the same versionCode as v20260813.1.
-        // Android decides updates by versionCode, so the patch never reached anyone.
-        // Date and patch are packed separately, leaving codes ordered across days.
-        val tagParts = tag.split(".")
-        val baseCode = tagParts.getOrNull(0)?.toIntOrNull() ?: dateCode
-        val patchCode = tagParts.getOrNull(1)?.toIntOrNull()?.coerceIn(0, 99) ?: 0
-        versionCode = baseCode * 100 + patchCode
-        versionName = if (tag.isNotBlank()) "v$tag" else "v$baseCode"
+        // Releases are tagged v<date>[.<patch>]: v20261105 is 2026110500, v20261105.2 is
+        // 2026110502. F-Droid rebuilds from the tag and reads these literals, so they are
+        // never computed at build time; scripts/bump-version.sh (make bump) rewrites them.
+        versionCode = 2026110500
+        versionName = "v20261105"
     }
 
     signingConfigs {
@@ -78,6 +67,9 @@ android {
         // Version-bump hints change with every upstream release, so they would make the
         // pre-push gate fail on code that has not changed.
         disable += setOf("NewerVersionAvailable", "GradleDependency", "AndroidGradlePluginVersion")
+        // Date-based codes (2026110500) look close to the limit, but leave room until 2099,
+        // and installed apps already carry them, so they cannot be lowered.
+        disable += "HighAppVersionCode"
     }
 
     composeCompiler {

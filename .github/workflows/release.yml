@@ -26,13 +26,23 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
 
+      # F-Droid builds the tag from the literals in app/build.gradle.kts, so a tag that
+      # disagrees with them would ship two different versions under one name.
+      - name: Check tag matches versionName
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version_name=$(sed -n 's/^ *versionName = "\(.*\)"$/\1/p' app/build.gradle.kts)
+          if [ "$version_name" != "$TAG" ]; then
+            echo "Tag $TAG does not match versionName $version_name in app/build.gradle.kts; run make bump first." >&2
+            exit 1
+          fi
+
       - name: Format, lint and test
         run: ./gradlew spotlessCheck lintDebug testDebugUnitTest
 
       - name: Build release APK
-        env:
-          TAG: ${{ github.ref_name }}
-        run: ./gradlew assembleRelease -PversionTag="$TAG"
+        run: ./gradlew assembleRelease
 
       - name: Sign release APK
         env:

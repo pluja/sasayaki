@@ -1,4 +1,4 @@
-.PHONY: build release-key test unit debug verify check format hooks screenshots clean docker-image
+.PHONY: build bump release-key test unit debug verify check format hooks screenshots clean docker-image
 
 DOCKER_IMAGE := sasayaki-build
 APK_OUTPUT := sasayaki-release.apk
@@ -45,6 +45,10 @@ build: docker-image
 		sh -c "scripts/sign-release.sh $(UNSIGNED_APK) $(APK_OUTPUT) && $(HAND_BACK) $(APK_OUTPUT)"
 	@echo "APK built: $(APK_OUTPUT)"
 	@ls -lh $(APK_OUTPUT)
+
+# Sets the release version to today (or VERSION=20261117.2) and creates its changelog file.
+bump:
+	scripts/bump-version.sh $(VERSION)
 
 # Creates the release key and its rotation proof from the old debug key. Run once.
 release-key: docker-image
