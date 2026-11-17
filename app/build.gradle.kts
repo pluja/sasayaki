@@ -64,6 +64,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // Lists the app's translations so Android offers Sasayaki in its per-app language setting.
+    androidResources {
+        generateLocaleConfig = true
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true

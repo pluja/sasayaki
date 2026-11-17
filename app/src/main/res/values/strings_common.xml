@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_save">Save</string>
+    <string name="action_back">Back</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_try_again">Try again</string>
+    <string name="action_dismiss">Dismiss</string>
+    <string name="action_allow">Allow</string>
+    <string name="action_turn_on">Turn on</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_add">Add</string>
+    <string name="action_more_options">More options</string>
+    <string name="action_open_settings">Open settings</string>
+    <string name="copied">Copied</string>
+    <plurals name="word_count">
+        <item quantity="one">%d word</item>
+        <item quantity="other">%d words</item>
+    </plurals>
+</resources>
