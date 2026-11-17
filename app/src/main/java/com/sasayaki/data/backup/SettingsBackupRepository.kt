@@ -53,7 +53,13 @@ class SettingsBackupRepository @Inject constructor(
         if (bytes.size > MAX_FILE_BYTES) throw BackupException(BackupProblem.NOT_SETTINGS_FILE, "the file is too large")
         val snapshot = SettingsBackupCodec.decode(bytes.toString(Charsets.UTF_8), preferencesDataStore.preferences.first())
         // Once the first table is replaced, the rest must follow even if the screen goes away.
-        withContext(NonCancellable) { restore(snapshot) }
+        withContext(NonCancellable) {
+            try {
+                restore(snapshot)
+            } catch (e: Exception) {
+                throw RestoreInterruptedException(e)
+            }
+        }
     }
 
     private suspend fun restore(snapshot: SettingsSnapshot) {
@@ -129,3 +135,6 @@ private fun java.io.InputStream.readNBytesUpTo(limit: Int): ByteArray {
     }
     return buffer.toByteArray()
 }
+
+/** RestoreInterruptedException means an import failed after it began replacing settings. */
+class RestoreInterruptedException(cause: Throwable) : Exception(cause)

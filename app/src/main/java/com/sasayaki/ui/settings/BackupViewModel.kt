@@ -1,18 +1,21 @@
 package com.sasayaki.ui.settings
 
 import android.net.Uri
+import android.util.Log
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sasayaki.R
 import com.sasayaki.data.backup.BackupException
 import com.sasayaki.data.backup.BackupProblem
+import com.sasayaki.data.backup.RestoreInterruptedException
 import com.sasayaki.data.backup.SettingsBackupRepository
 import com.sasayaki.data.backup.backupFileName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.IOException
 import java.time.LocalDate
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,12 +45,19 @@ class BackupViewModel @Inject constructor(private val backupRepository: Settings
             val message = try {
                 block()
                 success
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: BackupException) {
                 e.problem.message()
+            } catch (_: RestoreInterruptedException) {
+                R.string.backup_restore_interrupted
             } catch (_: IOException) {
                 R.string.backup_file_unreadable
             } catch (_: SecurityException) {
                 R.string.backup_file_unreadable
+            } catch (e: Exception) {
+                Log.e(TAG, "Settings backup failed", e)
+                R.string.backup_failed
             } finally {
                 _working.value = false
             }
@@ -55,6 +65,8 @@ class BackupViewModel @Inject constructor(private val backupRepository: Settings
         }
     }
 }
+
+private const val TAG = "BackupViewModel"
 
 @StringRes
 private fun BackupProblem.message(): Int = when (this) {
