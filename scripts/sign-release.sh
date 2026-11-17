@@ -17,6 +17,8 @@ apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)
 
 # Only v3 carries the lineage. v1 and v2 would have to be signed by the oldest key in it,
 # the public debug key, and minSdk 28 means every device reads v3 anyway.
+# Preserving the alignment keeps the signed APK byte-identical to the unsigned one outside
+# the signature, which F-Droid's reproducible build check (apksigcopier) relies on.
 "$apksigner" sign \
     --ks "$keystore" \
     --ks-key-alias sasayaki \
@@ -28,6 +30,7 @@ apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)
     --v2-signing-enabled false \
     --v3-signing-enabled true \
     --v4-signing-enabled false \
+    --alignment-preserved \
     --out "$out" \
     "$in"
 
