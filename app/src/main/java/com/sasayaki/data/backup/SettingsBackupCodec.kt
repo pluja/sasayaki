@@ -157,12 +157,12 @@ object SettingsBackupCodec {
 
     private fun BackupProvider?.toProvider(): Provider {
         val provider = this ?: damaged("a provider is empty")
+        val baseUrl = provider.baseUrl?.trim()?.takeIf(String::isNotEmpty) ?: damaged("a provider has no server address")
+        if (runCatching { EndpointPolicy.normalizeBaseUrl(baseUrl) }.isFailure) damaged("a provider has an invalid server address")
         return Provider(
             id = provider.ref ?: damaged("a provider has no ref"),
             name = provider.name?.trim().orEmpty(),
-            baseUrl = provider.baseUrl?.trim()?.takeIf(String::isNotEmpty)
-                ?.also { url -> if (runCatching { EndpointPolicy.normalizeBaseUrl(url) }.isFailure) damaged("a provider has an invalid server address") }
-                ?: damaged("a provider has no server address"),
+            baseUrl = baseUrl,
             speechModel = provider.speechModel?.trim()?.takeIf(String::isNotEmpty),
             cleanupModel = provider.cleanupModel?.trim()?.takeIf(String::isNotEmpty)
         )
