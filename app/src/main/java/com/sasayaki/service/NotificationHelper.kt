@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.sasayaki.MainActivity
@@ -31,7 +32,14 @@ class NotificationHelper(private val context: Context) {
         manager.createNotificationChannel(channel)
     }
 
-    fun buildForegroundNotification(): Notification {
+    fun buildReadyNotification(): Notification = build(R.string.bubble_notification_title, R.string.bubble_notification_text)
+
+    // buildListeningNotification replaces the ready one while the microphone is on, so the
+    // shade says plainly that Sasayaki is recording.
+    fun buildListeningNotification(): Notification =
+        build(R.string.bubble_notification_listening_title, R.string.bubble_notification_listening_text)
+
+    private fun build(@StringRes title: Int, @StringRes text: Int): Notification {
         val openIntent = PendingIntent.getActivity(
             context,
             0,
@@ -47,8 +55,8 @@ class NotificationHelper(private val context: Context) {
         )
 
         return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle(context.getString(R.string.bubble_notification_title))
-            .setContentText(context.getString(R.string.bubble_notification_text))
+            .setContentTitle(context.getString(title))
+            .setContentText(context.getString(text))
             .setSmallIcon(R.drawable.ic_notification)
             .setContentIntent(openIntent)
             .addAction(android.R.drawable.ic_delete, context.getString(R.string.action_stop), stopIntent)

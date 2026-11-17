@@ -190,7 +190,7 @@ class BubbleService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = notificationHelper?.buildForegroundNotification() ?: run {
+        val notification = notificationHelper?.buildReadyNotification() ?: run {
             Log.e(TAG, "NotificationHelper not initialized")
             stopSelf()
             return START_NOT_STICKY
@@ -306,7 +306,7 @@ class BubbleService : Service() {
      *   not start — the user is told rather than left with a bubble that does nothing.
      */
     private fun promoteToMicrophoneService(): Boolean {
-        val notification = notificationHelper?.buildForegroundNotification() ?: return false
+        val notification = notificationHelper?.buildListeningNotification() ?: return false
         return try {
             ServiceCompat.startForeground(
                 this,
@@ -328,7 +328,7 @@ class BubbleService : Service() {
      * microphone-in-use indicator does not stay lit while the bubble sits idle.
      */
     private fun demoteToIdleService() {
-        val notification = notificationHelper?.buildForegroundNotification() ?: return
+        val notification = notificationHelper?.buildReadyNotification() ?: return
         try {
             ServiceCompat.startForeground(
                 this,

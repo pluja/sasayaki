@@ -5,6 +5,8 @@
     <string name="bubble_notification_channel_description">Shown while the bubble is ready, so Android keeps it running</string>
     <string name="bubble_notification_title">Bubble is ready</string>
     <string name="bubble_notification_text">It appears when your keyboard opens</string>
+    <string name="bubble_notification_listening_title">Listening</string>
+    <string name="bubble_notification_listening_text">Sasayaki is recording what you say</string>
     <string name="action_stop">Turn off</string>
     <string name="tile_label">Dictation bubble</string>
     <string name="tile_on">On</string>
